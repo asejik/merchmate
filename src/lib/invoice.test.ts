@@ -143,13 +143,22 @@ describe('nextInvoiceNumber', () => {
     expect(nextInvoiceNumber([])).toBe('INV-001');
   });
 
-  it('continues from the highest number, not the most recent', () => {
-    expect(nextInvoiceNumber(['INV-009', 'INV-012', 'INV-010'])).toBe('INV-013');
+  it('continues from the most recent number so a sequence can be restarted', () => {
+    // Legacy timestamp-style numbers from the old numbering bug, then the user typed INV-001
+    expect(nextInvoiceNumber(['INV-4821', 'INV-7310', 'INV-001'])).toBe('INV-002');
+    expect(nextInvoiceNumber(['INV-009', 'INV-010'])).toBe('INV-011');
   });
 
-  it('handles custom and legacy timestamp-style numbers', () => {
-    expect(nextInvoiceNumber(['2026/INV/7', 'no-number'])).toBe('INV-008');
+  it('skips numbers already in use', () => {
+    expect(nextInvoiceNumber(['INV-002', 'INV-003', 'INV-001'])).toBe('INV-004');
+  });
+
+  it('keeps custom formats and widths', () => {
+    expect(nextInvoiceNumber(['2026/INV/07'])).toBe('2026/INV/08');
+    expect(nextInvoiceNumber(['A12-B'])).toBe('A13-B');
     expect(nextInvoiceNumber(['INV-999'])).toBe('INV-1000');
+    expect(nextInvoiceNumber(['no-number'])).toBe('INV-001');
+    expect(nextInvoiceNumber([], 'QUO-')).toBe('QUO-001');
   });
 });
 

@@ -111,13 +111,23 @@ export function backfillCreatedAt(invoice: Partial<Pick<Invoice, 'createdAt' | '
   }
 }
 
-/** Next number after the highest trailing number in use, e.g. ["INV-009", "INV-010"] -> "INV-011". */
-export function nextInvoiceNumber(existingNumbers: string[], prefix = 'INV-'): string {
-  const highest = existingNumbers.reduce((max, value) => {
-    const match = value.match(/(\d+)\s*$/);
-    return match ? Math.max(max, parseInt(match[1], 10)) : max;
-  }, 0);
-  return `${prefix}${String(highest + 1).padStart(3, '0')}`;
+/**
+ * Increments the most recent number, keeping its format ("2026/INV/07" -> "2026/INV/08"),
+ * and skips numbers already in use. Following the most recent (not the highest) lets a
+ * user restart a sequence by typing e.g. "INV-001" once.
+ * @param numbersOldestFirst existing numbers of the same kind, ordered by creation
+ */
+export function nextInvoiceNumber(numbersOldestFirst: string[], fallbackPrefix = 'INV-'): string {
+  const used = new Set(numbersOldestFirst.map(n => n.trim().toLowerCase()));
+  const match = numbersOldestFirst.at(-1)?.trim().match(/^(.*?)(\d+)(\D*)$/);
+  const [prefix, digits, suffix] = match ? [match[1], match[2], match[3]] : [fallbackPrefix, '000', ''];
+  let n = parseInt(digits, 10);
+  let candidate: string;
+  do {
+    n += 1;
+    candidate = `${prefix}${String(n).padStart(digits.length, '0')}${suffix}`;
+  } while (used.has(candidate.toLowerCase()));
+  return candidate;
 }
 
 // ---------- Dates ----------

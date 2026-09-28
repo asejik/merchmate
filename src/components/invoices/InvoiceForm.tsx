@@ -71,9 +71,12 @@ async function loadInitialValues(mode: InvoiceEditorMode, sourceInvoiceId?: stri
     db.businessProfile.orderBy('id').first(),
     sourceInvoiceId ? db.invoices.get(sourceInvoiceId) : undefined,
   ]);
-  // Invoices and quotes are numbered independently
+  // Invoices and quotes are numbered independently, each continuing from its most recent number
   const nextNumber = (kind: DocumentKind) => nextInvoiceNumber(
-    all.filter(doc => kindOf(doc) === kind).map(doc => doc.invoiceNumber),
+    all
+      .filter(doc => kindOf(doc) === kind)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+      .map(doc => doc.invoiceNumber),
     kind === 'quote' ? QUOTE_PREFIX : undefined,
   );
   if (mode !== 'create' && mode !== 'create-quote' && !source) throw new Error('Invoice not found');
