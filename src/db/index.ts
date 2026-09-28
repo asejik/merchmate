@@ -1,7 +1,7 @@
 import Dexie, { type Table } from 'dexie';
 import type { BusinessProfile, Customer, Invoice } from '../types';
 
-class AsoOkeDatabase extends Dexie {
+class InvoiceDatabase extends Dexie {
   // Declare implicit table properties.
   // (We don't instantiate them here, Dexie does that for us)
   businessProfile!: Table<BusinessProfile>;
@@ -9,6 +9,7 @@ class AsoOkeDatabase extends Dexie {
   invoices!: Table<Invoice>;
 
   constructor() {
+    // Legacy name kept on purpose: renaming it would orphan existing users' data.
     super('AsoOkeInvoiceDB');
 
     // Define the schema
@@ -22,4 +23,4 @@ class AsoOkeDatabase extends Dexie {
   }
 }
 
-export const db = new AsoOkeDatabase();
+export const db = new InvoiceDatabase();

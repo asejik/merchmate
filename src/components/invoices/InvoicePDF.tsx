@@ -66,7 +66,7 @@ interface PDFProps {
 }
 
 export const InvoicePDF = ({ invoice, business, customer }: PDFProps) => {
-  const defaultTerms = "IMPORTANT: PRODUCTION STARTS ONLY AFTER PAYMENT CONFIRMATION.\nWe do not start work on credit. Thank you for your understanding.";
+  const defaultTerms = "Payment is due by the date shown on this invoice.\nThank you for your business.";
   const balance = invoice.grandTotal - invoice.depositAmount;
   const isPaid = balance <= 0;
 

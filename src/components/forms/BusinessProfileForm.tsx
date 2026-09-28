@@ -24,7 +24,7 @@ const profileSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
-const DEFAULT_TERMS = "IMPORTANT: PRODUCTION STARTS ONLY AFTER PAYMENT CONFIRMATION.\nWe do not start work on credit. Thank you for your understanding.";
+const DEFAULT_TERMS = "Payment is due by the date shown on this invoice.\nThank you for your business.";
 
 export function BusinessProfileForm() {
   const [loading, setLoading] = useState(false);
@@ -150,7 +150,7 @@ export function BusinessProfileForm() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
                 <label className={labelClass}>Business Name</label>
-                <input {...register('businessName')} className={inputClass} placeholder="e.g. Alari Aso Oke" />
+                <input {...register('businessName')} className={inputClass} placeholder="e.g. Acme Supplies Ltd" />
                 {errors.businessName && <span className="text-red-400 text-xs">{errors.businessName.message}</span>}
             </div>
             <div>
@@ -214,7 +214,7 @@ export function BusinessProfileForm() {
                     {...register('invoiceFooterText')}
                     rows={4}
                     className={inputClass}
-                    placeholder="e.g. No refunds after production begins..."
+                    placeholder="e.g. Payment due within 14 days. No refunds on custom orders."
                 />
                 <p className="text-xs text-slate-500 mt-2">
                     This text will appear at the bottom of every PDF invoice.

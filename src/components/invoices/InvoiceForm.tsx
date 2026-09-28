@@ -129,7 +129,7 @@ export function InvoiceForm({ onComplete, onCancel, onAddClient }: Props) {
         </button>
         <div>
           <h2 className="text-2xl font-bold text-white">New Invoice</h2>
-          <p className="text-slate-400 text-sm">Create a new order.</p>
+          <p className="text-slate-400 text-sm">Bill a client for goods or services.</p>
         </div>
       </div>
 
@@ -186,7 +186,7 @@ export function InvoiceForm({ onComplete, onCancel, onAddClient }: Props) {
 
         <GlassCard className="p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-white">Order Items</h3>
+            <h3 className="text-lg font-semibold text-white">Items</h3>
             <button
               type="button"
               onClick={() => append({ description: '', quantity: 1, unitPrice: 0, total: 0 })}
@@ -209,7 +209,7 @@ export function InvoiceForm({ onComplete, onCancel, onAddClient }: Props) {
                   <div className="w-20">
                      <input
                        type="number"
-                       step="any" // FIX: Allows 3.5 yards
+                       step="any" // Allows fractional quantities, e.g. 3.5 hours
                        {...register(`items.${index}.quantity` as const)}
                        className={clsx(inputClass, "text-right")}
                        placeholder="Qty"
@@ -273,7 +273,7 @@ export function InvoiceForm({ onComplete, onCancel, onAddClient }: Props) {
                   </div>
                   <p className="text-xs text-indigo-300/80 mt-2 flex items-center gap-1">
                     <Calculator size={12} />
-                    Production starts after deposit.
+                    Any amount already paid upfront.
                   </p>
                 </div>
              </div>

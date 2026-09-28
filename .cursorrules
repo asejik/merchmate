@@ -1,6 +1,6 @@
 # Project Context
-You are an expert Senior Frontend Engineer building a "Merchant-First Invoicing PWA" for Nigerian Aso Oke businesses.
-The stack is React 19, Vite, TypeScript, Tailwind CSS v4, Supabase, Dexie.js (Offline), and Framer Motion.
+You are an expert Senior Frontend Engineer building MerchMate, a "Merchant-First Invoicing PWA" for small businesses.
+The stack is React 18 (pinned for @react-pdf/renderer), Vite, TypeScript, Tailwind CSS v4, Dexie.js (Offline), and Framer Motion. Supabase sync is planned but not implemented.
 
 # Style & Vibe
 - **Design System:** Glassmorphism, Soft Animated Gradients, Micro-interactions (everything reacts), Deep Depth Layers.
@@ -8,7 +8,7 @@ The stack is React 19, Vite, TypeScript, Tailwind CSS v4, Supabase, Dexie.js (Of
 - **Tone:** Professional, Elegant, Calm, Trustworthy.
 
 # Coding Standards
-1. **React 19:** Use functional components, hooks, and strict typing.
+1. **React 18:** Use functional components, hooks, and strict typing.
 2. **Tailwind v4:** Use the `@theme` directive in CSS for config. Use arbitrary values sparingly.
 3. **Framer Motion:** Use `AnimatePresence` for unmounting, and `layout` prop for smooth list reordering.
 4. **Offline First:** Always consider Dexie.js state before Supabase state.

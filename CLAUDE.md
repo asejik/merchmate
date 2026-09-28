@@ -16,10 +16,10 @@ npm run preview   # Serve the production build (use this to test PWA/offline beh
 
 ## Architecture
 
-Offline-first invoicing PWA for Aso Oke (Nigerian textile) merchants. React 18 + Vite + TypeScript + Tailwind v4 + Dexie (IndexedDB). There is no backend: all data lives in the browser.
+MerchMate: offline-first invoicing PWA for small businesses (originally built for Nigerian Aso Oke textile sellers). React 18 + Vite + TypeScript + Tailwind v4 + Dexie (IndexedDB). There is no backend: all data lives in the browser.
 
 - **Navigation**: no router. `App.tsx` holds an `activeTab` string (persisted to `localStorage`) and switches between `dashboard`, `invoices`, `create`, `customers`, `settings`. `AppShell` renders the nav and calls `onTabChange`.
-- **Data layer**: `src/db/index.ts` defines the Dexie DB `AsoOkeInvoiceDB` with tables `businessProfile` (single row, `++id`), `customers` and `invoices` (UUID string ids from `crypto.randomUUID()`). Types live in `src/types/index.ts`. Components read via `useLiveQuery` from `dexie-react-hooks` and write directly with `db.<table>.add/update` — there is no service/store layer. Only indexed fields can be used with `orderBy`/`where`; changing indexes requires a new `this.version(n)` block.
+- **Data layer**: `src/db/index.ts` defines the Dexie DB `AsoOkeInvoiceDB` (this legacy name must never change: it would orphan existing users' data) with tables `businessProfile` (single row, `++id`), `customers` and `invoices` (UUID string ids from `crypto.randomUUID()`). Types live in `src/types/index.ts`. Components read via `useLiveQuery` from `dexie-react-hooks` and write directly with `db.<table>.add/update` — there is no service/store layer. Only indexed fields can be used with `orderBy`/`where`; changing indexes requires a new `this.version(n)` block.
 - **Invoice money model**: totals are computed in `InvoiceForm` (`subtotal` → discount, either `percentage` or `fixed` via `discountType`/`discountRate` → `grandTotal`; `tax` is always 0). `depositAmount` is the running total paid, not just the initial deposit. Recording a payment (in `InvoiceList`) appends to `payments[]`, adds to `depositAmount`, and recomputes `status` (`pending` / `partial` / `paid`). Older invoices may have no `payments` array — code synthesizes a single "Initial Deposit" record from `depositAmount` in that case (see `InvoiceList` and `PaymentModal`). Quantities and discounts may be decimals.
 - **PDF + sharing**: `InvoicePDF.tsx` is an `@react-pdf/renderer` document. `InvoiceList` calls `pdf(<InvoicePDF/>).toBlob()` and shares the file via `navigator.share` (WhatsApp on mobile), with a download fallback. The business logo is stored as a data URL in `businessProfile.logoUrl` so it works offline and in the PDF.
 - **isSynced**: invoices carry an `isSynced` flag for a planned remote sync (Supabase env vars in `.env.example`), but no sync code exists yet.
@@ -32,7 +32,7 @@ Offline-first invoicing PWA for Aso Oke (Nigerian textile) merchants. React 18 +
 
 ## Style conventions (from `.cursorrules`)
 
-Note: `.cursorrules` mentions React 19, Supabase, and a `src/features/...` layout — the actual code uses React 18, no Supabase, and `src/components/<area>/`. Follow the code.
+Note: `.cursorrules` mentions a `src/features/...` layout; the actual code uses `src/components/<area>/`. Follow the code.
 
 - Dark glassmorphism UI (`GlassCard`, `bg-white/5`, `border-white/10`, slate/indigo palette), Framer Motion for animation (`AnimatePresence` for unmounts, `layout` for lists).
 - Tailwind v4: theme tokens go in `@theme` in `src/index.css`; there is no `tailwind.config`.

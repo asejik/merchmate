@@ -58,7 +58,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (tab: string) => void })
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-white">Dashboard</h1>
           <p className="text-slate-400 mt-1">
-            {data?.profile ? `Welcome back, ${data.profile.ownerName || 'Merchant'}` : 'Overview'}
+            {data?.profile ? `Welcome back, ${data.profile.ownerName || 'there'}` : 'Overview'}
           </p>
         </div>
 

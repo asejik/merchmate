@@ -25,10 +25,9 @@ export default defineConfig({
         enabled: false // Disable PWA logic in local dev to prevent caching issues
       },
       manifest: {
-        // UPDATE THESE LINES WITH YOUR CHOSEN NAME
         name: 'MerchMate - Smart Invoicing',
         short_name: 'MerchMate',
-        description: 'Professional offline invoicing for businesses.',
+        description: 'Offline-first invoicing for small businesses. Create, share and track invoices from your phone.',
 
         theme_color: '#ffffff',
         background_color: '#ffffff',

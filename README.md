@@ -1,6 +1,6 @@
-# Aso Oke Invoicing App (PWA)
+# MerchMate: Smart Invoicing (PWA)
 
-A modern, offline-first Progressive Web App (PWA) designed to help textile businesses and freelancers manage clients, track payments, and generate professional PDF invoices instantly—even without an internet connection.
+A modern, offline-first Progressive Web App (PWA) designed to help small businesses and freelancers manage clients, track payments, and generate professional PDF invoices instantly—even without an internet connection.
 
 ![App Screenshot](https://via.placeholder.com/800x400?text=App+Screenshot+Placeholder)
 
@@ -34,8 +34,8 @@ Follow these steps to run the project locally.
 
 ### 1. Clone the repository
 ```bash
-git clone [https://github.com/YOUR_USERNAME/asooke-invoice-app.git](https://github.com/YOUR_USERNAME/asooke-invoice-app.git)
-cd asooke-invoice-app
+git clone https://github.com/YOUR_USERNAME/merchmate.git
+cd merchmate
 2. Install Dependencies
 Note: This project strictly uses React 18 to ensure compatibility with the PDF renderer.
 
@@ -92,4 +92,4 @@ Open a Pull Request.
 📄 License
 Distributed under the MIT License. See LICENSE for more information.
 
-Built with ❤️ for the Aso Oke Industry.
+Built with ❤️ for small businesses.
