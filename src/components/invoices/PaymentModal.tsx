@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { GlassCard } from '../ui/GlassCard';
-import { X, Save, History, Calculator } from 'lucide-react'; // Added History icon
-import type { Invoice, PaymentRecord } from '../../types';
+import { X, Save, History, Calculator } from 'lucide-react';
+import type { Invoice } from '../../types';
+import { formatMoney } from '../../lib/currency';
+import { getBalance, getPaymentHistory } from '../../lib/invoice';
 
 interface Props {
   invoice: Invoice;
@@ -13,12 +15,9 @@ export function PaymentModal({ invoice, onClose, onSave }: Props) {
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
 
-  // Backward compatibility: If we have a deposit but no history array, create a fake one
-  const history: PaymentRecord[] = invoice.payments || (invoice.depositAmount > 0 ? [
-    { id: 'initial', date: new Date(invoice.dateIssued).toISOString(), amount: invoice.depositAmount, note: 'Initial Deposit' }
-  ] : []);
-
-  const remaining = invoice.grandTotal - invoice.depositAmount;
+  const history = getPaymentHistory(invoice);
+  const remaining = getBalance(invoice);
+  const money = (value: number) => formatMoney(value, invoice.currency);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +38,7 @@ export function PaymentModal({ invoice, onClose, onSave }: Props) {
             <Calculator size={20} className="text-indigo-400" />
             Record Payment
           </h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-white">
+          <button onClick={onClose} className="text-slate-400 hover:text-white" aria-label="Close">
             <X size={20} />
           </button>
         </div>
@@ -54,14 +53,14 @@ export function PaymentModal({ invoice, onClose, onSave }: Props) {
               <p className="text-sm text-slate-500 italic">No payments recorded yet.</p>
             ) : (
               <div className="space-y-2">
-                {history.map((rec, i) => (
-                  <div key={rec.id || i} className="flex justify-between items-center text-sm p-2 rounded bg-white/5 border border-white/5">
+                {history.map((rec) => (
+                  <div key={rec.id} className="flex justify-between items-center text-sm p-2 rounded bg-white/5 border border-white/5">
                     <div>
                       <span className="text-slate-300 block">{new Date(rec.date).toLocaleDateString()}</span>
                       <span className="text-[10px] text-slate-500">{rec.note || 'Payment'}</span>
                     </div>
                     <span className="text-green-400 font-mono font-bold">
-                      +{invoice.currency} {rec.amount.toLocaleString()}
+                      +{money(rec.amount)}
                     </span>
                   </div>
                 ))}
@@ -73,16 +72,16 @@ export function PaymentModal({ invoice, onClose, onSave }: Props) {
           <div className="bg-black/40 rounded-xl p-4 mb-6 border border-white/10">
             <div className="flex justify-between text-sm text-slate-400 mb-1">
               <span>Grand Total</span>
-              <span>{invoice.currency} {invoice.grandTotal.toLocaleString()}</span>
+              <span>{money(invoice.grandTotal)}</span>
             </div>
             <div className="flex justify-between text-sm text-green-400 mb-2">
               <span>Total Paid</span>
-              <span>- {invoice.currency} {invoice.depositAmount.toLocaleString()}</span>
+              <span>-{money(invoice.depositAmount)}</span>
             </div>
             <div className="h-px bg-white/10 my-2" />
             <div className="flex justify-between text-lg font-bold text-white">
               <span>Balance Due</span>
-              <span className="text-orange-400">{invoice.currency} {remaining.toLocaleString()}</span>
+              <span className="text-orange-400">{money(remaining)}</span>
             </div>
           </div>
 
@@ -95,6 +94,8 @@ export function PaymentModal({ invoice, onClose, onSave }: Props) {
                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold">{invoice.currency}</span>
                    <input
                     type="number"
+                    step="any"
+                    min="0"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     className="w-full bg-indigo-500/10 border border-indigo-500/50 rounded-xl px-4 py-3 pl-10 text-xl font-bold text-white focus:outline-none focus:border-indigo-500 transition-all placeholder-indigo-500/30"
@@ -124,7 +125,7 @@ export function PaymentModal({ invoice, onClose, onSave }: Props) {
             </form>
           ) : (
             <div className="text-center p-4 bg-green-500/10 border border-green-500/20 rounded-xl">
-              <span className="text-green-400 font-bold">Invoiced Fully Paid ✅</span>
+              <span className="text-green-400 font-bold">Invoice Fully Paid ✅</span>
             </div>
           )}
         </div>

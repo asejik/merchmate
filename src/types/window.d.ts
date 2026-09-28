@@ -1,7 +1,7 @@
-export {};
+import type { Buffer } from 'buffer';
 
 declare global {
   interface Window {
-    Buffer: any;
+    Buffer: typeof Buffer;
   }
 }

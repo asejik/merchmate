@@ -3,10 +3,12 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
 import { GlassCard } from '../ui/GlassCard';
 import { TrendingUp, Clock, FileText, Wallet, AlertCircle } from 'lucide-react';
-import type { CurrencyCode } from '../../types';
+import type { AppTab, CurrencyCode } from '../../types';
+import { CURRENCY_CODES, formatMoney } from '../../lib/currency';
+import { getAmountCollected, getBalance } from '../../lib/invoice';
 import { clsx } from 'clsx';
 
-export function Dashboard({ onNavigate }: { onNavigate: (tab: string) => void }) {
+export function Dashboard({ onNavigate }: { onNavigate: (tab: AppTab) => void }) {
   const [currency, setCurrency] = useState<CurrencyCode>('NGN');
 
   // 1. Fetch Invoices & Profile
@@ -24,21 +26,11 @@ export function Dashboard({ onNavigate }: { onNavigate: (tab: string) => void })
     // Filter by currency
     const filtered = data.invoices.filter(inv => inv.currency === currency);
 
-    let collected = 0;
-    let pending = 0;
-
-    filtered.forEach(inv => {
-      // Logic: If Paid, collected is full amount. If Partial/Pending, collected is just deposit.
-      const isPaid = inv.status === 'paid';
-      const cashIn = isPaid ? inv.grandTotal : inv.depositAmount;
-      const balance = inv.grandTotal - cashIn;
-
-      collected += cashIn;
-      pending += balance;
-    });
+    const collected = filtered.reduce((sum, inv) => sum + getAmountCollected(inv), 0);
+    const pending = filtered.reduce((sum, inv) => sum + getBalance(inv), 0);
 
     // Get 3 most recent invoices with customer names
-    const recent = filtered
+    const recent = [...filtered]
       .sort((a, b) => new Date(b.dateIssued).getTime() - new Date(a.dateIssued).getTime())
       .slice(0, 3)
       .map(inv => {
@@ -48,8 +40,6 @@ export function Dashboard({ onNavigate }: { onNavigate: (tab: string) => void })
 
     return { collected, pending, count: filtered.length, recent };
   }, [data, currency]);
-
-  const CURRENCIES: CurrencyCode[] = ['NGN', 'USD', 'GBP', 'EUR'];
 
   return (
     <div className="space-y-8 pb-28">
@@ -63,7 +53,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (tab: string) => void })
         </div>
 
         <div className="bg-white/5 p-1 rounded-lg inline-flex">
-          {CURRENCIES.map(c => (
+          {CURRENCY_CODES.map(c => (
             <button
               key={c}
               onClick={() => setCurrency(c)}
@@ -86,8 +76,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (tab: string) => void })
           </div>
           <h3 className="text-slate-400 text-xs font-medium uppercase tracking-wider">Cash Collected</h3>
           <p className="text-3xl font-bold text-white mt-2">
-            {currency === 'NGN' ? '₦' : currency === 'USD' ? '$' : currency === 'GBP' ? '£' : '€'}
-            {stats.collected.toLocaleString()}
+            {formatMoney(stats.collected, currency)}
           </p>
           <div className="mt-4 text-xs text-green-400 flex items-center gap-1">
             <TrendingUp size={14} />
@@ -101,8 +90,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (tab: string) => void })
           </div>
           <h3 className="text-slate-400 text-xs font-medium uppercase tracking-wider">Pending / Outstanding</h3>
           <p className="text-3xl font-bold text-orange-400 mt-2">
-            {currency === 'NGN' ? '₦' : currency === 'USD' ? '$' : currency === 'GBP' ? '£' : '€'}
-            {stats.pending.toLocaleString()}
+            {formatMoney(stats.pending, currency)}
           </p>
           <div className="mt-4 text-xs text-orange-400/80 flex items-center gap-1">
             <AlertCircle size={14} />
@@ -141,7 +129,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (tab: string) => void })
               </div>
               <div className="text-right">
                 <p className="text-white font-bold text-sm">
-                  {inv.currency} {inv.grandTotal.toLocaleString()}
+                  {formatMoney(inv.grandTotal, inv.currency)}
                 </p>
                 <p className={clsx(
                   "text-[10px] uppercase font-bold",

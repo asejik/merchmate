@@ -1,4 +1,6 @@
 export type CurrencyCode = 'NGN' | 'USD' | 'GBP' | 'EUR';
+export type DiscountType = 'percentage' | 'fixed';
+export type InvoiceStatus = 'draft' | 'pending' | 'paid' | 'partial';
 
 export interface BusinessProfile {
   id?: number; // Dexie uses auto-incrementing numbers by default
@@ -43,22 +45,22 @@ export interface Invoice {
   subtotal: number;
   discount: number;
   discountRate?: number;
-  discountType?: 'percentage' | 'fixed';
+  discountType?: DiscountType;
   tax: number;
   grandTotal: number;
-  depositAmount: number;
+  depositAmount: number; // Running total of all payments received, not just the first deposit
   payments?: PaymentRecord[];
 
   // Meta
   currency: CurrencyCode;
-  status: 'draft' | 'pending' | 'paid' | 'partial';
+  status: InvoiceStatus;
   dateIssued: Date;
   dueDate?: Date;
   notes?: string;
 
   // Sync Status (Critical for Offline Mode)
   isSynced: boolean;
-  createdAt?: Date;
+  createdAt: Date; // Backfilled for pre-v2 invoices by the Dexie upgrade
   updatedAt: Date;
 }
 
@@ -68,3 +70,4 @@ export interface PaymentRecord {
   amount: number;
   note?: string; // Optional: e.g., "Bank Transfer", "Cash"
 }
+export type AppTab = 'dashboard' | 'invoices' | 'create' | 'customers' | 'settings';

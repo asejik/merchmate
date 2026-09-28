@@ -7,6 +7,7 @@ import { GlassCard } from '../ui/GlassCard';
 import { Save, Upload, Loader2, FileText } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { BusinessProfile } from '../../types';
+import { DEFAULT_INVOICE_TERMS } from '../../lib/invoice';
 
 // 1. Define the Schema
 const profileSchema = z.object({
@@ -24,7 +25,6 @@ const profileSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
-const DEFAULT_TERMS = "Payment is due by the date shown on this invoice.\nThank you for your business.";
 
 export function BusinessProfileForm() {
   const [loading, setLoading] = useState(false);
@@ -35,7 +35,7 @@ export function BusinessProfileForm() {
   const { register, handleSubmit, setValue, formState: { errors } } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      invoiceFooterText: DEFAULT_TERMS
+      invoiceFooterText: DEFAULT_INVOICE_TERMS
     }
   });
 
@@ -53,7 +53,7 @@ export function BusinessProfileForm() {
         setValue('accountNumber', profile.accountNumber);
         setValue('accountName', profile.accountName);
         // Load saved terms or use default
-        setValue('invoiceFooterText', profile.invoiceFooterText || DEFAULT_TERMS);
+        setValue('invoiceFooterText', profile.invoiceFooterText || DEFAULT_INVOICE_TERMS);
 
         if (profile.logoUrl) {
           setLogoPreview(profile.logoUrl);

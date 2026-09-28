@@ -1,4 +1,4 @@
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { db } from '../../db';
@@ -28,7 +28,7 @@ interface Props {
 }
 
 export function CustomerForm({ onComplete, onCancel, initialData }: Props) {
-  const { register, handleSubmit, watch, formState: { errors } } = useForm<CustomerFormValues>({
+  const { register, handleSubmit, control, formState: { errors } } = useForm<CustomerFormValues>({
     resolver: zodResolver(customerSchema),
     defaultValues: {
       isInternational: false,
@@ -37,7 +37,7 @@ export function CustomerForm({ onComplete, onCancel, initialData }: Props) {
   });
 
   // Watch the checkbox to toggle UI
-  const isInternational = watch('isInternational');
+  const isInternational = useWatch({ control, name: 'isInternational' });
 
   const onSubmit = async (data: CustomerFormValues) => {
     try {
@@ -48,6 +48,7 @@ export function CustomerForm({ onComplete, onCancel, initialData }: Props) {
       }
       onComplete();
     } catch (err) {
+      console.error(err);
       alert("Failed to save customer");
     }
   };

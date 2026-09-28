@@ -2,43 +2,55 @@ import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
 import { GlassCard } from '../ui/GlassCard';
-import { FileText, Download, Share2, CreditCard, Send, History } from 'lucide-react'; // Added History icon
-import { pdf } from '@react-pdf/renderer';
-import { InvoicePDF } from './InvoicePDF';
+import { FileText, Download, Share2, CreditCard, Send, History } from 'lucide-react';
 import { PaymentModal } from './PaymentModal';
-import type { Invoice, PaymentRecord } from '../../types';
+import type { Invoice } from '../../types';
+import { formatMoney } from '../../lib/currency';
+import { applyPayment, getBalance, getPaymentHistory } from '../../lib/invoice';
+import { downloadBlob, renderInvoicePdf, shareOrDownload } from '../../lib/pdf';
+
+interface InvoiceWithCustomer extends Invoice {
+  customerName: string;
+}
+
+interface ShareState {
+  file: File;
+  invoice: Invoice;
+  afterPayment: boolean;
+}
+
+async function buildPdf(invoice: Invoice): Promise<Blob | null> {
+  const business = await db.businessProfile.orderBy('id').first();
+  const customer = await db.customers.get(invoice.customerId);
+  if (!business || !customer) {
+    alert(!business ? "Add your business details in Settings first." : "This invoice's client no longer exists.");
+    return null;
+  }
+  return renderInvoicePdf(invoice, business, customer);
+}
 
 export function InvoiceList() {
   const [generatingId, setGeneratingId] = useState<string | null>(null);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
-  const [shareModal, setShareModal] = useState<{ file: File, invoice: any } | null>(null);
+  const [shareModal, setShareModal] = useState<ShareState | null>(null);
 
-  const invoices = useLiveQuery(async () => {
-    const allInvoices = await db.invoices.reverse().toArray();
-    const allCustomers = await db.customers.toArray();
-
-    return allInvoices.map(inv => {
-      const customer = allCustomers.find(c => c.id === inv.customerId);
-      return {
-        ...inv,
-        customerName: customer?.name || 'Unknown',
-        customerPhone: customer?.phone || ''
-      };
-    });
+  const invoices = useLiveQuery(async (): Promise<InvoiceWithCustomer[]> => {
+    const [allInvoices, allCustomers] = await Promise.all([
+      db.invoices.orderBy('createdAt').reverse().toArray(),
+      db.customers.toArray(),
+    ]);
+    const names = new Map(allCustomers.map(c => [c.id, c.name]));
+    return allInvoices.map(inv => ({ ...inv, customerName: names.get(inv.customerId) ?? 'Unknown' }));
   });
 
-  const handlePrepareShare = async (invoice: any) => {
+  const handlePrepareShare = async (invoice: Invoice, afterPayment = false) => {
+    if (!invoice.id) return;
     setGeneratingId(invoice.id);
     try {
-      const business = await db.businessProfile.orderBy('id').first();
-      const customer = await db.customers.get(invoice.customerId);
-      if (!business || !customer) {
-        alert("Missing business or customer data!");
-        return;
-      }
-      const blob = await pdf(<InvoicePDF invoice={invoice} business={business} customer={customer} />).toBlob();
+      const blob = await buildPdf(invoice);
+      if (!blob) return;
       const file = new File([blob], `${invoice.invoiceNumber}.pdf`, { type: 'application/pdf' });
-      setShareModal({ file, invoice });
+      setShareModal({ file, invoice, afterPayment });
     } catch (error) {
       console.error("Error generating PDF:", error);
       alert(`Error: ${(error as Error).message}`);
@@ -49,70 +61,42 @@ export function InvoiceList() {
 
   const executeShare = async () => {
     if (!shareModal) return;
+    const { file, invoice } = shareModal;
     try {
-      if (navigator.canShare && navigator.canShare({ files: [shareModal.file] })) {
-        await navigator.share({
-          files: [shareModal.file],
-          title: `Invoice #${shareModal.invoice.invoiceNumber}`,
-          text: `Hello, here is the updated invoice #${shareModal.invoice.invoiceNumber}.`,
-        });
-      } else {
-        const url = URL.createObjectURL(shareModal.file);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = shareModal.file.name;
-        link.click();
-      }
-    } catch (error) { console.error(error); } finally { setShareModal(null); }
+      await shareOrDownload(file, `Invoice #${invoice.invoiceNumber}`, `Hello, here is invoice #${invoice.invoiceNumber}.`);
+    } catch (error) {
+      // AbortError just means the user closed the share sheet
+      if ((error as Error).name !== 'AbortError') console.error(error);
+    } finally {
+      setShareModal(null);
+    }
   };
 
-  const handlePaymentUpdate = async (amountToAdd: number, note: string) => {
-    if (!selectedInvoice || !selectedInvoice.id) return;
+  const handlePaymentUpdate = async (amount: number, note: string) => {
+    if (!selectedInvoice?.id) return;
     try {
-      const newDeposit = selectedInvoice.depositAmount + amountToAdd;
-      const isPaid = newDeposit >= selectedInvoice.grandTotal;
-      const isPartial = newDeposit > 0 && newDeposit < selectedInvoice.grandTotal;
-      const newStatus = isPaid ? 'paid' : (isPartial ? 'partial' : 'pending');
-
-      const newPayment: PaymentRecord = {
-        id: crypto.randomUUID(),
-        date: new Date().toISOString(),
-        amount: amountToAdd,
-        note: note || 'Payment'
-      };
-
-      const existingPayments = selectedInvoice.payments || (selectedInvoice.depositAmount > 0 ? [
-         { id: 'legacy', date: selectedInvoice.dateIssued.toISOString(), amount: selectedInvoice.depositAmount, note: 'Initial Deposit' }
-      ] : []);
-
-      const updatedPayments = [...existingPayments, newPayment];
-
-      await db.invoices.update(selectedInvoice.id, {
-        depositAmount: newDeposit,
-        payments: updatedPayments,
-        status: newStatus,
-        updatedAt: new Date()
-      });
-
-      const updatedInvoice = { ...selectedInvoice, depositAmount: newDeposit, payments: updatedPayments, status: newStatus };
+      const changes = applyPayment(selectedInvoice, amount, note);
+      await db.invoices.update(selectedInvoice.id, changes);
       setSelectedInvoice(null);
-      await handlePrepareShare(updatedInvoice);
-    } catch (error) { console.error(error); alert("Failed to update payment"); }
+      await handlePrepareShare({ ...selectedInvoice, ...changes }, true);
+    } catch (error) {
+      console.error(error);
+      alert("Failed to update payment");
+    }
   };
 
-  const handleDownload = async (invoice: any) => {
+  const handleDownload = async (invoice: Invoice) => {
+    if (!invoice.id) return;
     setGeneratingId(invoice.id);
     try {
-      const business = await db.businessProfile.orderBy('id').first();
-      const customer = await db.customers.get(invoice.customerId);
-      if (!business || !customer) return;
-      const blob = await pdf(<InvoicePDF invoice={invoice} business={business} customer={customer} />).toBlob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${invoice.invoiceNumber}.pdf`;
-      link.click();
-    } catch (err) { console.error(err); } finally { setGeneratingId(null); }
+      const blob = await buildPdf(invoice);
+      if (blob) downloadBlob(blob, `${invoice.invoiceNumber}.pdf`);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to generate PDF");
+    } finally {
+      setGeneratingId(null);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -140,11 +124,9 @@ export function InvoiceList() {
       </div>
 
       <div className="grid gap-4">
-        {invoices.map((inv: any) => {
-          // Calculate history on fly for display
-          const displayHistory = inv.payments || (inv.depositAmount > 0 ? [
-             { id: 'legacy', date: inv.dateIssued, amount: inv.depositAmount, note: 'Deposit' }
-          ] : []);
+        {invoices.map((inv) => {
+          const history = getPaymentHistory(inv);
+          const isGenerating = generatingId === inv.id;
 
           return (
             <GlassCard key={inv.id} className="p-4 flex flex-col gap-4 group">
@@ -162,7 +144,7 @@ export function InvoiceList() {
                       </span>
                       {inv.status !== 'paid' && (
                         <span className="text-xs font-mono text-slate-300">
-                          Due: {inv.currency} {(inv.grandTotal - inv.depositAmount).toLocaleString()}
+                          Due: {formatMoney(getBalance(inv), inv.currency)}
                         </span>
                       )}
                     </div>
@@ -171,43 +153,43 @@ export function InvoiceList() {
 
                 <div className="flex items-center gap-2 w-full md:w-auto justify-end">
                   {inv.status !== 'paid' && (
-                    <button onClick={() => setSelectedInvoice(inv)} className="p-2 hover:bg-green-500/10 rounded-lg text-green-400 transition-colors" title="Record Payment">
+                    <button onClick={() => setSelectedInvoice(inv)} className="p-2 hover:bg-green-500/10 rounded-lg text-green-400 transition-colors" title="Record Payment" aria-label="Record payment">
                       <CreditCard size={20} />
                     </button>
                   )}
                   <button
                     onClick={() => handlePrepareShare(inv)}
-                    disabled={generatingId === inv.id}
+                    disabled={isGenerating}
                     className="p-2 hover:bg-green-500/10 rounded-lg text-green-500 transition-colors"
                     title="Share PDF"
+                    aria-label="Share PDF"
                   >
-                    {generatingId === inv.id ? (
+                    {isGenerating ? (
                         <div className="h-5 w-5 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
                     ) : (
                         <Share2 size={20} />
                     )}
                   </button>
-                  <button onClick={() => handleDownload(inv)} className="p-2 hover:bg-white/10 rounded-lg text-indigo-400 transition-colors" title="Download PDF">
+                  <button onClick={() => handleDownload(inv)} disabled={isGenerating} className="p-2 hover:bg-white/10 rounded-lg text-indigo-400 transition-colors" title="Download PDF" aria-label="Download PDF">
                     <Download size={20} />
                   </button>
                 </div>
               </div>
 
-              {/* NEW: IN-APP PAYMENT HISTORY SECTION */}
-              {displayHistory.length > 0 && (
+              {history.length > 0 && (
                 <div className="mt-2 pt-3 border-t border-white/5">
                   <div className="flex items-center gap-2 mb-2 text-xs font-bold text-slate-500 uppercase">
                     <History size={12} /> Payment History
                   </div>
                   <div className="space-y-1">
-                    {displayHistory.map((rec: PaymentRecord, i: number) => (
-                      <div key={i} className="flex justify-between text-xs px-2 py-1 rounded bg-white/5">
+                    {history.map((rec) => (
+                      <div key={rec.id} className="flex justify-between text-xs px-2 py-1 rounded bg-white/5">
                         <span className="text-slate-400">
                            {new Date(rec.date).toLocaleDateString()}
                            {rec.note && <span className="opacity-50 ml-2 text-[10px] uppercase border border-slate-600 rounded px-1">{rec.note}</span>}
                         </span>
                         <span className="font-mono text-green-400">
-                          +{inv.currency} {Number(rec.amount).toLocaleString()}
+                          +{formatMoney(rec.amount, inv.currency)}
                         </span>
                       </div>
                     ))}
@@ -229,9 +211,13 @@ export function InvoiceList() {
             <div className="mx-auto w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center mb-4 text-green-400">
               <Share2 size={24} />
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">Invoice Updated!</h3>
+            <h3 className="text-xl font-bold text-white mb-2">
+              {shareModal.afterPayment ? 'Invoice Updated!' : 'PDF Ready'}
+            </h3>
             <p className="text-slate-400 text-sm mb-6">
-              The new balance has been calculated. Share the updated PDF now.
+              {shareModal.afterPayment
+                ? 'The new balance has been calculated. Share the updated PDF now.'
+                : `Invoice #${shareModal.invoice.invoiceNumber} is ready to send.`}
             </p>
             <div className="space-y-3">
               <button
@@ -239,7 +225,7 @@ export function InvoiceList() {
                 className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-500 text-white py-3 rounded-xl font-bold shadow-lg shadow-green-500/20 active:scale-95 transition-all"
               >
                 <Send size={18} />
-                Share Update
+                {shareModal.afterPayment ? 'Share Update' : 'Share'}
               </button>
               <button onClick={() => setShareModal(null)} className="text-slate-500 hover:text-white text-sm py-2">
                 Done

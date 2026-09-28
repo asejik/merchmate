@@ -21,6 +21,11 @@ export default defineConfig({
     // 2. PWA Configuration
     VitePWA({
       registerType: 'autoUpdate',
+      workbox: {
+        // The lazily loaded PDF engine (~1.3 MB) must be precached or PDFs fail offline.
+        // Workbox silently skips files above its 2 MB default.
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+      },
       devOptions: {
         enabled: false // Disable PWA logic in local dev to prevent caching issues
       },

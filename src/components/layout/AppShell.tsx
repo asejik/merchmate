@@ -1,16 +1,16 @@
 import { LayoutDashboard, FileText, Settings, PlusCircle, Menu, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
+import type { LucideIcon } from 'lucide-react';
+import type { AppTab } from '../../types';
 
 interface AppShellProps {
   children: React.ReactNode;
-  activeTab: string;
-  onTabChange: (id: string) => void;
+  activeTab: AppTab;
+  onTabChange: (id: AppTab) => void;
 }
 
 export function AppShell({ children, activeTab, onTabChange }: AppShellProps) {
-  // REMOVED: const [activeTab, setActiveTab] = useState('dashboard');
-
-  const navItems = [
+  const navItems: { id: AppTab; label: string; icon: LucideIcon; isPrimary?: boolean }[] = [
     { id: 'dashboard', label: 'Home', icon: LayoutDashboard },
     { id: 'invoices', label: 'Invoices', icon: FileText },
     { id: 'create', label: 'New', icon: PlusCircle, isPrimary: true },
@@ -40,6 +40,8 @@ export function AppShell({ children, activeTab, onTabChange }: AppShellProps) {
               <button
                 key={item.id}
                 onClick={() => onTabChange(item.id)}
+                aria-label={item.label}
+                aria-current={activeTab === item.id ? 'page' : undefined}
                 className={`relative flex flex-col items-center justify-center p-2 rounded-xl transition-all duration-200 ${
                   activeTab === item.id ? 'text-indigo-400' : 'text-slate-400 hover:text-slate-200'
                 }`}
@@ -74,6 +76,8 @@ export function AppShell({ children, activeTab, onTabChange }: AppShellProps) {
             <button
               key={item.id}
               onClick={() => onTabChange(item.id)}
+              aria-label={item.label}
+              aria-current={activeTab === item.id ? 'page' : undefined}
               className={`group relative flex items-center justify-center p-3 rounded-xl transition-all ${
                 activeTab === item.id ? 'bg-white/10 text-indigo-400' : 'text-slate-400 hover:bg-white/5 hover:text-slate-100'
               }`}

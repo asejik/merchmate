@@ -6,12 +6,22 @@ import { CustomerList } from './components/customers/CustomerList';
 import { InvoiceForm } from './components/invoices/InvoiceForm';
 import { InvoiceList } from './components/invoices/InvoiceList';
 import { Dashboard } from './components/dashboard/Dashboard';
+import type { AppTab } from './types';
+
+const TABS: AppTab[] = ['dashboard', 'invoices', 'create', 'customers', 'settings'];
+const TAB_STORAGE_KEY = 'activeTab';
+
+function readSavedTab(): AppTab {
+  try {
+    const saved = localStorage.getItem(TAB_STORAGE_KEY);
+    return TABS.find(tab => tab === saved) ?? 'dashboard';
+  } catch {
+    return 'dashboard';
+  }
+}
 
 function App() {
-  // FIX: Initialize state from localStorage if available, otherwise default to 'dashboard'
-  const [activeTab, setActiveTab] = useState(() => {
-    return localStorage.getItem('activeTab') || 'dashboard';
-  });
+  const [activeTab, setActiveTab] = useState<AppTab>(readSavedTab);
 
   const [status, setStatus] = useState('Checking DB...');
 
@@ -21,15 +31,19 @@ function App() {
         await db.open();
         setStatus('Ready');
       } catch (error) {
-        setStatus(`Error`);
+        console.error(error);
+        setStatus('Error');
       }
     }
     initDB();
   }, []);
 
-  // FIX: Save activeTab to localStorage whenever it changes
   useEffect(() => {
-    localStorage.setItem('activeTab', activeTab);
+    try {
+      localStorage.setItem(TAB_STORAGE_KEY, activeTab);
+    } catch {
+      // Storage can be unavailable (private mode); remembering the tab is optional
+    }
   }, [activeTab]);
 
   const renderContent = () => {
