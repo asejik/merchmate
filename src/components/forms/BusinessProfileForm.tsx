@@ -8,6 +8,8 @@ import { Save, Upload, Loader2, FileText, Receipt } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { BusinessProfile } from '../../types';
 import { DEFAULT_INVOICE_TERMS } from '../../lib/invoice';
+import { DEFAULT_COUNTRY_CODE } from '../../lib/whatsapp';
+import { BackupCard } from './BackupCard';
 
 // 1. Define the Schema
 const profileSchema = z.object({
@@ -24,6 +26,7 @@ const profileSchema = z.object({
   taxLabel: z.string().optional(),
   defaultTaxRate: z.coerce.number().min(0, "Must be 0 or more").max(100, "Must be 100 or less"),
   defaultDueDays: z.string(), // '' = no due date by default
+  defaultCountryCode: z.string().trim().regex(/^\+?\d{1,4}$/, "Digits only, e.g. 234"),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -42,6 +45,7 @@ export function BusinessProfileForm() {
       taxLabel: 'VAT',
       defaultTaxRate: 0,
       defaultDueDays: '',
+      defaultCountryCode: DEFAULT_COUNTRY_CODE,
     }
   });
 
@@ -63,6 +67,7 @@ export function BusinessProfileForm() {
         setValue('taxLabel', profile.taxLabel || 'VAT');
         setValue('defaultTaxRate', profile.defaultTaxRate ?? 0);
         setValue('defaultDueDays', profile.defaultDueDays?.toString() ?? '');
+        setValue('defaultCountryCode', profile.defaultCountryCode ?? DEFAULT_COUNTRY_CODE);
 
         if (profile.logoUrl) {
           setLogoPreview(profile.logoUrl);
@@ -105,6 +110,7 @@ export function BusinessProfileForm() {
       const profileData: BusinessProfile = {
         ...rest,
         taxLabel: rest.taxLabel?.trim() || 'VAT',
+        defaultCountryCode: rest.defaultCountryCode.replace(/\D/g, ''),
         defaultDueDays: defaultDueDays === '' ? undefined : Number(defaultDueDays),
         logoUrl: finalLogoUrl || undefined,
         // Ensure ID 1 is always used for the singleton profile
@@ -237,6 +243,12 @@ export function BusinessProfileForm() {
                 <option value="30">Net 30 days</option>
               </select>
             </div>
+            <div>
+              <label className={labelClass}>Phone Country Code</label>
+              <input {...register('defaultCountryCode')} className={inputClass} placeholder="234" inputMode="numeric" />
+              {errors.defaultCountryCode && <span className="text-red-400 text-xs">{errors.defaultCountryCode.message}</span>}
+              <p className="text-[11px] text-slate-500 mt-1">Used for WhatsApp reminders to local numbers like 0803…</p>
+            </div>
           </div>
         </GlassCard>
 
@@ -278,6 +290,8 @@ export function BusinessProfileForm() {
         </div>
 
       </form>
+
+      <BackupCard />
     </div>
   );
 }

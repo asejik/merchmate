@@ -47,6 +47,8 @@ function App() {
       try {
         await db.open();
         setStatus('Ready');
+        // Ask the browser not to evict our IndexedDB under storage pressure (best effort)
+        navigator.storage?.persist?.().catch(() => undefined);
       } catch (error) {
         console.error(error);
         setStatus('Error');

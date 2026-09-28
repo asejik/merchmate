@@ -2,7 +2,8 @@ import { useState, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
 import { GlassCard } from '../ui/GlassCard';
-import { TrendingUp, Clock, FileText, Wallet, AlertCircle } from 'lucide-react';
+import { TrendingUp, Clock, FileText, Wallet, AlertCircle, DatabaseBackup } from 'lucide-react';
+import { isBackupDue } from '../../db/backup';
 import type { AppTab, CurrencyCode } from '../../types';
 import { CURRENCY_CODES, formatMoney } from '../../lib/currency';
 import { getAmountCollected, getBalance, getDisplayStatus, todayInputValue } from '../../lib/invoice';
@@ -70,6 +71,18 @@ export function Dashboard({ onNavigate }: { onNavigate: (tab: AppTab) => void })
           ))}
         </div>
       </div>
+
+      {(data?.invoices.length ?? 0) > 0 && isBackupDue() && (
+        <button
+          onClick={() => onNavigate('settings')}
+          className="w-full flex items-center gap-3 p-4 rounded-2xl border border-orange-500/20 bg-orange-500/10 text-left hover:bg-orange-500/15 transition-colors"
+        >
+          <DatabaseBackup size={20} className="text-orange-300 shrink-0" />
+          <span className="text-sm text-orange-100">
+            <strong>Back up your data.</strong> Everything is stored only on this device. Save a backup in Settings &rarr;
+          </span>
+        </button>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

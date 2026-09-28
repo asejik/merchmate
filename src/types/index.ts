@@ -18,6 +18,7 @@ export interface BusinessProfile {
   taxLabel?: string; // e.g. "VAT"
   defaultTaxRate?: number; // percent
   defaultDueDays?: number; // payment terms; 0 = due on receipt
+  defaultCountryCode?: string; // for WhatsApp links from local numbers, e.g. "234"
 }
 
 export interface Customer {
@@ -64,6 +65,7 @@ export interface Invoice {
   dateIssued: Date;
   dueDate?: Date;
   notes?: string;
+  lastReminderAt?: Date;
 
   // Sync Status (Critical for Offline Mode)
   isSynced: boolean;

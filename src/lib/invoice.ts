@@ -247,3 +247,26 @@ export function duplicateDraft(invoice: Invoice, invoiceNumber: string, today: s
     depositAmount: 0,
   };
 }
+
+// ---------- Receipts ----------
+
+export interface ReceiptInfo {
+  payment: PaymentRecord;
+  receiptNumber: string; // e.g. "INV-004-R2"
+  paidToDate: number;
+  balanceAfter: number;
+}
+
+/** Details for a receipt for one payment, as of that payment (not today's balance). */
+export function getReceiptInfo(invoice: Invoice, paymentId: string): ReceiptInfo | null {
+  const history = getPaymentHistory(invoice);
+  const index = history.findIndex(p => p.id === paymentId);
+  if (index === -1) return null;
+  const paidToDate = round2(history.slice(0, index + 1).reduce((sum, p) => sum + p.amount, 0));
+  return {
+    payment: history[index],
+    receiptNumber: `${invoice.invoiceNumber}-R${index + 1}`,
+    paidToDate,
+    balanceAfter: Math.max(0, round2(invoice.grandTotal - paidToDate)),
+  };
+}
