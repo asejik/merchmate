@@ -2,21 +2,26 @@ import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
 import { GlassCard } from '../ui/GlassCard';
-import { FileText, Download, Share2, CreditCard, Send, History, Search, MoreVertical, Pencil, Copy, Trash2, MessageCircle, Receipt } from 'lucide-react';
+import { FileText, Download, Share2, CreditCard, Send, History, Search, MoreVertical, Pencil, Copy, Trash2, MessageCircle, Receipt, FileCheck2, Plus } from 'lucide-react';
 import { clsx } from 'clsx';
 import { PaymentModal } from './PaymentModal';
-import type { BusinessProfile, Customer, Invoice } from '../../types';
+import type { BusinessProfile, Customer, Invoice, ListView } from '../../types';
 import { formatMoney } from '../../lib/currency';
-import { applyPayment, getBalance, getDisplayStatus, getPaymentHistory, getReceiptInfo, todayInputValue, type DisplayStatus } from '../../lib/invoice';
+import { applyPayment, getBalance, getDisplayStatus, getPaymentHistory, getReceiptInfo, isQuote, todayInputValue, type DisplayStatus } from '../../lib/invoice';
 import { renderInvoicePdf, renderReceiptPdf } from '../../lib/pdf';
 import { downloadBlob, shareOrDownload } from '../../lib/share';
 import { buildReminderMessage, DEFAULT_COUNTRY_CODE, toWhatsAppNumber, whatsAppLink } from '../../lib/whatsapp';
 
 interface Props {
+  view: ListView;
+  onViewChange: (view: ListView) => void;
   onEdit: (invoiceId: string) => void;
   onDuplicate: (invoiceId: string) => void;
+  onConvert: (quoteId: string) => void;
   onCreate: () => void;
+  onCreateQuote: () => void;
 }
+
 
 interface InvoiceRow extends Invoice {
   customer?: Customer;
@@ -54,6 +59,9 @@ const STATUS_STYLES: Record<DisplayStatus, string> = {
   overdue: 'text-red-400 bg-red-400/10 border-red-400/20',
   pending: 'text-slate-400 bg-slate-400/10 border-slate-400/20',
   draft: 'text-slate-400 bg-slate-400/10 border-slate-400/20',
+  open: 'text-sky-400 bg-sky-400/10 border-sky-400/20',
+  expired: 'text-slate-500 bg-slate-500/10 border-slate-500/20',
+  converted: 'text-green-400 bg-green-400/10 border-green-400/20',
 };
 
 function matchesFilter(row: InvoiceRow, filter: Filter): boolean {
@@ -79,11 +87,12 @@ async function loadParties(invoice: Invoice): Promise<{ business: BusinessProfil
 
 async function invoiceShareFile(invoice: Invoice, business: BusinessProfile, customer: Customer): Promise<ShareFile> {
   const blob = await renderInvoicePdf(invoice, business, customer);
+  const noun = isQuote(invoice) ? 'Quote' : 'Invoice';
   return {
-    label: 'Invoice',
+    label: noun,
     file: new File([blob], `${invoice.invoiceNumber}.pdf`, { type: 'application/pdf' }),
-    title: `Invoice #${invoice.invoiceNumber}`,
-    text: `Hello, here is invoice #${invoice.invoiceNumber}.`,
+    title: `${noun} #${invoice.invoiceNumber}`,
+    text: `Hello, here is ${noun.toLowerCase()} #${invoice.invoiceNumber}.`,
   };
 }
 
@@ -106,7 +115,7 @@ function timeAgo(date: Date): string {
   return `${days} days ago`;
 }
 
-export function InvoiceList({ onEdit, onDuplicate, onCreate }: Props) {
+export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert, onCreate, onCreateQuote }: Props) {
   const [generatingId, setGeneratingId] = useState<string | null>(null);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [shareModal, setShareModal] = useState<ShareState | null>(null);
@@ -148,10 +157,14 @@ export function InvoiceList({ onEdit, onDuplicate, onCreate }: Props) {
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
     return (invoices ?? []).filter(row =>
-      matchesFilter(row, filter) &&
+      isQuote(row) === (view === 'quotes') &&
+      (view === 'quotes' || matchesFilter(row, filter)) &&
       (!term || row.customerName.toLowerCase().includes(term) || row.invoiceNumber.toLowerCase().includes(term))
     );
-  }, [invoices, search, filter]);
+  }, [invoices, search, filter, view]);
+
+  const viewTotal = (invoices ?? []).filter(row => isQuote(row) === (view === 'quotes')).length;
+  const noun = view === 'quotes' ? 'quote' : 'invoice';
 
   /** Runs a PDF job with the row's spinner showing and a readable error on failure. */
   const withGenerating = async (invoice: Invoice, job: () => Promise<void>) => {
@@ -171,7 +184,7 @@ export function InvoiceList({ onEdit, onDuplicate, onCreate }: Props) {
     const parties = await loadParties(invoice);
     if (!parties) return;
     const file = await invoiceShareFile(invoice, parties.business, parties.customer);
-    setShareModal({ heading: 'PDF Ready', description: `Invoice #${invoice.invoiceNumber} is ready to send.`, files: [file] });
+    setShareModal({ heading: 'PDF Ready', description: `${file.title} is ready to send.`, files: [file] });
   });
 
   const handleReceipt = (invoice: Invoice, paymentId: string) => withGenerating(invoice, async () => {
@@ -235,7 +248,8 @@ export function InvoiceList({ onEdit, onDuplicate, onCreate }: Props) {
     setMenuId(null);
     if (!invoice.id) return;
     const paidNote = invoice.depositAmount > 0 ? `\n\nIts ${formatMoney(invoice.depositAmount, invoice.currency)} payment history will also be deleted.` : '';
-    if (!confirm(`Delete invoice #${invoice.invoiceNumber} for ${invoice.customerName}? This cannot be undone.${paidNote}`)) return;
+    const docNoun = isQuote(invoice) ? 'quote' : 'invoice';
+    if (!confirm(`Delete ${docNoun} #${invoice.invoiceNumber} for ${invoice.customerName}? This cannot be undone.${paidNote}`)) return;
     try {
       await db.invoices.delete(invoice.id);
     } catch (err) {
@@ -244,39 +258,61 @@ export function InvoiceList({ onEdit, onDuplicate, onCreate }: Props) {
     }
   };
 
-  if (invoices && invoices.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 text-slate-500">
-        <FileText size={48} className="mb-4 opacity-20" />
-        <p>No invoices created yet.</p>
-        <button onClick={onCreate} className="mt-4 text-indigo-400 hover:text-indigo-300 text-sm font-medium">
-          Create your first invoice &rarr;
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-white">Invoices</h1>
-        <div className="text-sm text-slate-400">
-          {visible.length === invoices?.length ? `Total: ${visible.length}` : `${visible.length} of ${invoices?.length ?? 0}`}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex bg-white/5 rounded-xl p-1 border border-white/10" role="tablist" aria-label="Document type">
+          {(['invoices', 'quotes'] as ListView[]).map(v => (
+            <button
+              key={v}
+              role="tab"
+              aria-selected={view === v}
+              onClick={() => { onViewChange(v); setMenuId(null); }}
+              className={clsx(
+                "px-4 py-1.5 text-lg font-bold rounded-lg transition-all capitalize",
+                view === v ? "bg-white/10 text-white" : "text-slate-500 hover:text-slate-300"
+              )}
+            >
+              {v}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-slate-400 hidden sm:inline">
+            {visible.length === viewTotal ? `Total: ${viewTotal}` : `${visible.length} of ${viewTotal}`}
+          </span>
+          {view === 'quotes' && (
+            <button onClick={onCreateQuote} className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-xl text-sm font-medium transition-all">
+              <Plus size={16} /> New Quote
+            </button>
+          )}
         </div>
       </div>
 
+      {invoices && viewTotal === 0 ? (
+        <div className="flex flex-col items-center justify-center h-64 text-slate-500 text-center">
+          <FileText size={48} className="mb-4 opacity-20" />
+          <p>No {noun}s created yet.</p>
+          {view === 'quotes' && <p className="text-xs mt-1 max-w-xs">Quotes let clients approve a price before you start. Convert one to an invoice in a tap.</p>}
+          <button onClick={view === 'quotes' ? onCreateQuote : onCreate} className="mt-4 text-indigo-400 hover:text-indigo-300 text-sm font-medium">
+            Create your first {noun} &rarr;
+          </button>
+        </div>
+      ) : (
+      <>
       <div className="flex flex-col md:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
           <input
             type="search"
-            placeholder="Search client or invoice #..."
+            placeholder={`Search client or ${noun} #...`}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-white text-sm focus:outline-none focus:border-indigo-500 transition-all"
           />
         </div>
-        <div className="flex bg-white/5 rounded-xl p-1 border border-white/10" role="tablist">
+        {view === 'invoices' && (
+        <div className="flex bg-white/5 rounded-xl p-1 border border-white/10" role="tablist" aria-label="Filter by status">
           {FILTERS.map(f => (
             <button
               key={f.id}
@@ -292,6 +328,7 @@ export function InvoiceList({ onEdit, onDuplicate, onCreate }: Props) {
             </button>
           ))}
         </div>
+        )}
       </div>
 
       {/* Click-outside catcher; lives outside the cards because backdrop-filter traps fixed children */}
@@ -302,7 +339,9 @@ export function InvoiceList({ onEdit, onDuplicate, onCreate }: Props) {
           const history = getPaymentHistory(inv);
           const isGenerating = generatingId === inv.id;
           const statusStyle = STATUS_STYLES[inv.displayStatus];
-          const reminderUrl = inv.status !== 'paid' ? reminderLink(inv) : null;
+          const quote = isQuote(inv);
+          const unpaidInvoice = !quote && inv.status !== 'paid';
+          const reminderUrl = unpaidInvoice ? reminderLink(inv) : null;
 
           return (
             // Raise the card with an open menu above its siblings (each card is its own stacking context)
@@ -316,18 +355,20 @@ export function InvoiceList({ onEdit, onDuplicate, onCreate }: Props) {
                     <h3 className="text-white font-bold">{inv.customerName}</h3>
                     <p className="text-xs text-slate-400">
                       #{inv.invoiceNumber} • {new Date(inv.dateIssued).toLocaleDateString()}
-                      {inv.dueDate && inv.status !== 'paid' && <> • Due {new Date(inv.dueDate).toLocaleDateString()}</>}
+                      {inv.dueDate && (quote ? !inv.convertedInvoiceId : inv.status !== 'paid') && (
+                        <> • {quote ? 'Valid until' : 'Due'} {new Date(inv.dueDate).toLocaleDateString()}</>
+                      )}
                     </p>
                     <div className="mt-1 flex items-center gap-2 flex-wrap">
                       <span className={`text-[10px] uppercase px-2 py-0.5 rounded border ${statusStyle}`}>
                         {inv.displayStatus}
                       </span>
                       <span className="text-xs font-mono text-slate-300">
-                        {inv.status === 'paid'
+                        {quote || inv.status === 'paid'
                           ? formatMoney(inv.grandTotal, inv.currency)
                           : `Due: ${formatMoney(getBalance(inv), inv.currency)}`}
                       </span>
-                      {inv.lastReminderAt && inv.status !== 'paid' && (
+                      {inv.lastReminderAt && unpaidInvoice && (
                         <span className="text-[10px] text-slate-500">Reminded {timeAgo(inv.lastReminderAt)}</span>
                       )}
                     </div>
@@ -335,12 +376,12 @@ export function InvoiceList({ onEdit, onDuplicate, onCreate }: Props) {
                 </div>
 
                 <div className="flex items-center gap-2 w-full md:w-auto justify-end">
-                  {inv.status !== 'paid' && (
+                  {unpaidInvoice && (
                     <button onClick={() => setSelectedInvoice(inv)} className="p-2 hover:bg-green-500/10 rounded-lg text-green-400 transition-colors" title="Record Payment" aria-label="Record payment">
                       <CreditCard size={20} />
                     </button>
                   )}
-                  {inv.status !== 'paid' && (reminderUrl ? (
+                  {unpaidInvoice && (reminderUrl ? (
                     <a
                       href={reminderUrl}
                       target="_blank"
@@ -385,7 +426,12 @@ export function InvoiceList({ onEdit, onDuplicate, onCreate }: Props) {
                     </button>
                     {menuId === inv.id && (
                       <>
-                        <div className="absolute right-0 top-full mt-1 z-20 w-40 rounded-xl border border-white/10 bg-slate-900/95 backdrop-blur-xl shadow-2xl py-1 text-sm" role="menu">
+                        <div className="absolute right-0 top-full mt-1 z-20 w-48 rounded-xl border border-white/10 bg-slate-900/95 backdrop-blur-xl shadow-2xl py-1 text-sm" role="menu">
+                          {quote && !inv.convertedInvoiceId && (
+                            <button role="menuitem" onClick={() => { setMenuId(null); onConvert(inv.id!); }} className="w-full flex items-center gap-2 px-3 py-2 text-green-300 hover:bg-white/10">
+                              <FileCheck2 size={14} /> Convert to Invoice
+                            </button>
+                          )}
                           <button role="menuitem" onClick={() => { setMenuId(null); onEdit(inv.id!); }} className="w-full flex items-center gap-2 px-3 py-2 text-slate-200 hover:bg-white/10">
                             <Pencil size={14} /> Edit
                           </button>
@@ -439,6 +485,9 @@ export function InvoiceList({ onEdit, onDuplicate, onCreate }: Props) {
           <p className="text-center text-slate-500 py-12">No invoices match your search.</p>
         )}
       </div>
+
+      </>
+      )}
 
       {selectedInvoice && (
         <PaymentModal invoice={selectedInvoice} onClose={() => setSelectedInvoice(null)} onSave={handlePaymentUpdate} />

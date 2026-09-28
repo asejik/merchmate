@@ -6,7 +6,7 @@ import { TrendingUp, Clock, FileText, Wallet, AlertCircle, DatabaseBackup } from
 import { isBackupDue } from '../../db/backup';
 import type { AppTab, CurrencyCode } from '../../types';
 import { CURRENCY_CODES, formatMoney } from '../../lib/currency';
-import { getAmountCollected, getBalance, getDisplayStatus, todayInputValue } from '../../lib/invoice';
+import { getAmountCollected, getBalance, getDisplayStatus, isQuote, todayInputValue } from '../../lib/invoice';
 import { clsx } from 'clsx';
 
 export function Dashboard({ onNavigate }: { onNavigate: (tab: AppTab) => void }) {
@@ -25,7 +25,8 @@ export function Dashboard({ onNavigate }: { onNavigate: (tab: AppTab) => void })
     if (!data?.invoices) return { collected: 0, pending: 0, overdue: 0, overdueCount: 0, count: 0, recent: [] };
 
     // Filter by currency
-    const filtered = data.invoices.filter(inv => inv.currency === currency);
+    // Quotes are estimates, not money owed
+    const filtered = data.invoices.filter(inv => !isQuote(inv) && inv.currency === currency);
 
     const collected = filtered.reduce((sum, inv) => sum + getAmountCollected(inv), 0);
     const pending = filtered.reduce((sum, inv) => sum + getBalance(inv), 0);

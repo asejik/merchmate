@@ -5,21 +5,23 @@ const LAST_BACKUP_KEY = 'lastBackupAt';
 export const BACKUP_REMINDER_DAYS = 14;
 
 export async function exportAllData(): Promise<BackupData> {
-  const [businessProfile, customers, invoices] = await Promise.all([
+  const [businessProfile, customers, invoices, catalog] = await Promise.all([
     db.businessProfile.toArray(),
     db.customers.toArray(),
     db.invoices.toArray(),
+    db.catalog.toArray(),
   ]);
-  return { businessProfile, customers, invoices };
+  return { businessProfile, customers, invoices, catalog };
 }
 
 /** Replaces everything on this device with the backup, atomically: on any error nothing changes. */
 export async function restoreAllData(data: BackupData): Promise<void> {
-  await db.transaction('rw', db.businessProfile, db.customers, db.invoices, async () => {
-    await Promise.all([db.businessProfile.clear(), db.customers.clear(), db.invoices.clear()]);
+  await db.transaction('rw', [db.businessProfile, db.customers, db.invoices, db.catalog], async () => {
+    await Promise.all([db.businessProfile.clear(), db.customers.clear(), db.invoices.clear(), db.catalog.clear()]);
     await db.businessProfile.bulkPut(data.businessProfile);
     await db.customers.bulkPut(data.customers);
     await db.invoices.bulkPut(data.invoices);
+    await db.catalog.bulkPut(data.catalog);
   });
 }
 

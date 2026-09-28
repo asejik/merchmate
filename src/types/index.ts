@@ -1,6 +1,7 @@
 export type CurrencyCode = 'NGN' | 'USD' | 'GBP' | 'EUR';
 export type DiscountType = 'percentage' | 'fixed';
 export type InvoiceStatus = 'draft' | 'pending' | 'paid' | 'partial';
+export type DocumentKind = 'invoice' | 'quote';
 
 export interface BusinessProfile {
   id?: number; // Dexie uses auto-incrementing numbers by default
@@ -43,6 +44,8 @@ export interface InvoiceItem {
 
 export interface Invoice {
   id?: string; // UUID
+  kind?: DocumentKind; // undefined = invoice (records saved before quotes existed)
+  convertedInvoiceId?: string; // quotes only: the invoice created from this quote
   customerId: string;
   invoiceNumber: string; // e.g., INV-0001
   items: InvoiceItem[];
@@ -63,7 +66,7 @@ export interface Invoice {
   currency: CurrencyCode;
   status: InvoiceStatus;
   dateIssued: Date;
-  dueDate?: Date;
+  dueDate?: Date; // for quotes: valid until
   notes?: string;
   lastReminderAt?: Date;
 
@@ -80,3 +83,14 @@ export interface PaymentRecord {
   note?: string; // Optional: e.g., "Bank Transfer", "Cash"
 }
 export type AppTab = 'dashboard' | 'invoices' | 'create' | 'customers' | 'settings';
+export type ListView = 'invoices' | 'quotes';
+
+/** Remembered line item, learned from saved invoices and quotes. */
+export interface CatalogItem {
+  id: string;
+  name: string;
+  unitPrice: number;
+  currency: CurrencyCode;
+  usageCount: number;
+  updatedAt: Date;
+}

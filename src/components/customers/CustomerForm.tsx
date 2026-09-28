@@ -65,7 +65,7 @@ export function CustomerForm({ onComplete, onCancel, initialData }: Props) {
     if (!initialData?.id) return;
     const invoiceCount = await db.invoices.where('customerId').equals(initialData.id).count();
     if (invoiceCount > 0) {
-      alert(`${initialData.name} has ${invoiceCount} invoice${invoiceCount === 1 ? '' : 's'}. Delete those first to keep your records consistent.`);
+      alert(`${initialData.name} has ${invoiceCount} invoice${invoiceCount === 1 ? '' : 's'} or quote${invoiceCount === 1 ? '' : 's'}. Delete those first to keep your records consistent.`);
       return;
     }
     if (!confirm(`Delete ${initialData.name}? This cannot be undone.`)) return;

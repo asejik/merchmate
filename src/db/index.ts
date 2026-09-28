@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie';
-import type { BusinessProfile, Customer, Invoice } from '../types';
+import type { BusinessProfile, CatalogItem, Customer, Invoice } from '../types';
 import { backfillCreatedAt } from '../lib/invoice';
 
 class InvoiceDatabase extends Dexie {
@@ -7,7 +7,8 @@ class InvoiceDatabase extends Dexie {
   // (We don't instantiate them here, Dexie does that for us)
   businessProfile!: Table<BusinessProfile>;
   customers!: Table<Customer>;
-  invoices!: Table<Invoice>;
+  invoices!: Table<Invoice>; // Also holds quotes (kind: 'quote')
+  catalog!: Table<CatalogItem>;
 
   constructor() {
     // Legacy name kept on purpose: renaming it would orphan existing users' data.
@@ -29,6 +30,11 @@ class InvoiceDatabase extends Dexie {
     }).upgrade(tx =>
       tx.table('invoices').toCollection().modify(backfillCreatedAt)
     );
+
+    // v3 (additive): remembered line items for quick entry
+    this.version(3).stores({
+      catalog: '&id, name, currency'
+    });
   }
 }
 

@@ -6,7 +6,7 @@ import { CustomerList } from './components/customers/CustomerList';
 import { InvoiceForm, type InvoiceEditorMode } from './components/invoices/InvoiceForm';
 import { InvoiceList } from './components/invoices/InvoiceList';
 import { Dashboard } from './components/dashboard/Dashboard';
-import type { AppTab } from './types';
+import type { AppTab, ListView } from './types';
 
 const TABS: AppTab[] = ['dashboard', 'invoices', 'create', 'customers', 'settings'];
 const TAB_STORAGE_KEY = 'activeTab';
@@ -28,6 +28,7 @@ interface EditorState {
 function App() {
   const [activeTab, setActiveTab] = useState<AppTab>(readSavedTab);
   const [editor, setEditor] = useState<EditorState>({ mode: 'create' });
+  const [listView, setListView] = useState<ListView>('invoices');
 
   const openEditor = (next: EditorState) => {
     setEditor(next);
@@ -79,7 +80,10 @@ function App() {
             key={`${editor.mode}-${editor.invoiceId ?? 'new'}`}
             mode={editor.mode}
             sourceInvoiceId={editor.invoiceId}
-            onComplete={() => handleTabChange('invoices')}
+            onComplete={(kind) => {
+              setListView(kind === 'quote' ? 'quotes' : 'invoices');
+              handleTabChange('invoices');
+            }}
             onCancel={() => handleTabChange(editor.mode === 'create' ? 'dashboard' : 'invoices')}
             onAddClient={() => handleTabChange('customers')}
           />
@@ -88,9 +92,13 @@ function App() {
       case 'invoices':
         return (
           <InvoiceList
+            view={listView}
+            onViewChange={setListView}
             onEdit={(invoiceId) => openEditor({ mode: 'edit', invoiceId })}
             onDuplicate={(invoiceId) => openEditor({ mode: 'duplicate', invoiceId })}
+            onConvert={(invoiceId) => openEditor({ mode: 'convert', invoiceId })}
             onCreate={() => handleTabChange('create')}
+            onCreateQuote={() => openEditor({ mode: 'create-quote' })}
           />
         );
 

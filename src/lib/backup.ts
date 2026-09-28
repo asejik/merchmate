@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { BusinessProfile, Customer, Invoice } from '../types';
+import type { BusinessProfile, CatalogItem, Customer, Invoice } from '../types';
 
 export const BACKUP_FORMAT = 'merchmate-backup';
 export const BACKUP_VERSION = 1;
@@ -8,6 +8,7 @@ export interface BackupData {
   businessProfile: BusinessProfile[];
   customers: Customer[];
   invoices: Invoice[];
+  catalog: CatalogItem[];
 }
 
 export interface BackupSummary {
@@ -45,6 +46,14 @@ const invoiceSchema = z.object({
   lastReminderAt: isoDate.optional(),
 }).passthrough();
 
+const catalogSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  unitPrice: z.number(),
+  currency: z.string(),
+  updatedAt: isoDate,
+}).passthrough();
+
 const backupSchema = z.object({
   format: z.literal(BACKUP_FORMAT),
   version: z.number().int().max(BACKUP_VERSION, 'This backup was made by a newer version of MerchMate. Update the app first.'),
@@ -53,6 +62,7 @@ const backupSchema = z.object({
     businessProfile: z.array(z.object({ businessName: z.string() }).passthrough()),
     customers: z.array(customerSchema),
     invoices: z.array(invoiceSchema),
+    catalog: z.array(catalogSchema).default([]), // absent in backups made before the catalog existed
   }),
 });
 
@@ -84,6 +94,7 @@ export function parseBackup(text: string): { data: BackupData; summary: BackupSu
     businessProfile: data.businessProfile as unknown as BusinessProfile[],
     customers: data.customers as unknown as Customer[],
     invoices,
+    catalog: data.catalog as unknown as CatalogItem[],
   };
 
   return {

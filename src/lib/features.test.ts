@@ -34,6 +34,7 @@ describe('backup', () => {
     businessProfile: [{ id: 1, ...business, address: '1 Road', phone: '08030000000' }],
     customers: [{ id: 'c-1', name: 'Ada Obi', phone: '08031234567', createdAt: new Date('2026-04-01T00:00:00Z') }],
     invoices: [invoice],
+    catalog: [{ id: 'k1', name: 'Work', unitPrice: 10000, currency: 'NGN', usageCount: 2, updatedAt: new Date('2026-04-02T00:00:00Z') }],
   };
 
   it('round-trips data and revives dates', () => {
@@ -45,6 +46,13 @@ describe('backup', () => {
     expect(inv.dueDate?.getTime()).toBe(invoice.dueDate?.getTime());
     expect(inv.payments).toEqual(invoice.payments);
     expect(restored.customers[0].createdAt).toBeInstanceOf(Date);
+    expect(restored.catalog[0].updatedAt).toBeInstanceOf(Date);
+  });
+
+  it('accepts backups made before the catalog existed', () => {
+    const old = JSON.parse(serializeBackup(data));
+    delete old.data.catalog;
+    expect(parseBackup(JSON.stringify(old)).data.catalog).toEqual([]);
   });
 
   it('fills createdAt for invoices exported before v2', () => {

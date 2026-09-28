@@ -1,4 +1,4 @@
-import type { DiscountType, Invoice, InvoiceStatus, PaymentRecord } from '../types';
+import type { DiscountType, DocumentKind, Invoice, InvoiceStatus, PaymentRecord } from '../types';
 
 export const DEFAULT_INVOICE_TERMS = 'Payment is due by the date shown on this invoice.\nThank you for your business.';
 
@@ -145,14 +145,28 @@ export function daysBetween(fromInput: string, toInput: string): number {
   return Math.round((new Date(toInput).getTime() - new Date(fromInput).getTime()) / 86_400_000);
 }
 
-export type DisplayStatus = InvoiceStatus | 'overdue';
+export type DisplayStatus = InvoiceStatus | 'overdue' | 'open' | 'expired' | 'converted';
 
-export function isOverdue(invoice: Pick<Invoice, 'status' | 'dueDate'>, today: string = todayInputValue()): boolean {
-  return invoice.status !== 'paid' && !!invoice.dueDate && toDateInputValue(invoice.dueDate) < today;
+export const QUOTE_PREFIX = 'QUO-';
+
+export function isQuote(invoice: Pick<Invoice, 'kind'>): boolean {
+  return invoice.kind === 'quote';
 }
 
-/** Overdue is derived from dueDate at read time, never stored. */
-export function getDisplayStatus(invoice: Pick<Invoice, 'status' | 'dueDate'>, today?: string): DisplayStatus {
+export function kindOf(invoice: Pick<Invoice, 'kind'>): DocumentKind {
+  return invoice.kind ?? 'invoice';
+}
+
+export function isOverdue(invoice: Pick<Invoice, 'status' | 'dueDate' | 'kind'>, today: string = todayInputValue()): boolean {
+  return !isQuote(invoice) && invoice.status !== 'paid' && !!invoice.dueDate && toDateInputValue(invoice.dueDate) < today;
+}
+
+/** Overdue/expired are derived from dueDate at read time, never stored. */
+export function getDisplayStatus(invoice: Pick<Invoice, 'status' | 'dueDate' | 'kind' | 'convertedInvoiceId'>, today: string = todayInputValue()): DisplayStatus {
+  if (isQuote(invoice)) {
+    if (invoice.convertedInvoiceId) return 'converted';
+    return invoice.dueDate && toDateInputValue(invoice.dueDate) < today ? 'expired' : 'open';
+  }
   return isOverdue(invoice, today) ? 'overdue' : invoice.status;
 }
 
@@ -173,12 +187,20 @@ export interface InvoiceDraft {
   depositAmount: number; // Only used when creating; edits keep the recorded payments
 }
 
-/** Builds the invoice to store. With `existing`, keeps its identity and payment history. */
-export function composeInvoice(draft: InvoiceDraft, existing?: Invoice, now: Date = new Date()): Invoice {
-  const amountPaid = existing ? existing.depositAmount : round2(Math.max(0, toNumber(draft.depositAmount)));
+/**
+ * Builds the document to store. With `existing`, keeps its identity, kind and payment history.
+ * Quotes never carry payments.
+ */
+export function composeInvoice(draft: InvoiceDraft, existing?: Invoice, now: Date = new Date(), kind: DocumentKind = 'invoice'): Invoice {
+  const docKind = existing ? kindOf(existing) : kind;
+  const amountPaid = docKind === 'quote'
+    ? 0
+    : existing ? existing.depositAmount : round2(Math.max(0, toNumber(draft.depositAmount)));
   const totals = calculateTotals({ ...draft, amountPaid });
 
-  const payments: PaymentRecord[] = existing
+  const payments: PaymentRecord[] = docKind === 'quote'
+    ? []
+    : existing
     ? getPaymentHistory(existing)
     : amountPaid > 0
       ? [{ id: crypto.randomUUID(), date: new Date(draft.dateIssued).toISOString(), amount: amountPaid, note: 'Initial Deposit' }]
@@ -187,6 +209,7 @@ export function composeInvoice(draft: InvoiceDraft, existing?: Invoice, now: Dat
   return {
     ...existing,
     id: existing?.id ?? crypto.randomUUID(),
+    kind: docKind,
     customerId: draft.customerId,
     invoiceNumber: draft.invoiceNumber.trim(),
     items: draft.items.map(item => ({
@@ -268,5 +291,16 @@ export function getReceiptInfo(invoice: Invoice, paymentId: string): ReceiptInfo
     receiptNumber: `${invoice.invoiceNumber}-R${index + 1}`,
     paidToDate,
     balanceAfter: Math.max(0, round2(invoice.grandTotal - paidToDate)),
+  };
+}
+
+/** Form values for turning a quote into an invoice: same items and pricing, invoice numbering and terms. */
+export function convertQuoteDraft(quote: Invoice, invoiceNumber: string, defaultDueDays?: number, today: string = todayInputValue()): InvoiceDraft {
+  return {
+    ...invoiceToDraft(quote),
+    invoiceNumber,
+    dateIssued: today,
+    dueDate: defaultDueDays !== undefined ? addDays(today, defaultDueDays) : '',
+    depositAmount: 0,
   };
 }

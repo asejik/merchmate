@@ -10,6 +10,7 @@ import type { BusinessProfile } from '../../types';
 import { DEFAULT_INVOICE_TERMS } from '../../lib/invoice';
 import { DEFAULT_COUNTRY_CODE } from '../../lib/whatsapp';
 import { BackupCard } from './BackupCard';
+import { CatalogCard } from './CatalogCard';
 
 // 1. Define the Schema
 const profileSchema = z.object({
@@ -291,6 +292,7 @@ export function BusinessProfileForm() {
 
       </form>
 
+      <CatalogCard />
       <BackupCard />
     </div>
   );

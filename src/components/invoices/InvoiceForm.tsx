@@ -5,27 +5,31 @@ import { db } from '../../db';
 import { GlassCard } from '../ui/GlassCard';
 import { Save, Plus, Trash2, Calculator, ArrowLeft, Percent, Loader2 } from 'lucide-react';
 import { clsx } from 'clsx';
-import type { Invoice } from '../../types';
+import type { DocumentKind, Invoice } from '../../types';
 import { CURRENCY_CODES, CURRENCY_SYMBOLS, formatMoney } from '../../lib/currency';
 import {
   addDays,
   calculateTotals,
   composeInvoice,
+  convertQuoteDraft,
   duplicateDraft,
   invoiceToDraft,
+  kindOf,
   nextInvoiceNumber,
+  QUOTE_PREFIX,
   todayInputValue,
   toNumber,
   type InvoiceDraft,
 } from '../../lib/invoice';
+import { findCatalogItem, learnFromItems, sortCatalog } from '../../lib/catalog';
 
-export type InvoiceEditorMode = 'create' | 'edit' | 'duplicate';
+export type InvoiceEditorMode = 'create' | 'create-quote' | 'edit' | 'duplicate' | 'convert';
 
 interface Props {
   mode: InvoiceEditorMode;
-  /** Invoice to edit or copy from (ignored in create mode). */
+  /** Invoice/quote to edit, copy or convert (ignored when creating). */
   sourceInvoiceId?: string;
-  onComplete: () => void;
+  onComplete: (kind: DocumentKind) => void;
   onCancel: () => void;
   onAddClient: () => void;
 }
@@ -38,30 +42,57 @@ const DUE_PRESETS = [
   { label: '30 days', days: 30 },
 ];
 
-const TITLES: Record<InvoiceEditorMode, { title: string; subtitle: string; submit: string }> = {
-  create: { title: 'New Invoice', subtitle: 'Bill a client for goods or services.', submit: 'Generate Invoice' },
-  edit: { title: 'Edit Invoice', subtitle: 'Payments already recorded are kept.', submit: 'Save Changes' },
-  duplicate: { title: 'Duplicate Invoice', subtitle: 'A fresh, unpaid copy with a new number.', submit: 'Generate Invoice' },
-};
+function titles(mode: InvoiceEditorMode, kind: DocumentKind): { title: string; subtitle: string; submit: string } {
+  const noun = kind === 'quote' ? 'Quote' : 'Invoice';
+  switch (mode) {
+    case 'edit':
+      return { title: `Edit ${noun}`, subtitle: kind === 'quote' ? 'Update the quote before sending it again.' : 'Payments already recorded are kept.', submit: 'Save Changes' };
+    case 'duplicate':
+      return { title: `Duplicate ${noun}`, subtitle: 'A fresh copy with a new number.', submit: `Create ${noun}` };
+    case 'convert':
+      return { title: 'Convert Quote to Invoice', subtitle: 'Same items and prices. Adjust anything before saving.', submit: 'Create Invoice' };
+    case 'create-quote':
+      return { title: 'New Quote', subtitle: 'Send a price estimate. Convert it to an invoice once accepted.', submit: 'Create Quote' };
+    default:
+      return { title: 'New Invoice', subtitle: 'Bill a client for goods or services.', submit: 'Generate Invoice' };
+  }
+}
 
-async function loadInitialValues(mode: InvoiceEditorMode, sourceInvoiceId?: string): Promise<{ values: InvoiceDraft; existing?: Invoice }> {
-  const [numbers, profile, source] = await Promise.all([
-    db.invoices.orderBy('invoiceNumber').keys(),
+interface InitialState {
+  values: InvoiceDraft;
+  kind: DocumentKind;
+  existing?: Invoice;
+  convertFrom?: Invoice;
+}
+
+async function loadInitialValues(mode: InvoiceEditorMode, sourceInvoiceId?: string): Promise<InitialState> {
+  const [all, profile, source] = await Promise.all([
+    db.invoices.toArray(),
     db.businessProfile.orderBy('id').first(),
     sourceInvoiceId ? db.invoices.get(sourceInvoiceId) : undefined,
   ]);
-  const nextNumber = nextInvoiceNumber(numbers.map(String));
-  if (mode !== 'create' && !source) throw new Error('Invoice not found');
+  // Invoices and quotes are numbered independently
+  const nextNumber = (kind: DocumentKind) => nextInvoiceNumber(
+    all.filter(doc => kindOf(doc) === kind).map(doc => doc.invoiceNumber),
+    kind === 'quote' ? QUOTE_PREFIX : undefined,
+  );
+  if (mode !== 'create' && mode !== 'create-quote' && !source) throw new Error('Invoice not found');
 
-  if (mode === 'edit' && source) return { values: invoiceToDraft(source), existing: source };
-  if (mode === 'duplicate' && source) return { values: duplicateDraft(source, nextNumber) };
+  if (mode === 'edit' && source) return { values: invoiceToDraft(source), kind: kindOf(source), existing: source };
+  if (mode === 'duplicate' && source) return { values: duplicateDraft(source, nextNumber(kindOf(source))), kind: kindOf(source) };
+  if (mode === 'convert' && source) {
+    return { values: convertQuoteDraft(source, nextNumber('invoice'), profile?.defaultDueDays), kind: 'invoice', convertFrom: source };
+  }
 
+  const kind: DocumentKind = mode === 'create-quote' ? 'quote' : 'invoice';
   const today = todayInputValue();
-  const dueDays = profile?.defaultDueDays;
+  // Quotes default to 30 days validity; invoices use the business's payment terms
+  const dueDays = kind === 'quote' ? 30 : profile?.defaultDueDays;
   return {
+    kind,
     values: {
       customerId: '',
-      invoiceNumber: nextNumber,
+      invoiceNumber: nextNumber(kind),
       currency: 'NGN',
       dateIssued: today,
       dueDate: dueDays !== undefined ? addDays(today, dueDays) : '',
@@ -78,11 +109,15 @@ async function loadInitialValues(mode: InvoiceEditorMode, sourceInvoiceId?: stri
 
 export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAddClient }: Props) {
   const customers = useLiveQuery(() => db.customers.orderBy('name').toArray());
-  const [existing, setExisting] = useState<Invoice | undefined>();
-  const [ready, setReady] = useState(false);
+  const catalog = useLiveQuery(() => db.catalog.toArray(), [], []);
+  const [initial, setInitial] = useState<Omit<InitialState, 'values'> | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const text = TITLES[mode];
+  const existing = initial?.existing;
+  const kind = initial?.kind ?? (mode === 'create-quote' ? 'quote' : 'invoice');
+  const isQuoteDoc = kind === 'quote';
+  const noun = isQuoteDoc ? 'Quote' : 'Invoice';
+  const text = titles(mode, kind);
 
   const { register, control, handleSubmit, setValue, reset, formState: { errors } } = useForm<InvoiceDraft>({
     defaultValues: {
@@ -107,25 +142,33 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
   const taxLabel = useWatch({ control, name: "taxLabel" });
   const dateIssued = useWatch({ control, name: "dateIssued" });
   const symbol = CURRENCY_SYMBOLS[currency];
+  const suggestions = useMemo(() => sortCatalog(catalog.filter(c => c.currency === currency)), [catalog, currency]);
+
+  // Picking a remembered item fills in its last price (only if no price was typed yet)
+  const handleDescriptionChange = (index: number, description: string) => {
+    const match = findCatalogItem(catalog, description, currency);
+    if (match && !toNumber(items?.[index]?.unitPrice)) {
+      setValue(`items.${index}.unitPrice`, match.unitPrice);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
     loadInitialValues(mode, sourceInvoiceId)
-      .then(({ values, existing }) => {
+      .then(({ values, ...rest }) => {
         if (cancelled) return;
         reset(values);
-        setExisting(existing);
-        setReady(true);
+        setInitial(rest);
       })
       .catch(err => {
         console.error(err);
-        if (!cancelled) setError('Could not load invoice data.');
+        if (!cancelled) setError('Could not load this document. It may have been deleted.');
       });
     return () => { cancelled = true; };
   }, [mode, sourceInvoiceId, reset]);
 
-  // On edit, the amount paid comes from recorded payments, not the form
-  const amountPaid = existing ? existing.depositAmount : deposit;
+  // On edit, the amount paid comes from recorded payments, not the form. Quotes are never paid.
+  const amountPaid = isQuoteDoc ? 0 : existing ? existing.depositAmount : deposit;
 
   const totals = useMemo(
     () => calculateTotals({ items: items ?? [], discountType, discountRate, taxRate, amountPaid }),
@@ -137,21 +180,28 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
     const number = data.invoiceNumber.trim();
     const clash = await db.invoices.where('invoiceNumber').equals(number).first();
     if (clash && clash.id !== existing?.id) {
-      setError(`Invoice number ${number} is already used. Choose another.`);
+      setError(`Number ${number} is already used. Choose another.`);
       return;
     }
     if (data.dueDate && data.dueDate < data.dateIssued) {
-      setError('Due date cannot be before the invoice date.');
+      setError(`${isQuoteDoc ? 'Valid-until' : 'Due'} date cannot be before the ${noun.toLowerCase()} date.`);
       return;
     }
 
     setSaving(true);
     try {
-      await db.invoices.put(composeInvoice(data, existing));
-      onComplete();
+      const doc = composeInvoice(data, existing, new Date(), kind);
+      await db.transaction('rw', db.invoices, db.catalog, async () => {
+        await db.invoices.put(doc);
+        if (initial?.convertFrom?.id) {
+          await db.invoices.update(initial.convertFrom.id, { convertedInvoiceId: doc.id, updatedAt: new Date() });
+        }
+        await db.catalog.bulkPut(learnFromItems(await db.catalog.toArray(), doc.items, doc.currency));
+      });
+      onComplete(kind);
     } catch (err) {
       console.error(err);
-      setError('Failed to save invoice.');
+      setError(`Failed to save ${noun.toLowerCase()}.`);
     } finally {
       setSaving(false);
     }
@@ -160,7 +210,7 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
   const inputClass = "w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-all text-sm";
   const labelClass = "block text-xs font-medium text-slate-400 mb-1 uppercase";
 
-  if (!ready) {
+  if (!initial) {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-slate-500 gap-3">
         {error ? <p className="text-red-400">{error}</p> : <Loader2 className="animate-spin" size={28} />}
@@ -203,7 +253,7 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
               </div>
             </div>
             <div>
-              <label className={labelClass}>Invoice #</label>
+              <label className={labelClass}>{noun} #</label>
               <input {...register('invoiceNumber', { required: "Required" })} className={inputClass} />
               {errors.invoiceNumber && <span className="text-red-400 text-xs">{errors.invoiceNumber.message}</span>}
             </div>
@@ -231,11 +281,11 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
             <div>
-              <label className={labelClass}>Invoice Date</label>
+              <label className={labelClass}>{noun} Date</label>
               <input type="date" {...register('dateIssued', { required: true })} className={inputClass} />
             </div>
             <div className="md:col-span-2">
-              <label className={labelClass}>Due Date</label>
+              <label className={labelClass}>{isQuoteDoc ? 'Valid Until' : 'Due Date'}</label>
               <div className="flex flex-col sm:flex-row gap-2">
                 <input type="date" {...register('dueDate')} className={clsx(inputClass, "sm:max-w-[180px]")} />
                 <div className="flex flex-wrap gap-1">
@@ -273,13 +323,23 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
               <Plus size={14} /> Add Item
             </button>
           </div>
+          <datalist id="catalog-suggestions">
+            {suggestions.map(item => (
+              <option key={item.id} value={item.name}>{formatMoney(item.unitPrice, item.currency)}</option>
+            ))}
+          </datalist>
           <div className="space-y-3">
             {fields.map((field, index) => (
               <div key={field.id} className="flex flex-col md:flex-row gap-2 items-start md:items-center bg-white/5 p-3 rounded-xl border border-white/5">
                 <div className="flex-1 w-full">
                   <input
-                    {...register(`items.${index}.description` as const, { required: true })}
-                    placeholder="Item description"
+                    {...register(`items.${index}.description` as const, {
+                      required: true,
+                      onChange: (e: React.ChangeEvent<HTMLInputElement>) => handleDescriptionChange(index, e.target.value),
+                    })}
+                    list="catalog-suggestions"
+                    autoComplete="off"
+                    placeholder={suggestions.length ? "Item description (start typing for saved items)" : "Item description"}
                     className="bg-transparent border-none text-white placeholder-slate-600 focus:ring-0 w-full p-0 text-sm"
                   />
                 </div>
@@ -366,7 +426,7 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
                   </div>
                 </div>
 
-                {existing ? (
+                {isQuoteDoc ? null : existing ? (
                   <div className="rounded-xl bg-white/5 border border-white/10 p-4 text-sm text-slate-300">
                     Paid so far: <span className="font-bold text-white">{formatMoney(existing.depositAmount, currency)}</span>
                     <p className="text-xs text-slate-500 mt-1">Use “Record Payment” on the invoice list to add payments.</p>
@@ -392,7 +452,7 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
                 )}
 
                 <div>
-                  <label className={labelClass}>Notes (shown on invoice)</label>
+                  <label className={labelClass}>Notes (shown on {noun.toLowerCase()})</label>
                   <textarea
                     {...register('notes')}
                     rows={2}
@@ -431,19 +491,23 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
                   <span>{formatMoney(totals.grandTotal, currency)}</span>
                 </div>
 
-                <div className="flex justify-between text-sm text-slate-400">
-                  <span>Paid:</span>
-                  <span className="text-white">({formatMoney(toNumber(amountPaid), currency)})</span>
-                </div>
+                {!isQuoteDoc && (
+                  <>
+                    <div className="flex justify-between text-sm text-slate-400">
+                      <span>Paid:</span>
+                      <span className="text-white">({formatMoney(toNumber(amountPaid), currency)})</span>
+                    </div>
 
-                <div className="h-px bg-white/10 my-2" />
+                    <div className="h-px bg-white/10 my-2" />
 
-                <div className="flex justify-between text-lg font-bold">
-                  <span className="text-white">Balance Due:</span>
-                  <span className={totals.balance > 0 ? "text-orange-400" : "text-green-400"}>
-                    {formatMoney(totals.balance, currency)}
-                  </span>
-                </div>
+                    <div className="flex justify-between text-lg font-bold">
+                      <span className="text-white">Balance Due:</span>
+                      <span className={totals.balance > 0 ? "text-orange-400" : "text-green-400"}>
+                        {formatMoney(totals.balance, currency)}
+                      </span>
+                    </div>
+                  </>
+                )}
              </div>
           </div>
         </GlassCard>

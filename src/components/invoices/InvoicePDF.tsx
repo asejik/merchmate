@@ -1,6 +1,6 @@
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
 import type { Invoice, BusinessProfile, Customer } from '../../types';
-import { DEFAULT_INVOICE_TERMS, getBalance, getPaymentHistory } from '../../lib/invoice';
+import { DEFAULT_INVOICE_TERMS, getBalance, getPaymentHistory, isQuote } from '../../lib/invoice';
 import { formatAmount, formatMoney } from '../../lib/currency';
 
 const styles = StyleSheet.create({
@@ -70,8 +70,9 @@ interface PDFProps {
 }
 
 export const InvoicePDF = ({ invoice, business, customer }: PDFProps) => {
+  const quote = isQuote(invoice);
   const balance = getBalance(invoice);
-  const isPaid = balance <= 0;
+  const isPaid = !quote && balance <= 0;
   const history = getPaymentHistory(invoice);
   // Helvetica has no ₦ glyph, so PDFs always use the ISO code
   const money = (amount: number) => formatMoney(amount, invoice.currency, { code: true });
@@ -95,14 +96,14 @@ export const InvoicePDF = ({ invoice, business, customer }: PDFProps) => {
             <Text>{business.email}</Text>
           </View>
           <View style={{ alignItems: 'flex-end' }}>
-            <Text style={{ fontSize: 24, fontWeight: 'light', color: '#ccc' }}>INVOICE</Text>
+            <Text style={{ fontSize: 24, fontWeight: 'light', color: '#ccc' }}>{quote ? 'QUOTATION' : 'INVOICE'}</Text>
             <Text style={{ fontSize: 12, marginTop: 4 }}>#{invoice.invoiceNumber}</Text>
             <View style={{ marginTop: 20 }}>
               <Text style={styles.label}>Date Issued</Text>
               <Text style={styles.value}>{new Date(invoice.dateIssued).toLocaleDateString()}</Text>
               {invoice.dueDate && (
                 <>
-                  <Text style={styles.label}>Due Date</Text>
+                  <Text style={styles.label}>{quote ? 'Valid Until' : 'Due Date'}</Text>
                   <Text style={styles.value}>{new Date(invoice.dueDate).toLocaleDateString()}</Text>
                 </>
               )}
@@ -174,7 +175,7 @@ export const InvoicePDF = ({ invoice, business, customer }: PDFProps) => {
             <Text>{money(invoice.grandTotal)}</Text>
           </View>
 
-          {history.length > 0 && (
+          {!quote && history.length > 0 && (
              <View style={styles.historyTable}>
                <Text style={[styles.historyText, { fontWeight: 'bold', marginBottom: 4 }]}>Payment History:</Text>
                {history.map((pay) => (
@@ -190,17 +191,21 @@ export const InvoicePDF = ({ invoice, business, customer }: PDFProps) => {
              </View>
            )}
 
-          <View style={[styles.totalRow, { marginTop: 4 }]}>
-            <Text>Total Paid:</Text>
-            <Text>({money(invoice.depositAmount)})</Text>
-          </View>
+          {!quote && (
+            <>
+              <View style={[styles.totalRow, { marginTop: 4 }]}>
+                <Text>Total Paid:</Text>
+                <Text>({money(invoice.depositAmount)})</Text>
+              </View>
 
-          <View style={[styles.totalRow, { marginTop: 8, borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 4 }]}>
-            <Text style={{ fontWeight: 'bold' }}>Balance Due:</Text>
-            <Text style={{ fontWeight: 'bold', color: isPaid ? '#22c55e' : '#f97316' }}>
-              {money(balance)}
-            </Text>
-          </View>
+              <View style={[styles.totalRow, { marginTop: 8, borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 4 }]}>
+                <Text style={{ fontWeight: 'bold' }}>Balance Due:</Text>
+                <Text style={{ fontWeight: 'bold', color: isPaid ? '#22c55e' : '#f97316' }}>
+                  {money(balance)}
+                </Text>
+              </View>
+            </>
+          )}
         </View>
 
         {invoice.notes && (
