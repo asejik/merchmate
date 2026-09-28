@@ -1,16 +1,63 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
 import { GlassCard } from '../ui/GlassCard';
 import { CustomerForm } from './CustomerForm';
-import { Search, Plus, User, MapPin, Globe } from 'lucide-react';
+import { Search, Plus, User, MapPin, Globe, ScrollText, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Customer } from '../../types';
+import { buildStatement } from '../../lib/statement';
+import { renderStatementPdf } from '../../lib/pdf';
+import { formatMoney } from '../../lib/currency';
+import { ShareModal, type ShareState } from '../ui/ShareModal';
 
 export function CustomerList() {
   const [isCreating, setIsCreating] = useState(false);
   const [editing, setEditing] = useState<Customer | null>(null);
   const [search, setSearch] = useState('');
+  const [generatingId, setGeneratingId] = useState<string | null>(null);
+  const [shareModal, setShareModal] = useState<ShareState | null>(null);
+
+  const invoices = useLiveQuery(() => db.invoices.toArray(), [], []);
+
+  // Outstanding balance per client, per currency (currencies are never summed together)
+  const owed = useMemo(() => {
+    const byCustomer = new Map<string, string>();
+    const grouped = new Map<string, typeof invoices>();
+    for (const inv of invoices) grouped.set(inv.customerId, [...(grouped.get(inv.customerId) ?? []), inv]);
+    for (const [customerId, list] of grouped) {
+      const parts = buildStatement(list).filter(g => g.balance > 0).map(g => formatMoney(g.balance, g.currency));
+      if (parts.length) byCustomer.set(customerId, parts.join(' + '));
+    }
+    return byCustomer;
+  }, [invoices]);
+
+  const handleStatement = async (customer: Customer) => {
+    if (!customer.id) return;
+    setGeneratingId(customer.id);
+    try {
+      const business = await db.businessProfile.orderBy('id').first();
+      if (!business) {
+        alert("Add your business details in Settings first.");
+        return;
+      }
+      const list = await db.invoices.where('customerId').equals(customer.id).toArray();
+      const now = new Date();
+      const blob = await renderStatementPdf(business, customer, buildStatement(list), now);
+      const safeName = customer.name.replace(/[^\w\- ]+/g, '').trim() || 'client';
+      const file = new File([blob], `Statement - ${safeName} - ${now.toISOString().slice(0, 10)}.pdf`, { type: 'application/pdf' });
+      setShareModal({
+        heading: 'Statement Ready',
+        description: `Account statement for ${customer.name}.`,
+        files: [{ label: 'Statement', file, title: `Statement for ${customer.name}`, text: `Hello ${customer.name}, here is your account statement from ${business.businessName}.` }],
+      });
+    } catch (error) {
+      console.error(error);
+      alert(`Could not generate the statement: ${(error as Error).message}`);
+    } finally {
+      setGeneratingId(null);
+    }
+  };
 
   // Live Query with Filtering
   const customers = useLiveQuery(async () => {
@@ -87,12 +134,28 @@ export function CustomerList() {
                       <p className="text-slate-500 text-xs">{customer.phone}</p>
                     </div>
                   </div>
-                  {customer.country && (
-                    <div className="bg-blue-500/10 text-blue-400 p-1.5 rounded-lg" title="International">
-                      <Globe size={16} />
-                    </div>
-                  )}
+                  <div className="flex items-center gap-1">
+                    {customer.country && (
+                      <div className="bg-blue-500/10 text-blue-400 p-1.5 rounded-lg" title="International">
+                        <Globe size={16} />
+                      </div>
+                    )}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleStatement(customer); }}
+                      onKeyDown={(e) => e.stopPropagation()}
+                      disabled={generatingId === customer.id}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-300 hover:bg-white/10 transition-colors"
+                      title="Account statement"
+                      aria-label={`Account statement for ${customer.name}`}
+                    >
+                      {generatingId === customer.id ? <Loader2 size={16} className="animate-spin" /> : <ScrollText size={16} />}
+                    </button>
+                  </div>
                 </div>
+
+                {customer.id && owed.has(customer.id) && (
+                  <p className="mt-2 text-xs text-orange-300">Owes {owed.get(customer.id)}</p>
+                )}
 
                 {customer.address && (
                   <div className="mt-3 pt-3 border-t border-white/5 flex items-start gap-2 text-xs text-slate-400">
@@ -112,6 +175,8 @@ export function CustomerList() {
           </div>
         )}
       </div>
+
+      {shareModal && <ShareModal state={shareModal} onClose={() => setShareModal(null)} />}
     </div>
   );
 }

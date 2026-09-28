@@ -11,6 +11,7 @@ import { DEFAULT_INVOICE_TERMS } from '../../lib/invoice';
 import { DEFAULT_COUNTRY_CODE } from '../../lib/whatsapp';
 import { BackupCard } from './BackupCard';
 import { CatalogCard } from './CatalogCard';
+import { DEFAULT_BRAND_COLOR } from '../../lib/color';
 
 // 1. Define the Schema
 const profileSchema = z.object({
@@ -27,6 +28,8 @@ const profileSchema = z.object({
   taxLabel: z.string().optional(),
   defaultTaxRate: z.coerce.number().min(0, "Must be 0 or more").max(100, "Must be 100 or less"),
   defaultDueDays: z.string(), // '' = no due date by default
+  brandColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Pick a colour"),
+  invoiceTemplate: z.enum(['classic', 'modern']),
   defaultCountryCode: z.string().trim().regex(/^\+?\d{1,4}$/, "Digits only, e.g. 234"),
 });
 
@@ -47,6 +50,8 @@ export function BusinessProfileForm() {
       defaultTaxRate: 0,
       defaultDueDays: '',
       defaultCountryCode: DEFAULT_COUNTRY_CODE,
+      brandColor: DEFAULT_BRAND_COLOR,
+      invoiceTemplate: 'classic',
     }
   });
 
@@ -69,6 +74,8 @@ export function BusinessProfileForm() {
         setValue('defaultTaxRate', profile.defaultTaxRate ?? 0);
         setValue('defaultDueDays', profile.defaultDueDays?.toString() ?? '');
         setValue('defaultCountryCode', profile.defaultCountryCode ?? DEFAULT_COUNTRY_CODE);
+        setValue('brandColor', profile.brandColor ?? DEFAULT_BRAND_COLOR);
+        setValue('invoiceTemplate', profile.invoiceTemplate ?? 'classic');
 
         if (profile.logoUrl) {
           setLogoPreview(profile.logoUrl);
@@ -185,6 +192,24 @@ export function BusinessProfileForm() {
                 <label className={labelClass}>Email (Optional)</label>
                 <input {...register('email')} className={inputClass} placeholder="hello@example.com" />
             </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <div>
+                <label className={labelClass}>Brand Colour</label>
+                <div className="flex items-center gap-3">
+                  <input type="color" {...register('brandColor')} className="h-11 w-14 rounded-lg bg-transparent border border-white/10 cursor-pointer" aria-label="Brand colour" />
+                  <span className="text-xs text-slate-500">Used for your name, table headers and highlights on PDFs.</span>
+                </div>
+                {errors.brandColor && <span className="text-red-400 text-xs">{errors.brandColor.message}</span>}
+              </div>
+              <div>
+                <label className={labelClass}>PDF Template</label>
+                <select {...register('invoiceTemplate')} className={clsx(inputClass, "[&>option]:bg-slate-900")}>
+                  <option value="classic">Classic (white header)</option>
+                  <option value="modern">Modern (colour header band)</option>
+                </select>
+              </div>
             </div>
 
             <div className="mt-4">

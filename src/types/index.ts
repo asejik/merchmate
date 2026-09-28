@@ -2,6 +2,7 @@ export type CurrencyCode = 'NGN' | 'USD' | 'GBP' | 'EUR';
 export type DiscountType = 'percentage' | 'fixed';
 export type InvoiceStatus = 'draft' | 'pending' | 'paid' | 'partial';
 export type DocumentKind = 'invoice' | 'quote';
+export type InvoiceTemplate = 'classic' | 'modern';
 
 export interface BusinessProfile {
   id?: number; // Dexie uses auto-incrementing numbers by default
@@ -20,6 +21,9 @@ export interface BusinessProfile {
   defaultTaxRate?: number; // percent
   defaultDueDays?: number; // payment terms; 0 = due on receipt
   defaultCountryCode?: string; // for WhatsApp links from local numbers, e.g. "234"
+  // PDF branding
+  brandColor?: string; // "#RRGGBB"
+  invoiceTemplate?: InvoiceTemplate;
 }
 
 export interface Customer {

@@ -4,6 +4,7 @@ import { db } from '../../db';
 import { GlassCard } from '../ui/GlassCard';
 import { TrendingUp, Clock, FileText, Wallet, AlertCircle, DatabaseBackup } from 'lucide-react';
 import { isBackupDue } from '../../db/backup';
+import { Reports } from './Reports';
 import type { AppTab, CurrencyCode } from '../../types';
 import { CURRENCY_CODES, formatMoney } from '../../lib/currency';
 import { getAmountCollected, getBalance, getDisplayStatus, isQuote, todayInputValue } from '../../lib/invoice';
@@ -172,6 +173,10 @@ export function Dashboard({ onNavigate }: { onNavigate: (tab: AppTab) => void })
           )}
         </div>
       </div>
+
+      {data && data.invoices.length > 0 && (
+        <Reports invoices={data.invoices} customers={data.customers} currency={currency} />
+      )}
     </div>
   );
 }

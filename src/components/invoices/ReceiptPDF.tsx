@@ -2,21 +2,22 @@ import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/render
 import type { Invoice, BusinessProfile, Customer } from '../../types';
 import type { ReceiptInfo } from '../../lib/invoice';
 import { formatMoney } from '../../lib/currency';
+import { pdfTheme } from '../../lib/color';
 
 const styles = StyleSheet.create({
   page: { padding: 32, fontFamily: 'Helvetica', fontSize: 10, color: '#333' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
   logo: { width: 60, height: 'auto', marginBottom: 6 },
-  brand: { fontSize: 14, fontWeight: 'bold', color: '#4F46E5' },
+  brand: { fontSize: 14, fontFamily: 'Helvetica-Bold' },
   title: { fontSize: 18, color: '#999', textAlign: 'right' },
   label: { fontSize: 8, color: '#666', marginBottom: 2, textTransform: 'uppercase' },
   value: { fontSize: 10, marginBottom: 8 },
   divider: { height: 1, backgroundColor: '#eee', marginVertical: 12 },
   amountBox: { marginVertical: 12, padding: 16, backgroundColor: '#F0FDF4', borderRadius: 6, alignItems: 'center' },
-  amount: { fontSize: 22, fontWeight: 'bold', color: '#15803D' },
+  amount: { fontSize: 22, fontFamily: 'Helvetica-Bold', color: '#15803D' },
   row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
-  bold: { fontWeight: 'bold' },
-  paidStamp: { marginTop: 12, alignSelf: 'center', borderWidth: 2, borderColor: '#15803D', borderRadius: 6, paddingHorizontal: 12, paddingVertical: 4, color: '#15803D', fontWeight: 'bold', fontSize: 12 },
+  bold: { fontFamily: 'Helvetica-Bold' },
+  paidStamp: { marginTop: 12, alignSelf: 'center', borderWidth: 2, borderColor: '#15803D', borderRadius: 6, paddingHorizontal: 12, paddingVertical: 4, color: '#15803D', fontFamily: 'Helvetica-Bold', fontSize: 12 },
   footer: { position: 'absolute', bottom: 24, left: 32, right: 32, textAlign: 'center', fontSize: 8, color: '#999' },
 });
 
@@ -37,7 +38,7 @@ export const ReceiptPDF = ({ invoice, receipt, business, customer }: ReceiptPDFP
         <View style={styles.header}>
           <View>
             {business.logoUrl && <Image src={business.logoUrl} style={styles.logo} />}
-            <Text style={styles.brand}>{business.businessName}</Text>
+            <Text style={[styles.brand, { color: pdfTheme(business).accent }]}>{business.businessName}</Text>
             <Text>{business.phone}</Text>
             {business.email && <Text>{business.email}</Text>}
           </View>

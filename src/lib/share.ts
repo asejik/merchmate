@@ -17,3 +17,10 @@ export async function shareOrDownload(file: File, title: string, text: string): 
     downloadBlob(file, file.name);
   }
 }
+
+export interface ShareFile {
+  label: string;
+  file: File;
+  title: string;
+  text: string;
+}

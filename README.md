@@ -14,9 +14,18 @@ A modern, offline-first Progressive Web App (PWA) designed to help small busines
 * **🌍 Multi-Currency Support:** Seamlessly switch between **NGN (₦), USD ($), GBP (£), and EUR (€)**.
 * **📊 Real-Time Dashboard:** Tracks "Cash Collected" vs. "Pending Balance" to give a clear view of financial health.
 * **💬 Native WhatsApp Sharing:** Uses the Web Share API to attach PDF invoices directly to WhatsApp chats on mobile devices.
-* **🔢 Smart Numbering:** Automatically detects the last invoice number and increments the next one (e.g., INV-001 → INV-002).
+* **🔢 Smart Numbering:** Continues from your highest invoice number (e.g., INV-001 → INV-002); quotes are numbered separately (QUO-001).
 * **🎨 Glassmorphism UI:** A high-end, modern interface built with **Tailwind CSS v4** and **Framer Motion**.
 * **💰 Payment Tracking:** Handles partial payments, deposits, and automatically updates invoice status (Pending, Partial, Paid).
+* **🧾 Receipts & Statements:** A receipt PDF for every payment, and a full account statement per client.
+* **💬 WhatsApp Reminders:** One tap opens WhatsApp with a polite reminder, the balance and your bank details.
+* **📝 Quotes → Invoices:** Send a quotation, then convert it to an invoice in one tap once the client agrees.
+* **📦 Saved Items:** Remembers the items and prices you bill and suggests them as you type.
+* **⏰ Due Dates & Overdue Tracking:** Payment terms, overdue badges and an overdue total on the dashboard.
+* **🧮 Tax / VAT, Discounts & Notes** on every invoice, with per-business defaults.
+* **📊 Reports & CSV Export:** Monthly cash collected, top clients, and CSV exports for Excel or your accountant.
+* **🎨 Your Brand:** Brand colour and a choice of PDF templates.
+* **🛟 Backup & Restore:** Save everything to a file (Drive, email, WhatsApp) and restore it on any device.
 
 ## 🛠️ Tech Stack
 

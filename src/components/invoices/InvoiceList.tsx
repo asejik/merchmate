@@ -2,14 +2,15 @@ import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
 import { GlassCard } from '../ui/GlassCard';
-import { FileText, Download, Share2, CreditCard, Send, History, Search, MoreVertical, Pencil, Copy, Trash2, MessageCircle, Receipt, FileCheck2, Plus } from 'lucide-react';
+import { FileText, Download, Share2, CreditCard, History, Search, MoreVertical, Pencil, Copy, Trash2, MessageCircle, Receipt, FileCheck2, Plus } from 'lucide-react';
 import { clsx } from 'clsx';
 import { PaymentModal } from './PaymentModal';
 import type { BusinessProfile, Customer, Invoice, ListView } from '../../types';
 import { formatMoney } from '../../lib/currency';
 import { applyPayment, getBalance, getDisplayStatus, getPaymentHistory, getReceiptInfo, isQuote, todayInputValue, type DisplayStatus } from '../../lib/invoice';
 import { renderInvoicePdf, renderReceiptPdf } from '../../lib/pdf';
-import { downloadBlob, shareOrDownload } from '../../lib/share';
+import { downloadBlob, type ShareFile } from '../../lib/share';
+import { ShareModal, type ShareState } from '../ui/ShareModal';
 import { buildReminderMessage, DEFAULT_COUNTRY_CODE, toWhatsAppNumber, whatsAppLink } from '../../lib/whatsapp';
 
 interface Props {
@@ -27,21 +28,6 @@ interface InvoiceRow extends Invoice {
   customer?: Customer;
   customerName: string;
   displayStatus: DisplayStatus;
-}
-
-interface ShareFile {
-  label: string;
-  file: File;
-  title: string;
-  text: string;
-}
-
-// PDFs are generated before this modal opens: navigator.share needs a fresh tap,
-// and generating inside the tap handler can take long enough for that to expire.
-interface ShareState {
-  heading: string;
-  description: string;
-  files: ShareFile[];
 }
 
 type Filter = 'all' | 'unpaid' | 'overdue' | 'paid';
@@ -193,18 +179,6 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
     const file = await receiptShareFile(invoice, paymentId, parties.business, parties.customer);
     if (file) setShareModal({ heading: 'Receipt Ready', description: `${file.title} is ready to send.`, files: [file] });
   });
-
-  const executeShare = async (item: ShareFile) => {
-    const closeAfter = (shareModal?.files.length ?? 0) <= 1;
-    try {
-      await shareOrDownload(item.file, item.title, item.text);
-    } catch (error) {
-      // AbortError just means the user closed the share sheet
-      if ((error as Error).name !== 'AbortError') console.error(error);
-    } finally {
-      if (closeAfter) setShareModal(null);
-    }
-  };
 
   const handlePaymentUpdate = async (amount: number, note: string) => {
     if (!selectedInvoice?.id) return;
@@ -493,37 +467,7 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
         <PaymentModal invoice={selectedInvoice} onClose={() => setSelectedInvoice(null)} onSave={handlePaymentUpdate} />
       )}
 
-      {shareModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <GlassCard className="w-full max-w-sm p-6 text-center">
-            <div className="mx-auto w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center mb-4 text-green-400">
-              <Share2 size={24} />
-            </div>
-            <h3 className="text-xl font-bold text-white mb-2">{shareModal.heading}</h3>
-            <p className="text-slate-400 text-sm mb-6">{shareModal.description}</p>
-            <div className="space-y-3">
-              {shareModal.files.map((item, i) => (
-                <button
-                  key={item.file.name}
-                  onClick={() => executeShare(item)}
-                  className={clsx(
-                    "w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold active:scale-95 transition-all",
-                    i === 0
-                      ? "bg-green-600 hover:bg-green-500 text-white shadow-lg shadow-green-500/20"
-                      : "bg-white/10 hover:bg-white/20 text-white"
-                  )}
-                >
-                  <Send size={18} />
-                  Share {item.label}
-                </button>
-              ))}
-              <button onClick={() => setShareModal(null)} className="text-slate-500 hover:text-white text-sm py-2">
-                Done
-              </button>
-            </div>
-          </GlassCard>
-        </div>
-      )}
+      {shareModal && <ShareModal state={shareModal} onClose={() => setShareModal(null)} />}
     </div>
   );
 }
