@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
+  addDays,
   applyPayment,
   backfillCreatedAt,
+  composeInvoice,
+  duplicateDraft,
+  getDisplayStatus,
+  invoiceToDraft,
+  todayInputValue,
+  type InvoiceDraft,
   calculateTotals,
   deriveStatus,
   getAmountCollected,
@@ -47,7 +54,7 @@ describe('calculateTotals', () => {
     const t = calculateTotals({
       items: [{ quantity: '', unitPrice: NaN }], discountType: 'fixed', discountRate: undefined, amountPaid: '',
     });
-    expect(t).toEqual({ subtotal: 0, discount: 0, grandTotal: 0, balance: 0 });
+    expect(t).toEqual({ subtotal: 0, discount: 0, tax: 0, grandTotal: 0, balance: 0 });
   });
 
   it('applies a decimal percentage discount', () => {
@@ -175,5 +182,89 @@ describe('backfillCreatedAt (Dexie v2 upgrade)', () => {
     const c = { createdAt: existing, updatedAt };
     backfillCreatedAt(c);
     expect(c.createdAt).toBe(existing);
+  });
+});
+
+describe('tax', () => {
+  it('applies tax after the discount', () => {
+    const t = calculateTotals({
+      items: [{ quantity: 1, unitPrice: 10000 }], discountType: 'percentage', discountRate: 10, taxRate: 7.5, amountPaid: 0,
+    });
+    expect(t.discount).toBe(1000);
+    expect(t.tax).toBe(675);
+    expect(t.grandTotal).toBe(9675);
+  });
+
+  it('defaults to no tax for invoices saved before tax existed', () => {
+    const t = calculateTotals({ items: [{ quantity: 2, unitPrice: 50 }], discountType: 'fixed', discountRate: 0, amountPaid: 0 });
+    expect(t.tax).toBe(0);
+    expect(t.grandTotal).toBe(100);
+  });
+});
+
+describe('dates and overdue', () => {
+  it('formats local today and adds days across month ends', () => {
+    expect(todayInputValue(new Date(2026, 0, 5, 23, 30))).toBe('2026-01-05');
+    expect(addDays('2026-01-25', 14)).toBe('2026-02-08');
+  });
+
+  it('marks unpaid invoices past their due date as overdue', () => {
+    const due = new Date('2026-03-10');
+    expect(getDisplayStatus({ status: 'pending', dueDate: due }, '2026-03-10')).toBe('pending');
+    expect(getDisplayStatus({ status: 'partial', dueDate: due }, '2026-03-11')).toBe('overdue');
+    expect(getDisplayStatus({ status: 'paid', dueDate: due }, '2026-04-01')).toBe('paid');
+    expect(getDisplayStatus({ status: 'pending' }, '2030-01-01')).toBe('pending');
+  });
+});
+
+describe('composeInvoice', () => {
+  const now = new Date('2026-05-01T09:00:00Z');
+  const draft: InvoiceDraft = {
+    customerId: 'c-1', invoiceNumber: ' INV-004 ', currency: 'NGN', dateIssued: '2026-05-01', dueDate: '2026-05-15',
+    items: [{ description: 'Consulting ', quantity: 2, unitPrice: 5000 }],
+    discountType: 'fixed', discountRate: 0, taxRate: 7.5, taxLabel: 'VAT', notes: '  Thanks! ', depositAmount: 3000,
+  };
+
+  it('creates a new invoice with the deposit recorded as a payment', () => {
+    const inv = composeInvoice(draft, undefined, now);
+    expect(inv.invoiceNumber).toBe('INV-004');
+    expect(inv.grandTotal).toBe(10750);
+    expect(inv.tax).toBe(750);
+    expect(inv.status).toBe('partial');
+    expect(inv.payments).toHaveLength(1);
+    expect(inv.payments?.[0]).toMatchObject({ amount: 3000, note: 'Initial Deposit' });
+    expect(inv.notes).toBe('Thanks!');
+    expect(inv.dueDate?.toISOString().slice(0, 10)).toBe('2026-05-15');
+    expect(inv.createdAt).toBe(now);
+  });
+
+  it('editing keeps id, createdAt and payments, and recomputes status against the new total', () => {
+    const original = composeInvoice(draft, undefined, new Date('2026-04-01'));
+    const later = new Date('2026-05-02');
+    const edited = composeInvoice(
+      { ...draft, items: [{ description: 'Consulting', quantity: 1, unitPrice: 2000 }], taxRate: 0, depositAmount: 999999 },
+      original,
+      later,
+    );
+    expect(edited.id).toBe(original.id);
+    expect(edited.createdAt).toBe(original.createdAt);
+    expect(edited.payments).toEqual(original.payments);
+    expect(edited.depositAmount).toBe(3000); // the form's deposit field is ignored on edit
+    expect(edited.status).toBe('paid');
+    expect(edited.updatedAt).toBe(later);
+  });
+
+  it('round-trips through invoiceToDraft', () => {
+    const inv = composeInvoice(draft, undefined, now);
+    const again = composeInvoice(invoiceToDraft(inv), inv, now);
+    expect(again.grandTotal).toBe(inv.grandTotal);
+    expect(again.dueDate?.getTime()).toBe(inv.dueDate?.getTime());
+  });
+
+  it('duplicates as a fresh unpaid invoice keeping the payment terms length', () => {
+    const inv = composeInvoice(draft, undefined, now);
+    const copy = duplicateDraft(inv, 'INV-005', '2026-06-10');
+    expect(copy).toMatchObject({ invoiceNumber: 'INV-005', dateIssued: '2026-06-10', dueDate: '2026-06-24', depositAmount: 0 });
+    expect(composeInvoice(copy, undefined, now).payments).toEqual([]);
   });
 });

@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { db } from '../../db';
 import { GlassCard } from '../ui/GlassCard';
-import { Save, Upload, Loader2, FileText } from 'lucide-react';
+import { Save, Upload, Loader2, FileText, Receipt } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { BusinessProfile } from '../../types';
 import { DEFAULT_INVOICE_TERMS } from '../../lib/invoice';
@@ -17,10 +17,13 @@ const profileSchema = z.object({
   phone: z.string().min(10, "Valid phone number required"),
   email: z.string().email().optional().or(z.literal('')),
   bankName: z.string().min(2, "Bank name required"),
-  accountNumber: z.string().min(10, "Account number required"),
+  // Not fixed to 10 digits (Nigerian NUBAN) so UK sort-code accounts and IBANs also fit
+  accountNumber: z.string().min(4, "Account number required"),
   accountName: z.string().min(2, "Account name required"),
-  // NEW: Optional footer text
   invoiceFooterText: z.string().optional(),
+  taxLabel: z.string().optional(),
+  defaultTaxRate: z.coerce.number().min(0, "Must be 0 or more").max(100, "Must be 100 or less"),
+  defaultDueDays: z.string(), // '' = no due date by default
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -35,7 +38,10 @@ export function BusinessProfileForm() {
   const { register, handleSubmit, setValue, formState: { errors } } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      invoiceFooterText: DEFAULT_INVOICE_TERMS
+      invoiceFooterText: DEFAULT_INVOICE_TERMS,
+      taxLabel: 'VAT',
+      defaultTaxRate: 0,
+      defaultDueDays: '',
     }
   });
 
@@ -54,6 +60,9 @@ export function BusinessProfileForm() {
         setValue('accountName', profile.accountName);
         // Load saved terms or use default
         setValue('invoiceFooterText', profile.invoiceFooterText || DEFAULT_INVOICE_TERMS);
+        setValue('taxLabel', profile.taxLabel || 'VAT');
+        setValue('defaultTaxRate', profile.defaultTaxRate ?? 0);
+        setValue('defaultDueDays', profile.defaultDueDays?.toString() ?? '');
 
         if (profile.logoUrl) {
           setLogoPreview(profile.logoUrl);
@@ -92,8 +101,11 @@ export function BusinessProfileForm() {
         });
       }
 
+      const { defaultDueDays, ...rest } = data;
       const profileData: BusinessProfile = {
-        ...data,
+        ...rest,
+        taxLabel: rest.taxLabel?.trim() || 'VAT',
+        defaultDueDays: defaultDueDays === '' ? undefined : Number(defaultDueDays),
         logoUrl: finalLogoUrl || undefined,
         // Ensure ID 1 is always used for the singleton profile
         id: 1,
@@ -199,7 +211,36 @@ export function BusinessProfileForm() {
           </div>
         </GlassCard>
 
-        {/* Card 3: Invoice Terms (NEW) */}
+        {/* Card 3: Invoice Defaults */}
+        <GlassCard className="p-6 md:p-8">
+          <h3 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
+            <Receipt size={20} className="text-indigo-400"/> Invoice Defaults
+          </h3>
+          <p className="text-xs text-slate-500 mb-6">Pre-filled on every new invoice. You can still change them per invoice.</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className={labelClass}>Tax Name</label>
+              <input {...register('taxLabel')} className={inputClass} placeholder="VAT" />
+            </div>
+            <div>
+              <label className={labelClass}>Tax Rate (%)</label>
+              <input type="number" step="any" min="0" max="100" {...register('defaultTaxRate')} className={inputClass} placeholder="e.g. 7.5" />
+              {errors.defaultTaxRate && <span className="text-red-400 text-xs">{errors.defaultTaxRate.message}</span>}
+            </div>
+            <div>
+              <label className={labelClass}>Payment Terms</label>
+              <select {...register('defaultDueDays')} className={clsx(inputClass, "[&>option]:bg-slate-900")}>
+                <option value="">No due date</option>
+                <option value="0">Due on receipt</option>
+                <option value="7">Net 7 days</option>
+                <option value="14">Net 14 days</option>
+                <option value="30">Net 30 days</option>
+              </select>
+            </div>
+          </div>
+        </GlassCard>
+
+        {/* Card 4: Invoice Terms */}
         <GlassCard className="p-6 md:p-8">
             <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                 <FileText size={20} className="text-indigo-400"/>
@@ -208,7 +249,7 @@ export function BusinessProfileForm() {
 
             <div>
                 <label className={labelClass}>
-                    Footer Message (Appears in Red Box)
+                    Footer Message
                 </label>
                 <textarea
                     {...register('invoiceFooterText')}

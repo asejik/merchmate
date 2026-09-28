@@ -5,7 +5,7 @@ import { GlassCard } from '../ui/GlassCard';
 import { TrendingUp, Clock, FileText, Wallet, AlertCircle } from 'lucide-react';
 import type { AppTab, CurrencyCode } from '../../types';
 import { CURRENCY_CODES, formatMoney } from '../../lib/currency';
-import { getAmountCollected, getBalance } from '../../lib/invoice';
+import { getAmountCollected, getBalance, getDisplayStatus, todayInputValue } from '../../lib/invoice';
 import { clsx } from 'clsx';
 
 export function Dashboard({ onNavigate }: { onNavigate: (tab: AppTab) => void }) {
@@ -21,13 +21,16 @@ export function Dashboard({ onNavigate }: { onNavigate: (tab: AppTab) => void })
 
   // 2. Calculate Stats based on selected Currency
   const stats = useMemo(() => {
-    if (!data?.invoices) return { collected: 0, pending: 0, count: 0, recent: [] };
+    if (!data?.invoices) return { collected: 0, pending: 0, overdue: 0, overdueCount: 0, count: 0, recent: [] };
 
     // Filter by currency
     const filtered = data.invoices.filter(inv => inv.currency === currency);
 
     const collected = filtered.reduce((sum, inv) => sum + getAmountCollected(inv), 0);
     const pending = filtered.reduce((sum, inv) => sum + getBalance(inv), 0);
+    const today = todayInputValue();
+    const overdueInvoices = filtered.filter(inv => getDisplayStatus(inv, today) === 'overdue');
+    const overdue = overdueInvoices.reduce((sum, inv) => sum + getBalance(inv), 0);
 
     // Get 3 most recent invoices with customer names
     const recent = [...filtered]
@@ -35,10 +38,10 @@ export function Dashboard({ onNavigate }: { onNavigate: (tab: AppTab) => void })
       .slice(0, 3)
       .map(inv => {
         const customer = data.customers.find(c => c.id === inv.customerId);
-        return { ...inv, customerName: customer?.name || 'Unknown' };
+        return { ...inv, customerName: customer?.name || 'Unknown', displayStatus: getDisplayStatus(inv, today) };
       });
 
-    return { collected, pending, count: filtered.length, recent };
+    return { collected, pending, overdue, overdueCount: overdueInvoices.length, count: filtered.length, recent };
   }, [data, currency]);
 
   return (
@@ -92,9 +95,13 @@ export function Dashboard({ onNavigate }: { onNavigate: (tab: AppTab) => void })
           <p className="text-3xl font-bold text-orange-400 mt-2">
             {formatMoney(stats.pending, currency)}
           </p>
-          <div className="mt-4 text-xs text-orange-400/80 flex items-center gap-1">
+          <div className={clsx("mt-4 text-xs flex items-center gap-1", stats.overdueCount > 0 ? "text-red-400" : "text-orange-400/80")}>
             <AlertCircle size={14} />
-            <span>Money owed to you</span>
+            <span>
+              {stats.overdueCount > 0
+                ? `${formatMoney(stats.overdue, currency)} overdue on ${stats.overdueCount} invoice${stats.overdueCount === 1 ? '' : 's'}`
+                : 'Money owed to you'}
+            </span>
           </div>
         </GlassCard>
 
@@ -133,9 +140,9 @@ export function Dashboard({ onNavigate }: { onNavigate: (tab: AppTab) => void })
                 </p>
                 <p className={clsx(
                   "text-[10px] uppercase font-bold",
-                  inv.status === 'paid' ? "text-green-400" : "text-orange-400"
+                  inv.displayStatus === 'paid' ? "text-green-400" : inv.displayStatus === 'overdue' ? "text-red-400" : "text-orange-400"
                 )}>
-                  {inv.status}
+                  {inv.displayStatus}
                 </p>
               </div>
             </GlassCard>

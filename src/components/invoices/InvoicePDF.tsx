@@ -55,6 +55,8 @@ const styles = StyleSheet.create({
     textAlign: 'center'
   },
 
+  notes: { marginTop: 24, padding: 10, backgroundColor: '#f9fafb', borderRadius: 4 },
+
   ruleBox: { marginTop: 30, padding: 10, backgroundColor: '#FEF2F2', borderColor: '#FECACA', borderWidth: 1, borderRadius: 4 },
   ruleText: { color: '#DC2626', fontSize: 9, fontWeight: 'bold', textAlign: 'center' },
 
@@ -98,6 +100,12 @@ export const InvoicePDF = ({ invoice, business, customer }: PDFProps) => {
             <View style={{ marginTop: 20 }}>
               <Text style={styles.label}>Date Issued</Text>
               <Text style={styles.value}>{new Date(invoice.dateIssued).toLocaleDateString()}</Text>
+              {invoice.dueDate && (
+                <>
+                  <Text style={styles.label}>Due Date</Text>
+                  <Text style={styles.value}>{new Date(invoice.dueDate).toLocaleDateString()}</Text>
+                </>
+              )}
             </View>
           </View>
         </View>
@@ -154,6 +162,13 @@ export const InvoicePDF = ({ invoice, business, customer }: PDFProps) => {
             </View>
           )}
 
+          {invoice.tax > 0 && (
+            <View style={styles.totalRow}>
+              <Text>{invoice.taxLabel || 'Tax'}{invoice.taxRate ? ` (${invoice.taxRate}%)` : ''}:</Text>
+              <Text>{money(invoice.tax)}</Text>
+            </View>
+          )}
+
           <View style={styles.grandTotal}>
             <Text>Grand Total:</Text>
             <Text>{money(invoice.grandTotal)}</Text>
@@ -187,6 +202,13 @@ export const InvoicePDF = ({ invoice, business, customer }: PDFProps) => {
             </Text>
           </View>
         </View>
+
+        {invoice.notes && (
+          <View style={styles.notes}>
+            <Text style={styles.label}>Notes</Text>
+            <Text>{invoice.notes}</Text>
+          </View>
+        )}
 
         <View style={styles.ruleBox}>
           <Text style={styles.ruleText}>

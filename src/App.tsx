@@ -3,7 +3,7 @@ import { db } from './db';
 import { AppShell } from './components/layout/AppShell';
 import { BusinessProfileForm } from './components/forms/BusinessProfileForm';
 import { CustomerList } from './components/customers/CustomerList';
-import { InvoiceForm } from './components/invoices/InvoiceForm';
+import { InvoiceForm, type InvoiceEditorMode } from './components/invoices/InvoiceForm';
 import { InvoiceList } from './components/invoices/InvoiceList';
 import { Dashboard } from './components/dashboard/Dashboard';
 import type { AppTab } from './types';
@@ -20,8 +20,25 @@ function readSavedTab(): AppTab {
   }
 }
 
+interface EditorState {
+  mode: InvoiceEditorMode;
+  invoiceId?: string;
+}
+
 function App() {
   const [activeTab, setActiveTab] = useState<AppTab>(readSavedTab);
+  const [editor, setEditor] = useState<EditorState>({ mode: 'create' });
+
+  const openEditor = (next: EditorState) => {
+    setEditor(next);
+    setActiveTab('create');
+  };
+
+  // The nav's "New" button always starts a blank invoice
+  const handleTabChange = (tab: AppTab) => {
+    if (tab === 'create') setEditor({ mode: 'create' });
+    setActiveTab(tab);
+  };
 
   const [status, setStatus] = useState('Checking DB...');
 
@@ -57,25 +74,34 @@ function App() {
       case 'create':
         return (
           <InvoiceForm
-            onComplete={() => setActiveTab('invoices')}
-            onCancel={() => setActiveTab('dashboard')}
-            onAddClient={() => setActiveTab('customers')}
+            key={`${editor.mode}-${editor.invoiceId ?? 'new'}`}
+            mode={editor.mode}
+            sourceInvoiceId={editor.invoiceId}
+            onComplete={() => handleTabChange('invoices')}
+            onCancel={() => handleTabChange(editor.mode === 'create' ? 'dashboard' : 'invoices')}
+            onAddClient={() => handleTabChange('customers')}
           />
         );
 
       case 'invoices':
-        return <InvoiceList />;
+        return (
+          <InvoiceList
+            onEdit={(invoiceId) => openEditor({ mode: 'edit', invoiceId })}
+            onDuplicate={(invoiceId) => openEditor({ mode: 'duplicate', invoiceId })}
+            onCreate={() => handleTabChange('create')}
+          />
+        );
 
       case 'dashboard':
       default:
         return (
-          <Dashboard onNavigate={setActiveTab} />
+          <Dashboard onNavigate={handleTabChange} />
         );
     }
   };
 
   return (
-    <AppShell activeTab={activeTab} onTabChange={setActiveTab}>
+    <AppShell activeTab={activeTab} onTabChange={handleTabChange}>
       <div className="fixed top-4 right-4 z-50 pointer-events-none opacity-0 md:opacity-100">
          <div className="flex items-center gap-2 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-white/5">
              <span className={`h-2 w-2 rounded-full ${status === 'Ready' ? 'bg-green-500' : 'bg-red-500'}`} />

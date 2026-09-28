@@ -14,6 +14,10 @@ export interface BusinessProfile {
   accountNumber: string;
   accountName: string;
   invoiceFooterText?: string;
+  // Invoice defaults
+  taxLabel?: string; // e.g. "VAT"
+  defaultTaxRate?: number; // percent
+  defaultDueDays?: number; // payment terms; 0 = due on receipt
 }
 
 export interface Customer {
@@ -24,6 +28,7 @@ export interface Customer {
   address?: string;
   city?: string;
   country?: string;
+  isInternational?: boolean; // UI toggle for the address fields
   createdAt: Date;
 }
 
@@ -46,7 +51,9 @@ export interface Invoice {
   discount: number;
   discountRate?: number;
   discountType?: DiscountType;
-  tax: number;
+  tax: number; // Tax amount, applied after discount
+  taxRate?: number; // percent
+  taxLabel?: string;
   grandTotal: number;
   depositAmount: number; // Running total of all payments received, not just the first deposit
   payments?: PaymentRecord[];

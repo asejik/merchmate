@@ -3,7 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { db } from '../../db';
 import { GlassCard } from '../ui/GlassCard';
-import { Save, X, Globe } from 'lucide-react';
+import { Save, X, Globe, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Customer } from '../../types';
 
@@ -30,10 +30,18 @@ interface Props {
 export function CustomerForm({ onComplete, onCancel, initialData }: Props) {
   const { register, handleSubmit, control, formState: { errors } } = useForm<CustomerFormValues>({
     resolver: zodResolver(customerSchema),
-    defaultValues: {
-      isInternational: false,
-      ...initialData // Pre-fill if editing
-    }
+    defaultValues: initialData
+      ? {
+          name: initialData.name,
+          phone: initialData.phone,
+          email: initialData.email ?? '',
+          address: initialData.address ?? '',
+          city: initialData.city ?? '',
+          country: initialData.country ?? '',
+          // Older records never stored the toggle; infer it from the address fields
+          isInternational: initialData.isInternational ?? !!(initialData.address || initialData.city || initialData.country),
+        }
+      : { isInternational: false }
   });
 
   // Watch the checkbox to toggle UI
@@ -42,7 +50,7 @@ export function CustomerForm({ onComplete, onCancel, initialData }: Props) {
   const onSubmit = async (data: CustomerFormValues) => {
     try {
       if (initialData?.id) {
-        await db.customers.update(initialData.id, { ...data, createdAt: new Date() });
+        await db.customers.update(initialData.id, data);
       } else {
         await db.customers.add({ ...data, id: crypto.randomUUID(), createdAt: new Date() });
       }
@@ -50,6 +58,23 @@ export function CustomerForm({ onComplete, onCancel, initialData }: Props) {
     } catch (err) {
       console.error(err);
       alert("Failed to save customer");
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!initialData?.id) return;
+    const invoiceCount = await db.invoices.where('customerId').equals(initialData.id).count();
+    if (invoiceCount > 0) {
+      alert(`${initialData.name} has ${invoiceCount} invoice${invoiceCount === 1 ? '' : 's'}. Delete those first to keep your records consistent.`);
+      return;
+    }
+    if (!confirm(`Delete ${initialData.name}? This cannot be undone.`)) return;
+    try {
+      await db.customers.delete(initialData.id);
+      onComplete();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to delete customer");
     }
   };
 
@@ -62,7 +87,7 @@ export function CustomerForm({ onComplete, onCancel, initialData }: Props) {
         <h2 className="text-xl font-bold text-white">
           {initialData ? 'Edit Customer' : 'New Customer'}
         </h2>
-        <button onClick={onCancel} className="text-slate-400 hover:text-white">
+        <button onClick={onCancel} className="text-slate-400 hover:text-white" aria-label="Close">
           <X size={24} />
         </button>
       </div>
@@ -129,6 +154,11 @@ export function CustomerForm({ onComplete, onCancel, initialData }: Props) {
         </AnimatePresence>
 
         <div className="pt-4 flex justify-end gap-3">
+          {initialData?.id && (
+            <button type="button" onClick={handleDelete} className="mr-auto flex items-center gap-1.5 px-3 py-2 text-red-400 hover:text-red-300 text-sm">
+              <Trash2 size={16} /> Delete
+            </button>
+          )}
           <button type="button" onClick={onCancel} className="px-4 py-2 text-slate-400 hover:text-white">Cancel</button>
           <button type="submit" className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded-xl font-medium shadow-lg shadow-indigo-500/20">
             <Save size={18} />

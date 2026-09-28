@@ -1,46 +1,98 @@
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
 import { GlassCard } from '../ui/GlassCard';
-import { Save, Plus, Trash2, Calculator, ArrowLeft, Percent } from 'lucide-react';
+import { Save, Plus, Trash2, Calculator, ArrowLeft, Percent, Loader2 } from 'lucide-react';
 import { clsx } from 'clsx';
-import type { Invoice, CurrencyCode, DiscountType } from '../../types';
+import type { Invoice } from '../../types';
 import { CURRENCY_CODES, CURRENCY_SYMBOLS, formatMoney } from '../../lib/currency';
-import { calculateTotals, deriveStatus, lineTotal, nextInvoiceNumber, toNumber } from '../../lib/invoice';
+import {
+  addDays,
+  calculateTotals,
+  composeInvoice,
+  duplicateDraft,
+  invoiceToDraft,
+  nextInvoiceNumber,
+  todayInputValue,
+  toNumber,
+  type InvoiceDraft,
+} from '../../lib/invoice';
+
+export type InvoiceEditorMode = 'create' | 'edit' | 'duplicate';
 
 interface Props {
+  mode: InvoiceEditorMode;
+  /** Invoice to edit or copy from (ignored in create mode). */
+  sourceInvoiceId?: string;
   onComplete: () => void;
   onCancel: () => void;
   onAddClient: () => void;
 }
 
-interface InvoiceFormValues {
-  currency: CurrencyCode;
-  invoiceNumber: string;
-  items: { description: string; quantity: number; unitPrice: number }[];
-  depositAmount: number;
-  discountRate: number;
-  discountType: DiscountType;
-  dateIssued: string;
-  customerId: string;
+const EMPTY_ITEM = { description: '', quantity: 1, unitPrice: 0 };
+const DUE_PRESETS = [
+  { label: 'On receipt', days: 0 },
+  { label: '7 days', days: 7 },
+  { label: '14 days', days: 14 },
+  { label: '30 days', days: 30 },
+];
+
+const TITLES: Record<InvoiceEditorMode, { title: string; subtitle: string; submit: string }> = {
+  create: { title: 'New Invoice', subtitle: 'Bill a client for goods or services.', submit: 'Generate Invoice' },
+  edit: { title: 'Edit Invoice', subtitle: 'Payments already recorded are kept.', submit: 'Save Changes' },
+  duplicate: { title: 'Duplicate Invoice', subtitle: 'A fresh, unpaid copy with a new number.', submit: 'Generate Invoice' },
+};
+
+async function loadInitialValues(mode: InvoiceEditorMode, sourceInvoiceId?: string): Promise<{ values: InvoiceDraft; existing?: Invoice }> {
+  const [numbers, profile, source] = await Promise.all([
+    db.invoices.orderBy('invoiceNumber').keys(),
+    db.businessProfile.orderBy('id').first(),
+    sourceInvoiceId ? db.invoices.get(sourceInvoiceId) : undefined,
+  ]);
+  const nextNumber = nextInvoiceNumber(numbers.map(String));
+  if (mode !== 'create' && !source) throw new Error('Invoice not found');
+
+  if (mode === 'edit' && source) return { values: invoiceToDraft(source), existing: source };
+  if (mode === 'duplicate' && source) return { values: duplicateDraft(source, nextNumber) };
+
+  const today = todayInputValue();
+  const dueDays = profile?.defaultDueDays;
+  return {
+    values: {
+      customerId: '',
+      invoiceNumber: nextNumber,
+      currency: 'NGN',
+      dateIssued: today,
+      dueDate: dueDays !== undefined ? addDays(today, dueDays) : '',
+      items: [EMPTY_ITEM],
+      discountType: 'percentage',
+      discountRate: 0,
+      taxRate: profile?.defaultTaxRate ?? 0,
+      taxLabel: profile?.taxLabel || 'VAT',
+      notes: '',
+      depositAmount: 0,
+    },
+  };
 }
 
-const EMPTY_ITEM = { description: '', quantity: 1, unitPrice: 0 };
+export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAddClient }: Props) {
+  const customers = useLiveQuery(() => db.customers.orderBy('name').toArray());
+  const [existing, setExisting] = useState<Invoice | undefined>();
+  const [ready, setReady] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const text = TITLES[mode];
 
-export function InvoiceForm({ onComplete, onCancel, onAddClient }: Props) {
-  const customers = useLiveQuery(() => db.customers.toArray());
-
-  const { register, control, handleSubmit, setValue } = useForm<InvoiceFormValues>({
+  const { register, control, handleSubmit, setValue, reset, formState: { errors } } = useForm<InvoiceDraft>({
     defaultValues: {
       currency: 'NGN',
-      invoiceNumber: 'Loading...',
       items: [EMPTY_ITEM],
-      depositAmount: 0,
-      discountRate: 0,
       discountType: 'percentage',
-      dateIssued: new Date().toISOString().split('T')[0],
-      customerId: ''
+      discountRate: 0,
+      taxRate: 0,
+      taxLabel: 'VAT',
+      depositAmount: 0,
     }
   });
 
@@ -51,65 +103,70 @@ export function InvoiceForm({ onComplete, onCancel, onAddClient }: Props) {
   const currency = useWatch({ control, name: "currency" });
   const discountRate = useWatch({ control, name: "discountRate" });
   const discountType = useWatch({ control, name: "discountType" });
+  const taxRate = useWatch({ control, name: "taxRate" });
+  const taxLabel = useWatch({ control, name: "taxLabel" });
+  const dateIssued = useWatch({ control, name: "dateIssued" });
   const symbol = CURRENCY_SYMBOLS[currency];
 
-  // Sequential numbering: one past the highest number already used
   useEffect(() => {
-    db.invoices.orderBy('invoiceNumber').keys()
-      .then(keys => setValue('invoiceNumber', nextInvoiceNumber(keys.map(String))))
-      .catch(() => setValue('invoiceNumber', nextInvoiceNumber([])));
-  }, [setValue]);
+    let cancelled = false;
+    loadInitialValues(mode, sourceInvoiceId)
+      .then(({ values, existing }) => {
+        if (cancelled) return;
+        reset(values);
+        setExisting(existing);
+        setReady(true);
+      })
+      .catch(err => {
+        console.error(err);
+        if (!cancelled) setError('Could not load invoice data.');
+      });
+    return () => { cancelled = true; };
+  }, [mode, sourceInvoiceId, reset]);
+
+  // On edit, the amount paid comes from recorded payments, not the form
+  const amountPaid = existing ? existing.depositAmount : deposit;
 
   const totals = useMemo(
-    () => calculateTotals({ items: items ?? [], discountType, discountRate, amountPaid: deposit }),
-    [items, deposit, discountRate, discountType]
+    () => calculateTotals({ items: items ?? [], discountType, discountRate, taxRate, amountPaid }),
+    [items, amountPaid, discountRate, discountType, taxRate]
   );
 
-  const onSubmit = async (data: InvoiceFormValues) => {
-    if (!data.customerId) {
-      alert("Please select a customer");
+  const onSubmit = async (data: InvoiceDraft) => {
+    setError('');
+    const number = data.invoiceNumber.trim();
+    const clash = await db.invoices.where('invoiceNumber').equals(number).first();
+    if (clash && clash.id !== existing?.id) {
+      setError(`Invoice number ${number} is already used. Choose another.`);
+      return;
+    }
+    if (data.dueDate && data.dueDate < data.dateIssued) {
+      setError('Due date cannot be before the invoice date.');
       return;
     }
 
-    const now = new Date();
-    const amountPaid = toNumber(data.depositAmount);
-    const invoiceData: Invoice = {
-      id: crypto.randomUUID(),
-      customerId: data.customerId,
-      invoiceNumber: data.invoiceNumber.trim(),
-      items: data.items.map(item => ({
-        id: crypto.randomUUID(),
-        description: item.description,
-        quantity: toNumber(item.quantity),
-        unitPrice: toNumber(item.unitPrice),
-        total: lineTotal(item.quantity, item.unitPrice),
-      })),
-      subtotal: totals.subtotal,
-      discount: totals.discount,
-      discountRate: toNumber(data.discountRate),
-      discountType: data.discountType,
-      tax: 0,
-      grandTotal: totals.grandTotal,
-      depositAmount: amountPaid,
-      currency: data.currency,
-      status: deriveStatus(totals.grandTotal, amountPaid),
-      dateIssued: new Date(data.dateIssued),
-      isSynced: false,
-      createdAt: now,
-      updatedAt: now
-    };
-
+    setSaving(true);
     try {
-      await db.invoices.add(invoiceData);
+      await db.invoices.put(composeInvoice(data, existing));
       onComplete();
     } catch (err) {
       console.error(err);
-      alert("Failed to save invoice");
+      setError('Failed to save invoice.');
+    } finally {
+      setSaving(false);
     }
   };
 
   const inputClass = "w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-all text-sm";
   const labelClass = "block text-xs font-medium text-slate-400 mb-1 uppercase";
+
+  if (!ready) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 text-slate-500 gap-3">
+        {error ? <p className="text-red-400">{error}</p> : <Loader2 className="animate-spin" size={28} />}
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto pb-20">
@@ -118,8 +175,8 @@ export function InvoiceForm({ onComplete, onCancel, onAddClient }: Props) {
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h2 className="text-2xl font-bold text-white">New Invoice</h2>
-          <p className="text-slate-400 text-sm">Bill a client for goods or services.</p>
+          <h2 className="text-2xl font-bold text-white">{text.title}</h2>
+          <p className="text-slate-400 text-sm">{text.subtitle}</p>
         </div>
       </div>
 
@@ -148,29 +205,60 @@ export function InvoiceForm({ onComplete, onCancel, onAddClient }: Props) {
             <div>
               <label className={labelClass}>Invoice #</label>
               <input {...register('invoiceNumber', { required: "Required" })} className={inputClass} />
+              {errors.invoiceNumber && <span className="text-red-400 text-xs">{errors.invoiceNumber.message}</span>}
             </div>
             <div>
-              <label className={labelClass}>Date</label>
-              <input type="date" {...register('dateIssued', { required: true })} className={inputClass} />
+              <label className={labelClass}>Customer</label>
+              <select
+                {...register('customerId', { required: "Select a client" })}
+                className={clsx(inputClass, "[&>option]:bg-slate-900 [&>option]:text-white")}
+              >
+                <option value="">Select a client...</option>
+                {customers?.map(c => (
+                  <option key={c.id} value={c.id}>{c.name} ({c.phone})</option>
+                ))}
+              </select>
+              {errors.customerId && <span className="text-red-400 text-xs">{errors.customerId.message}</span>}
             </div>
           </div>
-          <div className="mt-4">
-            <label className={labelClass}>Customer</label>
-            <select
-              {...register('customerId', { required: "Required" })}
-              className={clsx(inputClass, "[&>option]:bg-slate-900 [&>option]:text-white")}
-            >
-              <option value="">Select a client...</option>
-              {customers?.map(c => (
-                <option key={c.id} value={c.id}>{c.name} ({c.phone})</option>
-              ))}
-            </select>
-            {customers?.length === 0 && (
-              <div className="mt-2 p-3 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-between">
-                <span className="text-xs text-orange-200">No clients found.</span>
-                <button type="button" onClick={onAddClient} className="text-xs font-bold text-orange-400 hover:text-orange-300 underline">+ Add New Client</button>
+
+          {customers?.length === 0 && (
+            <div className="mt-3 p-3 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-between">
+              <span className="text-xs text-orange-200">No clients found.</span>
+              <button type="button" onClick={onAddClient} className="text-xs font-bold text-orange-400 hover:text-orange-300 underline">+ Add New Client</button>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            <div>
+              <label className={labelClass}>Invoice Date</label>
+              <input type="date" {...register('dateIssued', { required: true })} className={inputClass} />
+            </div>
+            <div className="md:col-span-2">
+              <label className={labelClass}>Due Date</label>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input type="date" {...register('dueDate')} className={clsx(inputClass, "sm:max-w-[180px]")} />
+                <div className="flex flex-wrap gap-1">
+                  {DUE_PRESETS.map(preset => (
+                    <button
+                      key={preset.days}
+                      type="button"
+                      onClick={() => setValue('dueDate', addDays(dateIssued, preset.days))}
+                      className="text-[11px] bg-white/5 hover:bg-white/15 border border-white/10 px-2.5 py-1.5 rounded-md text-slate-300 transition-colors"
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setValue('dueDate', '')}
+                    className="text-[11px] px-2.5 py-1.5 rounded-md text-slate-500 hover:text-slate-300 transition-colors"
+                  >
+                    None
+                  </button>
+                </div>
               </div>
-            )}
+            </div>
           </div>
         </GlassCard>
 
@@ -230,49 +318,87 @@ export function InvoiceForm({ onComplete, onCancel, onAddClient }: Props) {
           <div className="flex flex-col md:flex-row gap-8">
              <div className="flex-1 space-y-4">
 
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                     <label className={labelClass}>Discount</label>
-                     <button
-                       type="button"
-                       onClick={() => setValue('discountType', discountType === 'percentage' ? 'fixed' : 'percentage')}
-                       className="text-[10px] bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded text-indigo-300 transition-colors uppercase font-bold tracking-wide"
-                     >
-                       Switch to {discountType === 'percentage' ? 'Fixed Amount' : 'Percentage'}
-                     </button>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                       <label className={labelClass}>Discount</label>
+                       <button
+                         type="button"
+                         onClick={() => setValue('discountType', discountType === 'percentage' ? 'fixed' : 'percentage')}
+                         className="text-[10px] bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded text-indigo-300 transition-colors uppercase font-bold tracking-wide"
+                       >
+                         {discountType === 'percentage' ? 'Use amount' : 'Use %'}
+                       </button>
+                    </div>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs font-bold">
+                        {discountType === 'percentage' ? <Percent size={14} /> : symbol}
+                      </span>
+                      <input
+                        type="number"
+                        step="any"
+                        {...register('discountRate', { valueAsNumber: true })}
+                        className={clsx(inputClass, "pl-9")}
+                        placeholder={discountType === 'percentage' ? "0%" : "0.00"}
+                        min="0"
+                      />
+                    </div>
                   </div>
 
-                  <div className="relative max-w-[200px]">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs font-bold">
-                      {discountType === 'percentage' ? <Percent size={14} /> : symbol}
-                    </span>
-                    <input
-                      type="number"
-                      step="any"
-                      {...register('discountRate', { valueAsNumber: true })}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 pl-9 text-white focus:outline-none focus:border-indigo-500 transition-all"
-                      placeholder={discountType === 'percentage' ? "0%" : "0.00"}
-                      min="0"
-                    />
+                  <div>
+                    <label className={labelClass}>Tax</label>
+                    <div className="flex gap-2">
+                      <input {...register('taxLabel')} className={clsx(inputClass, "w-20")} placeholder="VAT" aria-label="Tax name" />
+                      <div className="relative flex-1">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"><Percent size={14} /></span>
+                        <input
+                          type="number"
+                          step="any"
+                          min="0"
+                          max="100"
+                          {...register('taxRate', { valueAsNumber: true })}
+                          className={clsx(inputClass, "pl-9")}
+                          placeholder="0"
+                          aria-label="Tax rate"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <div>
-                  <label className={labelClass}>Deposit / Initial Payment</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">{symbol}</span>
-                    <input
-                      type="number"
-                      step="any"
-                      min="0"
-                      {...register('depositAmount', { valueAsNumber: true })}
-                      className="w-full bg-indigo-500/10 border border-indigo-500/30 rounded-xl px-4 py-4 pl-8 text-xl font-bold text-white focus:outline-none focus:border-indigo-500 transition-all"
-                    />
+                {existing ? (
+                  <div className="rounded-xl bg-white/5 border border-white/10 p-4 text-sm text-slate-300">
+                    Paid so far: <span className="font-bold text-white">{formatMoney(existing.depositAmount, currency)}</span>
+                    <p className="text-xs text-slate-500 mt-1">Use “Record Payment” on the invoice list to add payments.</p>
                   </div>
-                  <p className="text-xs text-indigo-300/80 mt-2 flex items-center gap-1">
-                    <Calculator size={12} />
-                    Any amount already paid upfront.
-                  </p>
+                ) : (
+                  <div>
+                    <label className={labelClass}>Deposit / Initial Payment</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">{symbol}</span>
+                      <input
+                        type="number"
+                        step="any"
+                        min="0"
+                        {...register('depositAmount', { valueAsNumber: true })}
+                        className="w-full bg-indigo-500/10 border border-indigo-500/30 rounded-xl px-4 py-4 pl-8 text-xl font-bold text-white focus:outline-none focus:border-indigo-500 transition-all"
+                      />
+                    </div>
+                    <p className="text-xs text-indigo-300/80 mt-2 flex items-center gap-1">
+                      <Calculator size={12} />
+                      Any amount already paid upfront.
+                    </p>
+                  </div>
+                )}
+
+                <div>
+                  <label className={labelClass}>Notes (shown on invoice)</label>
+                  <textarea
+                    {...register('notes')}
+                    rows={2}
+                    className={inputClass}
+                    placeholder="e.g. Delivery by Friday. Thank you for your order!"
+                  />
                 </div>
              </div>
 
@@ -291,6 +417,13 @@ export function InvoiceForm({ onComplete, onCancel, onAddClient }: Props) {
                   </div>
                 )}
 
+                {totals.tax > 0 && (
+                  <div className="flex justify-between text-sm text-slate-400">
+                    <span>{taxLabel || 'Tax'} ({toNumber(taxRate)}%):</span>
+                    <span>{formatMoney(totals.tax, currency)}</span>
+                  </div>
+                )}
+
                 <div className="h-px bg-white/10 my-2" />
 
                 <div className="flex justify-between text-base font-semibold text-white">
@@ -299,8 +432,8 @@ export function InvoiceForm({ onComplete, onCancel, onAddClient }: Props) {
                 </div>
 
                 <div className="flex justify-between text-sm text-slate-400">
-                  <span>Paid / Deposit:</span>
-                  <span className="text-white">({formatMoney(toNumber(deposit), currency)})</span>
+                  <span>Paid:</span>
+                  <span className="text-white">({formatMoney(toNumber(amountPaid), currency)})</span>
                 </div>
 
                 <div className="h-px bg-white/10 my-2" />
@@ -315,10 +448,11 @@ export function InvoiceForm({ onComplete, onCancel, onAddClient }: Props) {
           </div>
         </GlassCard>
 
-        <div className="flex justify-end pt-4">
-           <button type="submit" className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-4 rounded-xl font-bold shadow-lg shadow-indigo-500/20 transition-all transform hover:-translate-y-1">
-            <Save size={20} />
-            Generate Invoice
+        <div className="flex flex-col items-end gap-3 pt-4">
+          {error && <p className="text-sm text-red-400" role="alert">{error}</p>}
+          <button type="submit" disabled={saving} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-4 rounded-xl font-bold shadow-lg shadow-indigo-500/20 transition-all transform hover:-translate-y-1 disabled:opacity-50">
+            {saving ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />}
+            {text.submit}
           </button>
         </div>
       </form>
