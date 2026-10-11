@@ -1,5 +1,5 @@
 import type { CurrencyCode, Customer, Invoice } from '../types';
-import { getBalance, getPaymentHistory, isQuote, round2 } from './invoice';
+import { getBalance, getConfirmedPayments, isQuote, round2 } from './invoice';
 
 export interface MonthBucket {
   key: string; // "YYYY-MM"
@@ -20,7 +20,7 @@ export function monthlyCollections(invoices: Invoice[], currency: CurrencyCode, 
 
   for (const inv of invoices) {
     if (isQuote(inv) || inv.currency !== currency) continue;
-    for (const payment of getPaymentHistory(inv)) {
+    for (const payment of getConfirmedPayments(inv)) {
       const i = index.get(monthKey(new Date(payment.date)));
       if (i !== undefined) buckets[i].amount = round2(buckets[i].amount + payment.amount);
     }

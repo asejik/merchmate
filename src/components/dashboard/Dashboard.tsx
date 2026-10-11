@@ -2,12 +2,12 @@ import { useState, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
 import { GlassCard } from '../ui/GlassCard';
-import { TrendingUp, Clock, FileText, Wallet, AlertCircle, DatabaseBackup } from 'lucide-react';
+import { TrendingUp, Clock, FileText, Wallet, AlertCircle, DatabaseBackup, ShieldAlert } from 'lucide-react';
 import { isBackupDue } from '../../db/backup';
 import { Reports } from './Reports';
 import type { AppTab, CurrencyCode } from '../../types';
 import { CURRENCY_CODES, formatMoney } from '../../lib/currency';
-import { getAmountCollected, getBalance, getDisplayStatus, isQuote, todayInputValue } from '../../lib/invoice';
+import { getAmountCollected, getBalance, getDisplayStatus, getUnconfirmedAmount, isQuote, todayInputValue } from '../../lib/invoice';
 import { clsx } from 'clsx';
 
 export function Dashboard({ onNavigate }: { onNavigate: (tab: AppTab) => void }) {
@@ -23,13 +23,14 @@ export function Dashboard({ onNavigate }: { onNavigate: (tab: AppTab) => void })
 
   // 2. Calculate Stats based on selected Currency
   const stats = useMemo(() => {
-    if (!data?.invoices) return { collected: 0, pending: 0, overdue: 0, overdueCount: 0, count: 0, recent: [] };
+    if (!data?.invoices) return { collected: 0, unconfirmed: 0, pending: 0, overdue: 0, overdueCount: 0, count: 0, recent: [] };
 
     // Filter by currency
     // Quotes are estimates, not money owed
     const filtered = data.invoices.filter(inv => !isQuote(inv) && inv.currency === currency);
 
     const collected = filtered.reduce((sum, inv) => sum + getAmountCollected(inv), 0);
+    const unconfirmed = filtered.reduce((sum, inv) => sum + getUnconfirmedAmount(inv), 0);
     const pending = filtered.reduce((sum, inv) => sum + getBalance(inv), 0);
     const today = todayInputValue();
     const overdueInvoices = filtered.filter(inv => getDisplayStatus(inv, today) === 'overdue');
@@ -44,7 +45,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (tab: AppTab) => void })
         return { ...inv, customerName: customer?.name || 'Unknown', displayStatus: getDisplayStatus(inv, today) };
       });
 
-    return { collected, pending, overdue, overdueCount: overdueInvoices.length, count: filtered.length, recent };
+    return { collected, unconfirmed, pending, overdue, overdueCount: overdueInvoices.length, count: filtered.length, recent };
   }, [data, currency]);
 
   return (
@@ -96,10 +97,17 @@ export function Dashboard({ onNavigate }: { onNavigate: (tab: AppTab) => void })
           <p className="text-3xl font-bold text-white mt-2">
             {formatMoney(stats.collected, currency)}
           </p>
-          <div className="mt-4 text-xs text-green-400 flex items-center gap-1">
-            <TrendingUp size={14} />
-            <span>Actual cash in hand</span>
-          </div>
+          {stats.unconfirmed > 0 ? (
+            <button onClick={() => onNavigate('invoices')} className="mt-4 text-xs text-amber-300 flex items-center gap-1 hover:underline text-left">
+              <ShieldAlert size={14} />
+              <span>+ {formatMoney(stats.unconfirmed, currency)} in transfers to check in your bank</span>
+            </button>
+          ) : (
+            <div className="mt-4 text-xs text-green-400 flex items-center gap-1">
+              <TrendingUp size={14} />
+              <span>Actual cash in hand</span>
+            </div>
+          )}
         </GlassCard>
 
         <GlassCard className="p-6 relative overflow-hidden group">

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { GlassCard } from '../ui/GlassCard';
-import { X, Save, History, Calculator } from 'lucide-react';
+import { X, Save, History, Calculator, ShieldAlert } from 'lucide-react';
+import { clsx } from 'clsx';
 import type { Invoice } from '../../types';
 import { formatMoney } from '../../lib/currency';
 import { getBalance, getPaymentHistory } from '../../lib/invoice';
@@ -8,12 +9,19 @@ import { getBalance, getPaymentHistory } from '../../lib/invoice';
 interface Props {
   invoice: Invoice;
   onClose: () => void;
-  onSave: (amount: number, note: string) => void;
+  onSave: (amount: number, note: string, unconfirmed: boolean) => void;
 }
+
+const METHODS = ['Transfer', 'Cash', 'POS', 'Other'] as const;
+type Method = typeof METHODS[number];
 
 export function PaymentModal({ invoice, onClose, onSave }: Props) {
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
+  const [method, setMethod] = useState<Method>('Transfer');
+  const [seenInBank, setSeenInBank] = useState(false);
+  // Transfer alerts and screenshots can be faked, so transfers need an explicit bank check
+  const unconfirmed = method === 'Transfer' && !seenInBank;
 
   const history = getPaymentHistory(invoice);
   const remaining = getBalance(invoice);
@@ -26,7 +34,8 @@ export function PaymentModal({ invoice, onClose, onSave }: Props) {
     if (val > remaining) {
       if(!confirm("Amount exceeds balance. Continue?")) return;
     }
-    onSave(val, note);
+    const label = method === 'Other' ? '' : method;
+    onSave(val, [label, note.trim()].filter(Boolean).join(' - '), unconfirmed);
   };
 
   return (
@@ -58,8 +67,9 @@ export function PaymentModal({ invoice, onClose, onSave }: Props) {
                     <div>
                       <span className="text-slate-300 block">{new Date(rec.date).toLocaleDateString()}</span>
                       <span className="text-[10px] text-slate-500">{rec.note || 'Payment'}</span>
+                      {rec.unconfirmed && <span className="ml-2 text-[10px] text-amber-300">Awaiting confirmation</span>}
                     </div>
-                    <span className="text-green-400 font-mono font-bold">
+                    <span className={clsx("font-mono font-bold", rec.unconfirmed ? "text-amber-300/70" : "text-green-400")}>
                       +{money(rec.amount)}
                     </span>
                   </div>
@@ -105,22 +115,64 @@ export function PaymentModal({ invoice, onClose, onSave }: Props) {
                 </div>
               </div>
               <div>
+                <span className="block text-xs font-medium text-slate-400 mb-1 uppercase">Paid By</span>
+                <div className="flex bg-white/5 rounded-lg p-1 border border-white/10" role="radiogroup" aria-label="Payment method">
+                  {METHODS.map(m => (
+                    <button
+                      key={m}
+                      type="button"
+                      role="radio"
+                      aria-checked={method === m}
+                      onClick={() => setMethod(m)}
+                      className={clsx(
+                        "flex-1 py-1.5 text-xs font-medium rounded-md transition-all",
+                        method === m ? "bg-indigo-600 text-white shadow" : "text-slate-400 hover:text-white"
+                      )}
+                    >
+                      {m}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {method === 'Transfer' && (
+                <div className={clsx("rounded-xl border p-3 transition-colors", seenInBank ? "border-green-500/30 bg-green-500/10" : "border-amber-500/30 bg-amber-500/10")}>
+                  <label className="flex items-start gap-3 text-sm text-white cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={seenInBank}
+                      onChange={(e) => setSeenInBank(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 accent-green-500"
+                    />
+                    <span>I've checked my own bank app and the money is there</span>
+                  </label>
+                  {!seenInBank && (
+                    <p className="mt-2 text-xs text-amber-200/90 flex gap-1.5">
+                      <ShieldAlert size={14} className="shrink-0 mt-0.5" />
+                      Alerts and screenshots can be faked. Until you confirm it, this is saved as awaiting confirmation: it won't reduce the balance or get a receipt.
+                    </p>
+                  )}
+                </div>
+              )}
+              <div>
                 <label className="block text-xs font-medium text-slate-400 mb-1 uppercase">Note (Optional)</label>
                 <input
                     type="text"
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
                     className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500"
-                    placeholder="e.g. Bank Transfer, Cash"
+                    placeholder="e.g. Sent by her husband"
                   />
               </div>
 
               <button
                 type="submit"
-                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-xl font-bold shadow-lg shadow-indigo-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                className={clsx(
+                  "w-full text-white py-3 rounded-xl font-bold shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2",
+                  unconfirmed ? "bg-amber-600 hover:bg-amber-500 shadow-amber-500/20" : "bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/20"
+                )}
               >
                 <Save size={18} />
-                Confirm Payment
+                {unconfirmed ? 'Save as Awaiting Confirmation' : 'Confirm Payment'}
               </button>
             </form>
           ) : (

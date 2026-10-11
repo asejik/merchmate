@@ -1,5 +1,5 @@
 import type { Customer, Invoice } from '../types';
-import { getBalance, getDisplayStatus, getPaymentHistory, kindOf, todayInputValue, toDateInputValue } from './invoice';
+import { getBalance, getDisplayStatus, getConfirmedPayments, kindOf, todayInputValue, toDateInputValue } from './invoice';
 
 type Cell = string | number | null | undefined;
 
@@ -54,7 +54,7 @@ export function paymentsCsv(invoices: Invoice[], customers: Customer[]): string 
   const names = new Map(customers.map(c => [c.id, c.name]));
   const rows = invoices
     .filter(inv => kindOf(inv) === 'invoice')
-    .flatMap(inv => getPaymentHistory(inv).map(p => ({ inv, p })))
+    .flatMap(inv => getConfirmedPayments(inv).map(p => ({ inv, p })))
     .sort((a, b) => new Date(a.p.date).getTime() - new Date(b.p.date).getTime());
   return toCsv([
     ['Date', 'Invoice', 'Client', 'Currency', 'Amount', 'Note'],

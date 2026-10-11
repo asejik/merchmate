@@ -16,6 +16,11 @@ import {
   getPaymentHistory,
   nextInvoiceNumber,
   round2,
+  confirmPayment,
+  getConfirmedPayments,
+  getReceiptInfo,
+  getUnconfirmedAmount,
+  removeUnconfirmedPayment,
 } from './invoice';
 import { formatMoney } from './currency';
 import type { Invoice } from '../types';
@@ -275,5 +280,45 @@ describe('composeInvoice', () => {
     const copy = duplicateDraft(inv, 'INV-005', '2026-06-10');
     expect(copy).toMatchObject({ invoiceNumber: 'INV-005', dateIssued: '2026-06-10', dueDate: '2026-06-24', depositAmount: 0 });
     expect(composeInvoice(copy, undefined, now).payments).toEqual([]);
+  });
+});
+
+describe('unconfirmed transfers', () => {
+  const now = new Date('2026-06-01T10:00:00Z');
+  const inv = baseInvoice({ grandTotal: 1000, depositAmount: 200, payments: [{ id: 'p1', date: '2026-05-01T00:00:00.000Z', amount: 200, note: 'Cash' }] });
+
+  it('are recorded without reducing the balance', () => {
+    const changes = applyPayment(inv, 800, 'Transfer', now, { unconfirmed: true });
+    expect(changes.depositAmount).toBe(200);
+    expect(changes.status).toBe('partial');
+    expect(changes.payments?.at(-1)).toMatchObject({ amount: 800, unconfirmed: true });
+    const updated = { ...inv, ...changes };
+    expect(getUnconfirmedAmount(updated)).toBe(800);
+    expect(getConfirmedPayments(updated)).toHaveLength(1);
+  });
+
+  it('confirming counts the money, clears the flag and keeps earlier receipt numbers', () => {
+    const pending = { ...inv, ...applyPayment(inv, 300, 'Transfer', now, { unconfirmed: true }) };
+    const pendingId = pending.payments!.at(-1)!.id;
+    const withCash = { ...pending, ...applyPayment(pending, 100, 'Cash', now) };
+    const cashId = withCash.payments!.at(-1)!.id;
+    expect(getReceiptInfo(withCash, cashId)?.receiptNumber).toBe('INV-001-R2');
+    expect(getReceiptInfo(withCash, pendingId)).toBeNull();
+
+    const confirmed = { ...withCash, ...confirmPayment(withCash, pendingId, now) };
+    expect(confirmed.depositAmount).toBe(600);
+    expect(getUnconfirmedAmount(confirmed)).toBe(0);
+    expect(confirmed.payments?.find(p => p.id === pendingId)).not.toHaveProperty('unconfirmed');
+    expect(getReceiptInfo(confirmed, cashId)?.receiptNumber).toBe('INV-001-R2');
+    expect(getReceiptInfo(confirmed, pendingId)).toMatchObject({ receiptNumber: 'INV-001-R3', paidToDate: 600, balanceAfter: 400 });
+  });
+
+  it('a transfer that never arrived can be removed; confirmed payments cannot', () => {
+    const pending = { ...inv, ...applyPayment(inv, 300, 'Transfer', now, { unconfirmed: true }) };
+    const removed = removeUnconfirmedPayment(pending, pending.payments!.at(-1)!.id, now);
+    expect(removed?.payments).toHaveLength(1);
+    expect(removed?.depositAmount).toBe(200);
+    expect(removeUnconfirmedPayment(pending, 'p1', now)).toBeNull();
+    expect(confirmPayment(pending, 'p1', now)).toBeNull();
   });
 });

@@ -82,26 +82,59 @@ export function getPaymentHistory(invoice: Pick<Invoice, 'payments' | 'depositAm
   }];
 }
 
+/** Payments that count as money received (excludes transfers awaiting confirmation). */
+export function getConfirmedPayments(invoice: Pick<Invoice, 'payments' | 'depositAmount' | 'dateIssued'>): PaymentRecord[] {
+  return getPaymentHistory(invoice).filter(p => !p.unconfirmed);
+}
+
+/** Total of transfers recorded but not yet seen in the bank. */
+export function getUnconfirmedAmount(invoice: Pick<Invoice, 'payments' | 'depositAmount' | 'dateIssued'>): number {
+  return round2(getPaymentHistory(invoice).filter(p => p.unconfirmed).reduce((sum, p) => sum + p.amount, 0));
+}
+
+type PaymentChanges = Pick<Invoice, 'depositAmount' | 'payments' | 'status' | 'updatedAt'>;
+
+function withPayments(invoice: Invoice, payments: PaymentRecord[], received: number, now: Date): PaymentChanges {
+  const depositAmount = round2(invoice.depositAmount + received);
+  return { depositAmount, payments, status: deriveStatus(invoice.grandTotal, depositAmount), updatedAt: now };
+}
+
+/** Records a payment. An unconfirmed one is kept aside and does not reduce the balance until confirmed. */
 export function applyPayment(
   invoice: Invoice,
   amount: number,
   note: string,
   now: Date = new Date(),
-): Pick<Invoice, 'depositAmount' | 'payments' | 'status' | 'updatedAt'> {
-  const depositAmount = round2(invoice.depositAmount + amount);
+  options: { unconfirmed?: boolean } = {},
+): PaymentChanges {
   const payment: PaymentRecord = {
     id: crypto.randomUUID(),
     date: now.toISOString(),
     amount: round2(amount),
     note: note.trim() || 'Payment',
+    ...(options.unconfirmed && { unconfirmed: true }),
   };
+  return withPayments(invoice, [...getPaymentHistory(invoice), payment], payment.unconfirmed ? 0 : payment.amount, now);
+}
 
-  return {
-    depositAmount,
-    payments: [...getPaymentHistory(invoice), payment],
-    status: deriveStatus(invoice.grandTotal, depositAmount),
-    updatedAt: now,
-  };
+/**
+ * Marks a transfer as received. It moves to the end of the history so receipt numbers
+ * already issued for other payments never change.
+ */
+export function confirmPayment(invoice: Invoice, paymentId: string, now: Date = new Date()): PaymentChanges | null {
+  const history = getPaymentHistory(invoice);
+  const payment = history.find(p => p.id === paymentId);
+  if (!payment?.unconfirmed) return null;
+  const confirmed: PaymentRecord = { ...payment };
+  delete confirmed.unconfirmed;
+  return withPayments(invoice, [...history.filter(p => p.id !== paymentId), confirmed], payment.amount, now);
+}
+
+/** Drops a transfer that never arrived. Confirmed payments cannot be removed. */
+export function removeUnconfirmedPayment(invoice: Invoice, paymentId: string, now: Date = new Date()): PaymentChanges | null {
+  const history = getPaymentHistory(invoice);
+  if (!history.find(p => p.id === paymentId)?.unconfirmed) return null;
+  return withPayments(invoice, history.filter(p => p.id !== paymentId), 0, now);
 }
 
 /** Dexie v2 upgrade: invoices saved before v2 have no createdAt. */
@@ -298,7 +331,7 @@ export interface ReceiptInfo {
 
 /** Details for a receipt for one payment, as of that payment (not today's balance). */
 export function getReceiptInfo(invoice: Invoice, paymentId: string): ReceiptInfo | null {
-  const history = getPaymentHistory(invoice);
+  const history = getConfirmedPayments(invoice);
   const index = history.findIndex(p => p.id === paymentId);
   if (index === -1) return null;
   const paidToDate = round2(history.slice(0, index + 1).reduce((sum, p) => sum + p.amount, 0));

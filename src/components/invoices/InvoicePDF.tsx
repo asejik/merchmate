@@ -1,6 +1,6 @@
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
 import type { Invoice, BusinessProfile, Customer } from '../../types';
-import { DEFAULT_INVOICE_TERMS, getBalance, getPaymentHistory, isQuote } from '../../lib/invoice';
+import { DEFAULT_INVOICE_TERMS, getBalance, getConfirmedPayments, isQuote } from '../../lib/invoice';
 import { formatAmount, formatMoney } from '../../lib/currency';
 import { pdfTheme } from '../../lib/color';
 
@@ -75,7 +75,7 @@ export const InvoicePDF = ({ invoice, business, customer }: PDFProps) => {
   const quote = isQuote(invoice);
   const balance = getBalance(invoice);
   const isPaid = !quote && balance <= 0;
-  const history = getPaymentHistory(invoice);
+  const history = getConfirmedPayments(invoice);
   // Helvetica has no ₦ glyph, so PDFs always use the ISO code
   const money = (amount: number) => formatMoney(amount, invoice.currency, { code: true });
   const theme = pdfTheme(business);

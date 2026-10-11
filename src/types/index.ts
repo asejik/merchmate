@@ -90,6 +90,9 @@ export interface PaymentRecord {
   date: string;
   amount: number;
   note?: string; // Optional: e.g., "Bank Transfer", "Cash"
+  // Transfer not yet seen in the bank account (guards against fake alerts).
+  // Excluded from depositAmount, totals and receipts until confirmed.
+  unconfirmed?: boolean;
 }
 export type AppTab = 'dashboard' | 'invoices' | 'create' | 'customers' | 'settings';
 export type ListView = 'invoices' | 'quotes';

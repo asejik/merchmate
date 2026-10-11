@@ -2,12 +2,12 @@ import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
 import { GlassCard } from '../ui/GlassCard';
-import { FileText, Download, Share2, CreditCard, History, Search, MoreVertical, Pencil, Copy, Trash2, MessageCircle, Receipt, FileCheck2, Plus, Check, ChevronRight } from 'lucide-react';
+import { FileText, Download, Share2, CreditCard, History, Search, MoreVertical, Pencil, Copy, Trash2, MessageCircle, Receipt, FileCheck2, Plus, Check, ChevronRight, X, ShieldAlert } from 'lucide-react';
 import { clsx } from 'clsx';
 import { PaymentModal } from './PaymentModal';
 import type { BusinessProfile, Customer, Invoice, ListView, OrderStage } from '../../types';
 import { formatMoney } from '../../lib/currency';
-import { applyPayment, getBalance, getDisplayStatus, getPaymentHistory, getReceiptInfo, isQuote, todayInputValue, type DisplayStatus } from '../../lib/invoice';
+import { applyPayment, confirmPayment, getBalance, getDisplayStatus, getPaymentHistory, getReceiptInfo, getUnconfirmedAmount, isQuote, removeUnconfirmedPayment, todayInputValue, type DisplayStatus } from '../../lib/invoice';
 import { renderInvoicePdf, renderReceiptPdf } from '../../lib/pdf';
 import { downloadBlob, type ShareFile } from '../../lib/share';
 import { ShareModal, type ShareState } from '../ui/ShareModal';
@@ -150,7 +150,9 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
     if (!invoice.id || stage === invoice.orderStage) return;
     const balance = getBalance(invoice);
     if (stage === 'delivered' && balance > 0 &&
-        !confirm(`${invoice.customerName} still owes ${formatMoney(balance, invoice.currency)} on #${invoice.invoiceNumber}.\n\nMark as delivered anyway?`)) {
+        !confirm(`${invoice.customerName} still owes ${formatMoney(balance, invoice.currency)} on #${invoice.invoiceNumber}.${
+          getUnconfirmedAmount(invoice) > 0 ? `\n\n${formatMoney(getUnconfirmedAmount(invoice), invoice.currency)} in transfers is not yet confirmed. Check your bank app first.` : ''
+        }\n\nMark as delivered anyway?`)) {
       return;
     }
     try {
@@ -206,36 +208,69 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
     if (file) setShareModal({ heading: 'Receipt Ready', description: `${file.title} is ready to send.`, files: [file] });
   });
 
-  const handlePaymentUpdate = async (amount: number, note: string) => {
-    if (!selectedInvoice?.id) return;
-    const changes = applyPayment(selectedInvoice, amount, note);
+  /** Saves payment changes, then offers the receipt for the payment just received (and the updated invoice). */
+  const savePaymentAndShare = async (invoice: Invoice, changes: Partial<Invoice>, paymentId: string | undefined, withInvoice: boolean) => {
+    if (!invoice.id) return;
     try {
-      await db.invoices.update(selectedInvoice.id, changes);
+      await db.invoices.update(invoice.id, changes);
     } catch (error) {
       console.error(error);
       alert("Failed to update payment");
       return;
     }
-    setSelectedInvoice(null);
-
-    const updated: Invoice = { ...selectedInvoice, ...changes };
-    const newPaymentId = changes.payments?.[changes.payments.length - 1]?.id;
+    const updated: Invoice = { ...invoice, ...changes };
     await withGenerating(updated, async () => {
       const parties = await loadParties(updated);
-      if (!parties || !newPaymentId) return;
+      if (!parties || !paymentId) return;
       const [receipt, invoiceFile] = await Promise.all([
-        receiptShareFile(updated, newPaymentId, parties.business, parties.customer),
-        invoiceShareFile(updated, parties.business, parties.customer),
+        receiptShareFile(updated, paymentId, parties.business, parties.customer),
+        withInvoice ? invoiceShareFile(updated, parties.business, parties.customer) : null,
       ]);
       const balance = getBalance(updated);
+      const files = [receipt, invoiceFile].filter((f): f is ShareFile => f !== null);
       setShareModal({
         heading: 'Payment Recorded',
         description: balance > 0
-          ? `New balance: ${formatMoney(balance, updated.currency)}. Send the client a receipt and the updated invoice.`
+          ? `New balance: ${formatMoney(balance, updated.currency)}. Send the client a receipt${withInvoice ? ' and the updated invoice' : ''}.`
           : 'This invoice is now fully paid. Send the client a receipt.',
-        files: receipt ? [receipt, invoiceFile] : [invoiceFile],
+        files,
       });
     });
+  };
+
+  const handlePaymentUpdate = async (amount: number, note: string, unconfirmed: boolean) => {
+    if (!selectedInvoice?.id) return;
+    const invoice = selectedInvoice;
+    const changes = applyPayment(invoice, amount, note, new Date(), { unconfirmed });
+    setSelectedInvoice(null);
+    if (unconfirmed) {
+      // Nothing to send yet: the receipt comes when the transfer is confirmed
+      try {
+        await db.invoices.update(invoice.id!, changes);
+      } catch (error) {
+        console.error(error);
+        alert("Failed to update payment");
+      }
+      return;
+    }
+    await savePaymentAndShare(invoice, changes, changes.payments?.at(-1)?.id, true);
+  };
+
+  const handleConfirmTransfer = async (invoice: Invoice, paymentId: string) => {
+    const changes = confirmPayment(invoice, paymentId);
+    if (changes) await savePaymentAndShare(invoice, changes, paymentId, false);
+  };
+
+  const handleRemoveTransfer = async (invoice: Invoice, paymentId: string, amount: number) => {
+    const changes = removeUnconfirmedPayment(invoice, paymentId);
+    if (!changes || !invoice.id) return;
+    if (!confirm(`Remove this ${formatMoney(amount, invoice.currency)} transfer?\n\nOnly do this if the money never arrived in your account.`)) return;
+    try {
+      await db.invoices.update(invoice.id, changes);
+    } catch (error) {
+      console.error(error);
+      alert("Failed to update payment");
+    }
   };
 
   const handleDownload = (invoice: Invoice) => withGenerating(invoice, async () => {
@@ -346,6 +381,7 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
           const reminderUrl = showWhatsApp ? reminderLink(inv) : null;
           const upcomingStage = inv.orderStage ? nextStage(inv.orderStage) : null;
           const deliveryLate = isDeliveryLate(inv, today);
+          const unconfirmedAmount = quote ? 0 : getUnconfirmedAmount(inv);
 
           return (
             // Raise the card with an open menu above its siblings (each card is its own stacking context)
@@ -393,6 +429,11 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
                           ? formatMoney(inv.grandTotal, inv.currency)
                           : `Due: ${formatMoney(getBalance(inv), inv.currency)}`}
                       </span>
+                      {unconfirmedAmount > 0 && (
+                        <span className="text-[10px] text-amber-300 inline-flex items-center gap-1" title="Transfers you haven't seen in your bank account yet">
+                          <ShieldAlert size={11} /> {formatMoney(unconfirmedAmount, inv.currency)} unconfirmed
+                        </span>
+                      )}
                       {inv.lastReminderAt && showWhatsApp && (
                         <span className="text-[10px] text-slate-500">Messaged {timeAgo(inv.lastReminderAt)}</span>
                       )}
@@ -496,11 +537,33 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
                   </div>
                   <div className="space-y-1">
                     {history.map((rec) => (
-                      <div key={rec.id} className="flex justify-between items-center text-xs px-2 py-1 rounded bg-white/5">
+                      <div key={rec.id} className={clsx("flex justify-between items-center text-xs px-2 py-1 rounded", rec.unconfirmed ? "bg-amber-500/10 border border-amber-500/20" : "bg-white/5")}>
                         <span className="text-slate-400">
                            {new Date(rec.date).toLocaleDateString()}
                            {rec.note && <span className="opacity-50 ml-2 text-[10px] uppercase border border-slate-600 rounded px-1">{rec.note}</span>}
+                           {rec.unconfirmed && <span className="ml-2 text-[10px] text-amber-300">Awaiting confirmation</span>}
                         </span>
+                        {rec.unconfirmed ? (
+                          <span className="flex items-center gap-1">
+                            <span className="font-mono text-amber-300/80 mr-1">{formatMoney(rec.amount, inv.currency)}</span>
+                            <button
+                              onClick={() => handleConfirmTransfer(inv, rec.id)}
+                              disabled={isGenerating}
+                              className="flex items-center gap-1 px-2 py-1 rounded bg-green-500/15 text-green-300 hover:bg-green-500/25 transition-colors"
+                              title="I've seen this money in my bank account"
+                            >
+                              <Check size={12} /> Received
+                            </button>
+                            <button
+                              onClick={() => handleRemoveTransfer(inv, rec.id, rec.amount)}
+                              className="p-1 rounded text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                              title="The money never arrived: remove"
+                              aria-label={`Remove unconfirmed transfer of ${formatMoney(rec.amount, inv.currency)}`}
+                            >
+                              <X size={14} />
+                            </button>
+                          </span>
+                        ) : (
                         <span className="flex items-center gap-2">
                           <span className="font-mono text-green-400">+{formatMoney(rec.amount, inv.currency)}</span>
                           <button
@@ -513,6 +576,7 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
                             <Receipt size={14} />
                           </button>
                         </span>
+                        )}
                       </div>
                     ))}
                   </div>
