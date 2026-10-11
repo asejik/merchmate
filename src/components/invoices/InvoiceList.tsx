@@ -2,16 +2,17 @@ import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
 import { GlassCard } from '../ui/GlassCard';
-import { FileText, Download, Share2, CreditCard, History, Search, MoreVertical, Pencil, Copy, Trash2, MessageCircle, Receipt, FileCheck2, Plus } from 'lucide-react';
+import { FileText, Download, Share2, CreditCard, History, Search, MoreVertical, Pencil, Copy, Trash2, MessageCircle, Receipt, FileCheck2, Plus, Check, ChevronRight } from 'lucide-react';
 import { clsx } from 'clsx';
 import { PaymentModal } from './PaymentModal';
-import type { BusinessProfile, Customer, Invoice, ListView } from '../../types';
+import type { BusinessProfile, Customer, Invoice, ListView, OrderStage } from '../../types';
 import { formatMoney } from '../../lib/currency';
 import { applyPayment, getBalance, getDisplayStatus, getPaymentHistory, getReceiptInfo, isQuote, todayInputValue, type DisplayStatus } from '../../lib/invoice';
 import { renderInvoicePdf, renderReceiptPdf } from '../../lib/pdf';
 import { downloadBlob, type ShareFile } from '../../lib/share';
 import { ShareModal, type ShareState } from '../ui/ShareModal';
-import { buildReminderMessage, DEFAULT_COUNTRY_CODE, toWhatsAppNumber, whatsAppLink } from '../../lib/whatsapp';
+import { buildClientMessage, DEFAULT_COUNTRY_CODE, toWhatsAppNumber, whatsAppLink } from '../../lib/whatsapp';
+import { isDeliveryLate, isOpenOrder, nextStage, ORDER_STAGES, stageLabel } from '../../lib/orders';
 
 interface Props {
   view: ListView;
@@ -30,14 +31,21 @@ interface InvoiceRow extends Invoice {
   displayStatus: DisplayStatus;
 }
 
-type Filter = 'all' | 'unpaid' | 'overdue' | 'paid';
+type Filter = 'all' | 'to-deliver' | 'unpaid' | 'overdue' | 'paid';
 
 const FILTERS: { id: Filter; label: string }[] = [
   { id: 'all', label: 'All' },
+  { id: 'to-deliver', label: 'To deliver' },
   { id: 'unpaid', label: 'Unpaid' },
   { id: 'overdue', label: 'Overdue' },
   { id: 'paid', label: 'Paid' },
 ];
+
+const STAGE_STYLES: Record<OrderStage, string> = {
+  in_progress: 'text-amber-300 bg-amber-400/10 border-amber-400/20',
+  ready: 'text-sky-300 bg-sky-400/10 border-sky-400/20',
+  delivered: 'text-slate-400 bg-slate-400/10 border-slate-400/20',
+};
 
 const STATUS_STYLES: Record<DisplayStatus, string> = {
   paid: 'text-green-400 bg-green-400/10 border-green-400/20',
@@ -52,6 +60,7 @@ const STATUS_STYLES: Record<DisplayStatus, string> = {
 
 function matchesFilter(row: InvoiceRow, filter: Filter): boolean {
   switch (filter) {
+    case 'to-deliver': return isOpenOrder(row);
     case 'unpaid': return row.status !== 'paid';
     case 'overdue': return row.displayStatus === 'overdue';
     case 'paid': return row.status === 'paid';
@@ -133,7 +142,23 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
   const reminderLink = (row: InvoiceRow): string | null => {
     if (!business || !row.customer?.phone) return null;
     const phone = toWhatsAppNumber(row.customer.phone, business.defaultCountryCode || DEFAULT_COUNTRY_CODE);
-    return phone ? whatsAppLink(phone, buildReminderMessage(row, row.customer, business)) : null;
+    return phone ? whatsAppLink(phone, buildClientMessage(row, row.customer, business)) : null;
+  };
+
+  const setStage = async (invoice: InvoiceRow, stage: OrderStage) => {
+    setMenuId(null);
+    if (!invoice.id || stage === invoice.orderStage) return;
+    const balance = getBalance(invoice);
+    if (stage === 'delivered' && balance > 0 &&
+        !confirm(`${invoice.customerName} still owes ${formatMoney(balance, invoice.currency)} on #${invoice.invoiceNumber}.\n\nMark as delivered anyway?`)) {
+      return;
+    }
+    try {
+      await db.invoices.update(invoice.id, { orderStage: stage, updatedAt: new Date() });
+    } catch (err) {
+      console.error(err);
+      alert("Failed to update the order");
+    }
   };
 
   const markReminded = (invoice: Invoice) => {
@@ -149,6 +174,7 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
     );
   }, [invoices, search, filter, view]);
 
+  const today = todayInputValue();
   const viewTotal = (invoices ?? []).filter(row => isQuote(row) === (view === 'quotes')).length;
   const noun = view === 'quotes' ? 'quote' : 'invoice';
 
@@ -315,7 +341,11 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
           const statusStyle = STATUS_STYLES[inv.displayStatus];
           const quote = isQuote(inv);
           const unpaidInvoice = !quote && inv.status !== 'paid';
-          const reminderUrl = unpaidInvoice ? reminderLink(inv) : null;
+          const orderReady = !quote && inv.orderStage === 'ready';
+          const showWhatsApp = unpaidInvoice || orderReady;
+          const reminderUrl = showWhatsApp ? reminderLink(inv) : null;
+          const upcomingStage = inv.orderStage ? nextStage(inv.orderStage) : null;
+          const deliveryLate = isDeliveryLate(inv, today);
 
           return (
             // Raise the card with an open menu above its siblings (each card is its own stacking context)
@@ -332,18 +362,39 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
                       {inv.dueDate && (quote ? !inv.convertedInvoiceId : inv.status !== 'paid') && (
                         <> • {quote ? 'Valid until' : 'Due'} {new Date(inv.dueDate).toLocaleDateString()}</>
                       )}
+                      {inv.deliveryDate && inv.orderStage !== 'delivered' && !inv.convertedInvoiceId && (
+                        <> • <span className={clsx(deliveryLate && "text-red-400 font-medium")}>
+                          {deliveryLate ? 'Delivery was' : 'Delivery'} {new Date(inv.deliveryDate).toLocaleDateString()}
+                        </span></>
+                      )}
                     </p>
                     <div className="mt-1 flex items-center gap-2 flex-wrap">
                       <span className={`text-[10px] uppercase px-2 py-0.5 rounded border ${statusStyle}`}>
                         {inv.displayStatus}
                       </span>
+                      {inv.orderStage && !quote && (
+                        <button
+                          onClick={() => upcomingStage && setStage(inv, upcomingStage)}
+                          disabled={!upcomingStage}
+                          className={clsx(
+                            "text-[10px] uppercase px-2 py-0.5 rounded border inline-flex items-center gap-0.5 transition-opacity",
+                            STAGE_STYLES[inv.orderStage],
+                            upcomingStage && "hover:opacity-80"
+                          )}
+                          title={upcomingStage ? `Mark as ${stageLabel(upcomingStage)}` : 'Delivered'}
+                          aria-label={upcomingStage ? `Order ${stageLabel(inv.orderStage)}. Mark as ${stageLabel(upcomingStage)}` : 'Order delivered'}
+                        >
+                          {stageLabel(inv.orderStage)}
+                          {upcomingStage && <ChevronRight size={10} />}
+                        </button>
+                      )}
                       <span className="text-xs font-mono text-slate-300">
                         {quote || inv.status === 'paid'
                           ? formatMoney(inv.grandTotal, inv.currency)
                           : `Due: ${formatMoney(getBalance(inv), inv.currency)}`}
                       </span>
-                      {inv.lastReminderAt && unpaidInvoice && (
-                        <span className="text-[10px] text-slate-500">Reminded {timeAgo(inv.lastReminderAt)}</span>
+                      {inv.lastReminderAt && showWhatsApp && (
+                        <span className="text-[10px] text-slate-500">Messaged {timeAgo(inv.lastReminderAt)}</span>
                       )}
                     </div>
                   </div>
@@ -355,15 +406,15 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
                       <CreditCard size={20} />
                     </button>
                   )}
-                  {unpaidInvoice && (reminderUrl ? (
+                  {showWhatsApp && (reminderUrl ? (
                     <a
                       href={reminderUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={() => markReminded(inv)}
                       className="p-2 hover:bg-emerald-500/10 rounded-lg text-emerald-400 transition-colors"
-                      title="Send WhatsApp payment reminder"
-                      aria-label="Send WhatsApp payment reminder"
+                      title={orderReady ? "Tell client on WhatsApp that the order is ready" : "Send WhatsApp payment reminder"}
+                      aria-label={orderReady ? "Tell client on WhatsApp that the order is ready" : "Send WhatsApp payment reminder"}
                     >
                       <MessageCircle size={20} />
                     </a>
@@ -412,6 +463,22 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
                           <button role="menuitem" onClick={() => { setMenuId(null); onDuplicate(inv.id!); }} className="w-full flex items-center gap-2 px-3 py-2 text-slate-200 hover:bg-white/10">
                             <Copy size={14} /> Duplicate
                           </button>
+                          {!quote && (
+                            <div className="border-y border-white/10 my-1 py-1" role="group" aria-label="Order stage">
+                              <p className="px-3 pt-1 pb-0.5 text-[10px] uppercase text-slate-500">Order</p>
+                              {ORDER_STAGES.map(stage => (
+                                <button
+                                  key={stage.id}
+                                  role="menuitemradio"
+                                  aria-checked={inv.orderStage === stage.id}
+                                  onClick={() => setStage(inv, stage.id)}
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-slate-200 hover:bg-white/10"
+                                >
+                                  <Check size={14} className={clsx(inv.orderStage !== stage.id && "invisible")} /> {stage.label}
+                                </button>
+                              ))}
+                            </div>
+                          )}
                           <button role="menuitem" onClick={() => handleDelete(inv)} className="w-full flex items-center gap-2 px-3 py-2 text-red-400 hover:bg-red-500/10">
                             <Trash2 size={14} /> Delete
                           </button>

@@ -194,6 +194,7 @@ export interface InvoiceDraft {
   taxRate: number;
   taxLabel: string;
   notes: string;
+  deliveryDate: string; // '' = none
   depositAmount: number; // Only used when creating; edits keep the recorded payments
 }
 
@@ -244,6 +245,9 @@ export function composeInvoice(draft: InvoiceDraft, existing?: Invoice, now: Dat
     dateIssued: new Date(draft.dateIssued),
     dueDate: draft.dueDate ? new Date(draft.dueDate) : undefined,
     notes: draft.notes.trim() || undefined,
+    deliveryDate: draft.deliveryDate ? new Date(draft.deliveryDate) : undefined,
+    // New invoices start in progress; edits keep their stage (untracked ones stay untracked)
+    orderStage: docKind === 'quote' ? undefined : existing ? existing.orderStage : 'in_progress',
     isSynced: false,
     createdAt: existing?.createdAt ?? now,
     updatedAt: now,
@@ -264,6 +268,7 @@ export function invoiceToDraft(invoice: Invoice): InvoiceDraft {
     taxRate: invoice.taxRate ?? 0,
     taxLabel: invoice.taxLabel ?? 'Tax',
     notes: invoice.notes ?? '',
+    deliveryDate: invoice.deliveryDate ? toDateInputValue(invoice.deliveryDate) : '',
     depositAmount: invoice.depositAmount,
   };
 }
@@ -277,6 +282,7 @@ export function duplicateDraft(invoice: Invoice, invoiceNumber: string, today: s
     invoiceNumber,
     dateIssued: today,
     dueDate: termDays === null ? '' : addDays(today, termDays),
+    deliveryDate: '',
     depositAmount: 0,
   };
 }

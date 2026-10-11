@@ -23,14 +23,43 @@ export function toWhatsAppNumber(phone: string, defaultCountryCode: string = DEF
 const formatDay = (date: Date | string) =>
   new Date(date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 
+type PaymentDetails = Pick<BusinessProfile, 'businessName' | 'bankName' | 'accountNumber' | 'accountName'>;
+
+const firstNameOf = (customer: Pick<Customer, 'name'>) => customer.name.trim().split(/\s+/)[0] || customer.name;
+
+function paymentDetailLines(business: PaymentDetails): string[] {
+  if (!business.bankName || !business.accountNumber) return [];
+  return ['', 'Payment details:', `${business.bankName}`, `${business.accountNumber}`, `${business.accountName}`];
+}
+
+/** "Your order is ready" message, asking for any balance before pickup or delivery. */
+export function buildReadyMessage(invoice: Invoice, customer: Pick<Customer, 'name'>, business: PaymentDetails): string {
+  const balance = getBalance(invoice);
+  const lines = [
+    `Hello ${firstNameOf(customer)},`,
+    '',
+    `Good news! Your order from ${business.businessName} (invoice #${invoice.invoiceNumber}) is ready.`,
+  ];
+  if (balance > 0) {
+    lines.push(`Balance to pay before pickup or delivery: *${formatMoney(balance, invoice.currency)}*`, ...paymentDetailLines(business));
+  }
+  lines.push('', 'Thank you!');
+  return lines.join('\n');
+}
+
+/** The message the WhatsApp button sends: "order ready" once it is ready, otherwise a payment reminder. */
+export function buildClientMessage(invoice: Invoice, customer: Pick<Customer, 'name'>, business: PaymentDetails): string {
+  return invoice.orderStage === 'ready' ? buildReadyMessage(invoice, customer, business) : buildReminderMessage(invoice, customer, business);
+}
+
 export function buildReminderMessage(
   invoice: Invoice,
   customer: Pick<Customer, 'name'>,
-  business: Pick<BusinessProfile, 'businessName' | 'bankName' | 'accountNumber' | 'accountName'>,
+  business: PaymentDetails,
   today: string = todayInputValue(),
 ): string {
   const balance = formatMoney(getBalance(invoice), invoice.currency);
-  const firstName = customer.name.trim().split(/\s+/)[0] || customer.name;
+  const firstName = firstNameOf(customer);
 
   let dueLine: string;
   if (invoice.dueDate && isOverdue(invoice, today)) {
@@ -50,11 +79,7 @@ export function buildReminderMessage(
     `Balance due: *${balance}*`,
   ];
 
-  if (business.bankName && business.accountNumber) {
-    lines.push('', 'Payment details:', `${business.bankName}`, `${business.accountNumber}`, `${business.accountName}`);
-  }
-
-  lines.push('', 'Please ignore this message if you have already paid. Thank you!');
+  lines.push(...paymentDetailLines(business), '', 'Please ignore this message if you have already paid. Thank you!');
   return lines.join('\n');
 }
 

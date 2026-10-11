@@ -105,6 +105,7 @@ async function loadInitialValues(mode: InvoiceEditorMode, sourceInvoiceId?: stri
       taxRate: profile?.defaultTaxRate ?? 0,
       taxLabel: profile?.taxLabel || 'VAT',
       notes: '',
+      deliveryDate: '',
       depositAmount: 0,
     },
   };
@@ -312,6 +313,13 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
                 </div>
               </div>
             </div>
+            <div>
+              <label className={labelClass}>Delivery / Pickup Date</label>
+              <input type="date" {...register('deliveryDate')} className={inputClass} />
+            </div>
+            <p className="md:col-span-2 self-end text-xs text-slate-500 pb-2">
+              Optional. When you promised the order. Shown on the {noun.toLowerCase()} and flagged if it slips.
+            </p>
           </div>
         </GlassCard>
 

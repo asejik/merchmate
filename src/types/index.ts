@@ -3,6 +3,7 @@ export type DiscountType = 'percentage' | 'fixed';
 export type InvoiceStatus = 'draft' | 'pending' | 'paid' | 'partial';
 export type DocumentKind = 'invoice' | 'quote';
 export type InvoiceTemplate = 'classic' | 'modern';
+export type OrderStage = 'in_progress' | 'ready' | 'delivered';
 
 export interface BusinessProfile {
   id?: number; // Dexie uses auto-incrementing numbers by default
@@ -73,6 +74,10 @@ export interface Invoice {
   dueDate?: Date; // for quotes: valid until
   notes?: string;
   lastReminderAt?: Date;
+
+  // Order tracking (invoices only). undefined = not tracked (saved before order tracking existed)
+  orderStage?: OrderStage;
+  deliveryDate?: Date; // promised delivery / pickup day
 
   // Sync Status (Critical for Offline Mode)
   isSynced: boolean;

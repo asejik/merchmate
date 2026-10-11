@@ -44,6 +44,7 @@ const invoiceSchema = z.object({
   createdAt: isoDate.optional(),
   updatedAt: isoDate,
   lastReminderAt: isoDate.optional(),
+  deliveryDate: isoDate.optional(),
 }).passthrough();
 
 const catalogSchema = z.object({

@@ -112,6 +112,12 @@ export const InvoicePDF = ({ invoice, business, customer }: PDFProps) => {
                   <Text style={styles.value}>{new Date(invoice.dueDate).toLocaleDateString()}</Text>
                 </>
               )}
+              {invoice.deliveryDate && (
+                <>
+                  <Text style={[styles.label, { color: theme.modern ? theme.onAccent : '#666' }]}>{quote ? 'Est. Delivery' : 'Delivery Date'}</Text>
+                  <Text style={styles.value}>{new Date(invoice.deliveryDate).toLocaleDateString()}</Text>
+                </>
+              )}
             </View>
           </View>
         </View>
