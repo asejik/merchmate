@@ -1,6 +1,6 @@
 import type { BusinessProfile, Customer, Invoice } from '../types';
 import { formatMoney } from './currency';
-import { getBalance, isOverdue, todayInputValue, toDateInputValue } from './invoice';
+import { getBalance, isOverdue, isQuote, todayInputValue, toDateInputValue } from './invoice';
 
 export const DEFAULT_COUNTRY_CODE = '234';
 
@@ -96,4 +96,50 @@ export function clientWhatsAppLink(
   if (!customer.phone) return null;
   const phone = toWhatsAppNumber(customer.phone, business.defaultCountryCode || DEFAULT_COUNTRY_CODE);
   return phone ? whatsAppLink(phone, buildClientMessage(invoice, customer, business)) : null;
+}
+
+const formatQuantity = (n: number) => String(Number(n.toFixed(4)));
+
+/**
+ * The whole invoice as a WhatsApp message, for clients who won't open a PDF.
+ * Account details are on their own lines so they can be long-pressed and copied.
+ */
+export function buildInvoiceText(invoice: Invoice, customer: Pick<Customer, 'name'>, business: PaymentDetails): string {
+  const quote = isQuote(invoice);
+  const money = (value: number) => formatMoney(value, invoice.currency);
+  const balance = getBalance(invoice);
+
+  const lines = [
+    `*${quote ? 'QUOTE' : 'INVOICE'} #${invoice.invoiceNumber}*`,
+    `From: ${business.businessName}`,
+    `To: ${customer.name}`,
+    `Date: ${formatDay(invoice.dateIssued)}`,
+  ];
+  if (invoice.dueDate && !(quote && invoice.convertedInvoiceId) && (quote || balance > 0)) {
+    lines.push(`${quote ? 'Valid until' : 'Due'}: ${formatDay(invoice.dueDate)}`);
+  }
+  if (invoice.deliveryDate) lines.push(`${quote ? 'Est. delivery' : 'Delivery'}: ${formatDay(invoice.deliveryDate)}`);
+
+  lines.push('');
+  for (const item of invoice.items) {
+    lines.push(item.quantity === 1
+      ? `• ${item.description}: ${money(item.total)}`
+      : `• ${item.description} (${formatQuantity(item.quantity)} × ${money(item.unitPrice)}): ${money(item.total)}`);
+  }
+
+  lines.push('');
+  if (invoice.discount > 0 || invoice.tax > 0) lines.push(`Subtotal: ${money(invoice.subtotal)}`);
+  if (invoice.discount > 0) lines.push(`Discount: -${money(invoice.discount)}`);
+  if (invoice.tax > 0) lines.push(`${invoice.taxLabel || 'Tax'} (${invoice.taxRate ?? 0}%): ${money(invoice.tax)}`);
+  lines.push(`*Total: ${money(invoice.grandTotal)}*`);
+
+  if (!quote) {
+    if (invoice.depositAmount > 0) lines.push(`Paid: ${money(Math.min(invoice.depositAmount, invoice.grandTotal))}`);
+    lines.push(balance > 0 ? `*Balance due: ${money(balance)}*` : '*PAID IN FULL*');
+    if (balance > 0) lines.push(...paymentDetailLines(business));
+  }
+
+  if (invoice.notes) lines.push('', invoice.notes);
+  lines.push('', 'Thank you!');
+  return lines.join('\n');
 }

@@ -11,7 +11,8 @@ import { applyPayment, confirmPayment, getBalance, getDisplayStatus, getPaymentH
 import { renderInvoicePdf, renderReceiptPdf } from '../../lib/pdf';
 import { downloadBlob, type ShareFile } from '../../lib/share';
 import { ShareModal, type ShareState } from '../ui/ShareModal';
-import { clientWhatsAppLink } from '../../lib/whatsapp';
+import { buildInvoiceText, clientWhatsAppLink, DEFAULT_COUNTRY_CODE, toWhatsAppNumber, whatsAppLink } from '../../lib/whatsapp';
+import { renderInvoiceImage } from '../../lib/invoiceImage';
 import { isDeliveryLate, isOpenOrder, nextStage, ORDER_STAGES, stageLabel } from '../../lib/orders';
 
 interface Props {
@@ -196,8 +197,23 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
   const handlePrepareShare = (invoice: Invoice) => withGenerating(invoice, async () => {
     const parties = await loadParties(invoice);
     if (!parties) return;
-    const file = await invoiceShareFile(invoice, parties.business, parties.customer);
-    setShareModal({ heading: 'PDF Ready', description: `${file.title} is ready to send.`, files: [file] });
+    const { business, customer } = parties;
+    const [file, image] = await Promise.all([
+      invoiceShareFile(invoice, business, customer),
+      // The image is a nice-to-have: if the browser can't draw it, still offer the PDF
+      renderInvoiceImage(invoice, business, customer).catch(err => { console.error(err); return null; }),
+    ]);
+    const files = [file];
+    if (image) {
+      files.push({ ...file, label: 'as Image', file: new File([image], `${invoice.invoiceNumber}.png`, { type: 'image/png' }) });
+    }
+    const phone = toWhatsAppNumber(customer.phone ?? '', business.defaultCountryCode || DEFAULT_COUNTRY_CODE);
+    setShareModal({
+      heading: 'Ready to Send',
+      description: `Send ${file.title} as a PDF, an image that opens right in the chat, or a WhatsApp text message.`,
+      files,
+      links: [{ label: 'Send as WhatsApp Text', href: whatsAppLink(phone, buildInvoiceText(invoice, customer, business)) }],
+    });
   });
 
   const handleReceipt = (invoice: Invoice, paymentId: string) => withGenerating(invoice, async () => {

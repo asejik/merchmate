@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { backupFileName, parseBackup, serializeBackup, type BackupData } from './backup';
-import { buildReminderMessage, toWhatsAppNumber, whatsAppLink } from './whatsapp';
+import { buildInvoiceText, buildReminderMessage, toWhatsAppNumber, whatsAppLink } from './whatsapp';
 import { getReceiptInfo } from './invoice';
 import type { Invoice } from '../types';
 
@@ -126,5 +126,37 @@ describe('getReceiptInfo', () => {
     const legacy = { ...invoice, payments: undefined, depositAmount: 2500 };
     expect(getReceiptInfo(legacy, 'legacy')).toMatchObject({ paidToDate: 2500, balanceAfter: 7500 });
     expect(getReceiptInfo(invoice, 'nope')).toBeNull();
+  });
+});
+
+describe('invoice as WhatsApp text', () => {
+  const customer = { name: 'Ada Obi' };
+
+  it('lists items, totals, balance and copyable payment details', () => {
+    const text = buildInvoiceText({ ...invoice, items: [
+      { id: 'a', description: 'Agbada', quantity: 1, unitPrice: 6000, total: 6000 },
+      { id: 'b', description: 'Cap', quantity: 2, unitPrice: 2000, total: 4000 },
+    ] }, customer, business);
+    expect(text).toContain('*INVOICE #INV-004*');
+    expect(text).toContain('To: Ada Obi');
+    expect(text).toContain('Due: 15 May 2026');
+    expect(text).toContain('• Agbada: ₦6,000.00');
+    expect(text).toContain('• Cap (2 × ₦2,000.00): ₦4,000.00');
+    expect(text).toContain('*Total: ₦10,000.00*');
+    expect(text).toContain('Paid: ₦7,000.00');
+    expect(text).toContain('*Balance due: ₦3,000.00*');
+    expect(text).toContain('\n0123456789\n');
+  });
+
+  it('paid invoices and quotes drop the payment request', () => {
+    const paid = buildInvoiceText({ ...invoice, depositAmount: 10000, status: 'paid' }, customer, business);
+    expect(paid).toContain('*PAID IN FULL*');
+    expect(paid).not.toContain('0123456789');
+    expect(paid).not.toContain('Due:');
+
+    const quote = buildInvoiceText({ ...invoice, kind: 'quote', depositAmount: 0, payments: [] }, customer, business);
+    expect(quote).toContain('*QUOTE #INV-004*');
+    expect(quote).toContain('Valid until: 15 May 2026');
+    expect(quote).not.toContain('Balance');
   });
 });

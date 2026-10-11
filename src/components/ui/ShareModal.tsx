@@ -1,4 +1,4 @@
-import { Send, Share2 } from 'lucide-react';
+import { MessageCircle, Send, Share2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { GlassCard } from './GlassCard';
 import { shareOrDownload, type ShareFile } from '../../lib/share';
@@ -9,6 +9,8 @@ export interface ShareState {
   heading: string;
   description: string;
   files: ShareFile[];
+  /** Extra actions that are plain links, e.g. the invoice as WhatsApp text. */
+  links?: { label: string; href: string }[];
 }
 
 interface Props {
@@ -24,7 +26,7 @@ export function ShareModal({ state, onClose }: Props) {
       // AbortError just means the user closed the share sheet
       if ((error as Error).name !== 'AbortError') console.error(error);
     } finally {
-      if (state.files.length <= 1) onClose();
+      if (state.files.length + (state.links?.length ?? 0) <= 1) onClose();
     }
   };
 
@@ -51,6 +53,19 @@ export function ShareModal({ state, onClose }: Props) {
               <Send size={18} />
               Share {item.label}
             </button>
+          ))}
+          {state.links?.map(link => (
+            <a
+              key={link.href}
+              href={link.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={onClose}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold bg-white/10 hover:bg-white/20 text-white active:scale-95 transition-all"
+            >
+              <MessageCircle size={18} />
+              {link.label}
+            </a>
           ))}
           <button onClick={onClose} className="text-slate-500 hover:text-white text-sm py-2">
             Done
