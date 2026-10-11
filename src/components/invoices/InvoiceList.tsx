@@ -116,6 +116,7 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [shareModal, setShareModal] = useState<ShareState | null>(null);
   const [menuId, setMenuId] = useState<string | null>(null);
+  const [menuUp, setMenuUp] = useState(false); // open upwards near the bottom so the nav bar doesn't cover it
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
 
@@ -203,7 +204,7 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
       // The image is a nice-to-have: if the browser can't draw it, still offer the PDF
       renderInvoiceImage(invoice, business, customer).catch(err => { console.error(err); return null; }),
     ]);
-    const files = [file];
+    const files = [{ ...file, label: 'as PDF' }];
     if (image) {
       files.push({ ...file, label: 'as Image', file: new File([image], `${invoice.invoiceNumber}.png`, { type: 'image/png' }) });
     }
@@ -370,7 +371,7 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
               aria-selected={filter === f.id}
               onClick={() => setFilter(f.id)}
               className={clsx(
-                "flex-1 md:flex-none px-3 py-1.5 text-xs font-medium rounded-lg transition-all",
+                "flex-1 md:flex-none px-2 sm:px-3 py-1.5 text-xs font-medium rounded-lg transition-all whitespace-nowrap",
                 filter === f.id ? "bg-indigo-600 text-white shadow" : "text-slate-400 hover:text-white"
               )}
             >
@@ -497,7 +498,10 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
                   </button>
                   <div className="relative">
                     <button
-                      onClick={() => setMenuId(menuId === inv.id ? null : inv.id ?? null)}
+                      onClick={(e) => {
+                        setMenuUp(e.currentTarget.getBoundingClientRect().top > window.innerHeight / 2);
+                        setMenuId(menuId === inv.id ? null : inv.id ?? null);
+                      }}
                       className="p-2 hover:bg-white/10 rounded-lg text-slate-400 transition-colors"
                       title="More actions"
                       aria-label="More actions"
@@ -507,7 +511,7 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
                     </button>
                     {menuId === inv.id && (
                       <>
-                        <div className="absolute right-0 top-full mt-1 z-20 w-48 rounded-xl border border-white/10 bg-slate-900/95 backdrop-blur-xl shadow-2xl py-1 text-sm" role="menu">
+                        <div className={clsx("absolute right-0 z-20 w-48", menuUp ? "bottom-full mb-1" : "top-full mt-1", "rounded-xl border border-white/10 bg-slate-900/95 backdrop-blur-xl shadow-2xl py-1 text-sm")} role="menu">
                           {quote && !inv.convertedInvoiceId && (
                             <button role="menuitem" onClick={() => { setMenuId(null); onConvert(inv.id!); }} className="w-full flex items-center gap-2 px-3 py-2 text-green-300 hover:bg-white/10">
                               <FileCheck2 size={14} /> Convert to Invoice
@@ -552,22 +556,22 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
                   </div>
                   <div className="space-y-1">
                     {history.map((rec) => (
-                      <div key={rec.id} className={clsx("flex justify-between items-center text-xs px-2 py-1 rounded", rec.unconfirmed ? "bg-amber-500/10 border border-amber-500/20" : "bg-white/5")}>
+                      <div key={rec.id} className={clsx("flex flex-wrap justify-between items-center gap-x-2 gap-y-1 text-xs px-2 py-1 rounded", rec.unconfirmed ? "bg-amber-500/10 border border-amber-500/20" : "bg-white/5")}>
                         <span className="text-slate-400">
                            {new Date(rec.date).toLocaleDateString()}
                            {rec.note && <span className="opacity-50 ml-2 text-[10px] uppercase border border-slate-600 rounded px-1">{rec.note}</span>}
-                           {rec.unconfirmed && <span className="ml-2 text-[10px] text-amber-300">Awaiting confirmation</span>}
                         </span>
                         {rec.unconfirmed ? (
-                          <span className="flex items-center gap-1">
-                            <span className="font-mono text-amber-300/80 mr-1">{formatMoney(rec.amount, inv.currency)}</span>
+                          <span className="flex items-center gap-1 ml-auto">
+                            <span className="font-mono text-amber-300/80 mr-1" title="Awaiting confirmation">{formatMoney(rec.amount, inv.currency)}</span>
                             <button
                               onClick={() => handleConfirmTransfer(inv, rec.id)}
                               disabled={isGenerating}
                               className="flex items-center gap-1 px-2 py-1 rounded bg-green-500/15 text-green-300 hover:bg-green-500/25 transition-colors"
                               title="I've seen this money in my bank account"
+                              aria-label={`Mark ${formatMoney(rec.amount, inv.currency)} transfer as received`}
                             >
-                              <Check size={12} /> Received
+                              <Check size={12} /> Received?
                             </button>
                             <button
                               onClick={() => handleRemoveTransfer(inv, rec.id, rec.amount)}

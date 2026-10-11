@@ -3,7 +3,7 @@ import { GlassCard } from '../ui/GlassCard';
 import { X, Save, History, Calculator, ShieldAlert } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { Invoice } from '../../types';
-import { formatMoney } from '../../lib/currency';
+import { CURRENCY_SYMBOLS, formatMoney } from '../../lib/currency';
 import { getBalance, getPaymentHistory } from '../../lib/invoice';
 
 interface Props {
@@ -39,7 +39,7 @@ export function PaymentModal({ invoice, onClose, onSave }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
       <GlassCard className="w-full max-w-md p-0 overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="p-4 border-b border-white/10 flex justify-between items-center bg-white/5">
@@ -101,7 +101,7 @@ export function PaymentModal({ invoice, onClose, onSave }: Props) {
               <div>
                 <label className="block text-xs font-medium text-slate-400 mb-1 uppercase">New Amount</label>
                 <div className="relative">
-                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold">{invoice.currency}</span>
+                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold">{CURRENCY_SYMBOLS[invoice.currency]}</span>
                    <input
                     type="number"
                     step="any"
