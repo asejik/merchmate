@@ -11,7 +11,7 @@ import { applyPayment, confirmPayment, getBalance, getDisplayStatus, getPaymentH
 import { renderInvoicePdf, renderReceiptPdf } from '../../lib/pdf';
 import { downloadBlob, type ShareFile } from '../../lib/share';
 import { ShareModal, type ShareState } from '../ui/ShareModal';
-import { buildClientMessage, DEFAULT_COUNTRY_CODE, toWhatsAppNumber, whatsAppLink } from '../../lib/whatsapp';
+import { clientWhatsAppLink } from '../../lib/whatsapp';
 import { isDeliveryLate, isOpenOrder, nextStage, ORDER_STAGES, stageLabel } from '../../lib/orders';
 
 interface Props {
@@ -140,9 +140,8 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
 
   // Rendered as a plain link (not window.open after an await) so popup blockers never interfere
   const reminderLink = (row: InvoiceRow): string | null => {
-    if (!business || !row.customer?.phone) return null;
-    const phone = toWhatsAppNumber(row.customer.phone, business.defaultCountryCode || DEFAULT_COUNTRY_CODE);
-    return phone ? whatsAppLink(phone, buildClientMessage(row, row.customer, business)) : null;
+    if (!business || !row.customer) return null;
+    return clientWhatsAppLink(row, row.customer, business);
   };
 
   const setStage = async (invoice: InvoiceRow, stage: OrderStage) => {

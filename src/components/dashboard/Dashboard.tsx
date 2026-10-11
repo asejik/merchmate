@@ -5,6 +5,7 @@ import { GlassCard } from '../ui/GlassCard';
 import { TrendingUp, Clock, FileText, Wallet, AlertCircle, DatabaseBackup, ShieldAlert } from 'lucide-react';
 import { isBackupDue } from '../../db/backup';
 import { Reports } from './Reports';
+import { FollowUps } from './FollowUps';
 import type { AppTab, CurrencyCode } from '../../types';
 import { CURRENCY_CODES, formatMoney } from '../../lib/currency';
 import { getAmountCollected, getBalance, getDisplayStatus, getUnconfirmedAmount, isQuote, todayInputValue } from '../../lib/invoice';
@@ -85,6 +86,10 @@ export function Dashboard({ onNavigate }: { onNavigate: (tab: AppTab) => void })
             <strong>Back up your data.</strong> Everything is stored only on this device. Save a backup in Settings &rarr;
           </span>
         </button>
+      )}
+
+      {data && data.invoices.length > 0 && (
+        <FollowUps invoices={data.invoices} customers={data.customers} business={data.profile} onNavigate={onNavigate} />
       )}
 
       {/* Stats Grid */}

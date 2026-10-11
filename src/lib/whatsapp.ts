@@ -86,3 +86,14 @@ export function buildReminderMessage(
 export function whatsAppLink(phoneDigits: string, message: string): string {
   return `https://wa.me/${phoneDigits}?text=${encodeURIComponent(message)}`;
 }
+
+/** WhatsApp link for the card's message button, or null when the client has no usable number. */
+export function clientWhatsAppLink(
+  invoice: Invoice,
+  customer: Pick<Customer, 'name' | 'phone'>,
+  business: PaymentDetails & Pick<BusinessProfile, 'defaultCountryCode'>,
+): string | null {
+  if (!customer.phone) return null;
+  const phone = toWhatsAppNumber(customer.phone, business.defaultCountryCode || DEFAULT_COUNTRY_CODE);
+  return phone ? whatsAppLink(phone, buildClientMessage(invoice, customer, business)) : null;
+}
