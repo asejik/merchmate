@@ -1,5 +1,6 @@
 import type { Customer, Invoice } from '../types';
 import { getBalance, getDisplayStatus, getConfirmedPayments, kindOf, todayInputValue, toDateInputValue } from './invoice';
+import { getJobProfit } from './profit';
 
 type Cell = string | number | null | undefined;
 
@@ -28,7 +29,7 @@ export function invoicesCsv(invoices: Invoice[], customers: Customer[], today: s
   const names = new Map(customers.map(c => [c.id, c.name]));
   const sorted = [...invoices].sort((a, b) => new Date(a.dateIssued).getTime() - new Date(b.dateIssued).getTime());
   return toCsv([
-    ['Type', 'Number', 'Client', 'Date', 'Due / Valid Until', 'Currency', 'Subtotal', 'Discount', 'Tax', 'Total', 'Paid', 'Balance', 'Status'],
+    ['Type', 'Number', 'Client', 'Date', 'Due / Valid Until', 'Currency', 'Subtotal', 'Discount', 'Tax', 'Total', 'Paid', 'Balance', 'Costs', 'Profit', 'Status'],
     ...sorted.map(inv => {
       const quote = kindOf(inv) === 'quote';
       return [
@@ -44,6 +45,8 @@ export function invoicesCsv(invoices: Invoice[], customers: Customer[], today: s
         inv.grandTotal,
         quote ? '' : inv.depositAmount,
         quote ? '' : getBalance(inv),
+        getJobProfit(inv)?.cost ?? '',
+        getJobProfit(inv)?.profit ?? '',
         getDisplayStatus(inv, today),
       ];
     }),

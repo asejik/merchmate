@@ -77,6 +77,9 @@ export interface Invoice {
   notes?: string;
   lastReminderAt?: Date;
 
+  // Private job costs (materials, labour, transport). Never shown to the client.
+  costs?: JobCost[];
+
   // Optional instalments, e.g. 50% now, 30% at fitting, 20% on collection
   paymentPlan?: PlanInstallment[];
 
@@ -88,6 +91,12 @@ export interface Invoice {
   isSynced: boolean;
   createdAt: Date; // Backfilled for pre-v2 invoices by the Dexie upgrade
   updatedAt: Date;
+}
+
+export interface JobCost {
+  id: string;
+  description: string;
+  amount: number;
 }
 
 /** One stage of a payment plan. Stored as a percentage so it follows edits to the total. */

@@ -3,7 +3,7 @@ import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
 import { GlassCard } from '../ui/GlassCard';
-import { Save, Plus, Trash2, Calculator, ArrowLeft, Percent, Loader2, CalendarClock } from 'lucide-react';
+import { Save, Plus, Trash2, Calculator, ArrowLeft, Percent, Loader2, CalendarClock, Lock } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { DocumentKind, Invoice } from '../../types';
 import { CURRENCY_CODES, CURRENCY_SYMBOLS, formatMoney } from '../../lib/currency';
@@ -25,6 +25,7 @@ import {
   type PlanDraftStep,
 } from '../../lib/invoice';
 import { findCatalogItem, learnFromItems, sortCatalog } from '../../lib/catalog';
+import { computeProfit } from '../../lib/profit';
 
 export type InvoiceEditorMode = 'create' | 'create-quote' | 'edit' | 'duplicate' | 'convert';
 
@@ -117,6 +118,7 @@ async function loadInitialValues(mode: InvoiceEditorMode, sourceInvoiceId?: stri
       notes: '',
       deliveryDate: '',
       plan: [],
+      costs: [],
       depositAmount: 0,
     },
   };
@@ -147,6 +149,7 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: "items" });
+  const { fields: costFields, append: appendCost, remove: removeCost } = useFieldArray({ control, name: "costs" });
   const { fields: planFields, append: appendStep, remove: removeStep, replace: replacePlan } = useFieldArray({ control, name: "plan" });
 
   const items = useWatch({ control, name: "items" });
@@ -158,6 +161,7 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
   const taxLabel = useWatch({ control, name: "taxLabel" });
   const dateIssued = useWatch({ control, name: "dateIssued" });
   const plan = useWatch({ control, name: "plan" });
+  const costs = useWatch({ control, name: "costs" });
   const symbol = CURRENCY_SYMBOLS[currency];
   const suggestions = useMemo(() => sortCatalog(catalog.filter(c => c.currency === currency)), [catalog, currency]);
 
@@ -192,6 +196,7 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
     [items, amountPaid, discountRate, discountType, taxRate]
   );
 
+  const profit = useMemo(() => computeProfit(totals.grandTotal, totals.tax, costs ?? []), [totals.grandTotal, totals.tax, costs]);
   const planSplit = useMemo(() => planAmounts(totals.grandTotal, plan ?? []), [totals.grandTotal, plan]);
   const planPercentTotal = (plan ?? []).reduce((sum, step) => sum + toNumber(step.percent), 0);
 
@@ -609,6 +614,71 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
                 </span>
               </div>
               <p className="text-[11px] text-slate-500">Leave a date empty for stages with no fixed day, like "on collection". Reminders ask for the instalment due, not the whole balance.</p>
+            </div>
+          )}
+        </GlassCard>
+
+        <GlassCard className="p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <Lock size={18} className="text-indigo-400" /> My Costs
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">Optional and private: never shown to the client. See what you actually make on this job.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => appendCost({ description: '', amount: 0 })}
+              className="text-xs flex items-center gap-1 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-indigo-300 transition-colors shrink-0"
+            >
+              <Plus size={14} /> Add Cost
+            </button>
+          </div>
+
+          {costFields.length > 0 && (
+            <div className="mt-4 space-y-2">
+              {costFields.map((field, index) => (
+                <div key={field.id} className="flex gap-2 items-center">
+                  <input
+                    {...register(`costs.${index}.description` as const)}
+                    className={clsx(inputClass, "flex-1")}
+                    placeholder="e.g. Fabric, tailor, transport"
+                    aria-label="Cost description"
+                  />
+                  <div className="w-32 relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs">{symbol}</span>
+                    <input
+                      type="number"
+                      step="any"
+                      min="0"
+                      {...register(`costs.${index}.amount` as const, { valueAsNumber: true })}
+                      className={clsx(inputClass, "text-right pl-6")}
+                      aria-label="Cost amount"
+                    />
+                  </div>
+                  <button type="button" onClick={() => removeCost(index)} className="p-2 text-slate-500 hover:text-red-400 transition-colors" aria-label="Remove cost">
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+              <div className="mt-3 rounded-xl bg-black/20 border border-white/5 p-4 text-sm space-y-1">
+                <div className="flex justify-between text-slate-400">
+                  <span>Your price{totals.tax > 0 ? ` (before ${taxLabel || 'tax'})` : ''}</span>
+                  <span>{formatMoney(profit.revenue, currency)}</span>
+                </div>
+                <div className="flex justify-between text-slate-400">
+                  <span>Costs</span>
+                  <span>-{formatMoney(profit.cost, currency)}</span>
+                </div>
+                <div className="h-px bg-white/10 my-1" />
+                <div className="flex justify-between font-bold">
+                  <span className="text-white">Profit</span>
+                  <span className={profit.profit < 0 ? "text-red-400" : "text-green-400"}>
+                    {formatMoney(profit.profit, currency)}
+                    {profit.margin !== null && <span className="text-xs font-normal text-slate-400"> · {profit.margin}%</span>}
+                  </span>
+                </div>
+              </div>
             </div>
           )}
         </GlassCard>

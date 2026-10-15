@@ -15,6 +15,7 @@ const draft: InvoiceDraft = {
     { label: 'At fitting', percent: 30, dueDate: '2026-10-10' },
     { label: 'On collection', percent: 20, dueDate: '' },
   ],
+  costs: [],
   depositAmount: 0,
 };
 const now = new Date('2026-10-01T09:00:00Z');

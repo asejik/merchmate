@@ -13,6 +13,7 @@ import { downloadBlob, type ShareFile } from '../../lib/share';
 import { ShareModal, type ShareState } from '../ui/ShareModal';
 import { buildInvoiceText, clientWhatsAppLink, DEFAULT_COUNTRY_CODE, toWhatsAppNumber, whatsAppLink } from '../../lib/whatsapp';
 import { renderInvoiceImage } from '../../lib/invoiceImage';
+import { getJobProfit } from '../../lib/profit';
 import { formatDate } from '../../lib/dates';
 import { isDeliveryLate, isOpenOrder, nextStage, ORDER_STAGES, stageLabel } from '../../lib/orders';
 
@@ -401,6 +402,7 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
           const deliveryLate = isDeliveryLate(inv, today);
           const unconfirmedAmount = quote ? 0 : getUnconfirmedAmount(inv);
           const nextStep = unpaidInvoice ? nextInstallment(inv, today) : null;
+          const jobProfit = getJobProfit(inv);
 
           return (
             // Raise the card with an open menu above its siblings (each card is its own stacking context)
@@ -457,6 +459,12 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
                         <span className="text-[10px] text-slate-500">Messaged {timeAgo(inv.lastReminderAt)}</span>
                       )}
                     </div>
+                    {jobProfit && (
+                      <p className="mt-1 text-[11px] text-slate-500" title="From your private costs. Not shown to the client.">
+                        {quote ? 'Expected profit' : 'Profit'}: <span className={jobProfit.profit < 0 ? "text-red-400" : "text-slate-300"}>{formatMoney(jobProfit.profit, inv.currency)}</span>
+                        {jobProfit.margin !== null && <> · {jobProfit.margin}%</>}
+                      </p>
+                    )}
                     {nextStep && (
                       <p className={clsx("mt-1 text-[11px]", nextStep.state === 'overdue' ? "text-red-400" : "text-slate-400")}>
                         Next: {nextStep.installment.label} · {formatMoney(nextStep.remaining, inv.currency)}

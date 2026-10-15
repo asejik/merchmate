@@ -330,6 +330,7 @@ export interface InvoiceDraft {
   notes: string;
   deliveryDate: string; // '' = none
   plan: PlanDraftStep[]; // [] = no payment plan
+  costs: { description: string; amount: number }[]; // private job costs
   depositAmount: number; // Only used when creating; edits keep the recorded payments
 }
 
@@ -381,6 +382,11 @@ export function composeInvoice(draft: InvoiceDraft, existing?: Invoice, now: Dat
     dueDate: draft.dueDate ? new Date(draft.dueDate) : undefined,
     notes: draft.notes.trim() || undefined,
     deliveryDate: draft.deliveryDate ? new Date(draft.deliveryDate) : undefined,
+    costs: draft.costs.some(c => toNumber(c.amount) > 0)
+      ? draft.costs
+        .filter(c => toNumber(c.amount) > 0)
+        .map(c => ({ id: crypto.randomUUID(), description: c.description.trim() || 'Cost', amount: round2(toNumber(c.amount)) }))
+      : undefined,
     paymentPlan: draft.plan.length > 0
       ? draft.plan.map((step, i) => ({
         id: crypto.randomUUID(),
@@ -412,6 +418,7 @@ export function invoiceToDraft(invoice: Invoice): InvoiceDraft {
     taxLabel: invoice.taxLabel ?? 'Tax',
     notes: invoice.notes ?? '',
     deliveryDate: invoice.deliveryDate ? toDateInputValue(invoice.deliveryDate) : '',
+    costs: (invoice.costs ?? []).map(({ description, amount }) => ({ description, amount })),
     plan: (invoice.paymentPlan ?? []).map(step => ({
       label: step.label,
       percent: step.percent,

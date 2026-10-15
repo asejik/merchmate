@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
-import { BarChart3, Download, Table2, Users } from 'lucide-react';
+import { BarChart3, Download, PiggyBank, Table2, Users } from 'lucide-react';
 import { clsx } from 'clsx';
 import { GlassCard } from '../ui/GlassCard';
 import type { CurrencyCode, Customer, Invoice } from '../../types';
 import { formatMoney } from '../../lib/currency';
 import { compactNumber, monthlyCollections, niceMax, topClients } from '../../lib/reports';
 import { csvFile, invoicesCsv, paymentsCsv } from '../../lib/csv';
+import { monthProfit } from '../../lib/profit';
 import { shareOrDownload } from '../../lib/share';
 
 interface Props {
@@ -149,6 +150,38 @@ function TopClients({ invoices, customers, currency }: Props) {
   );
 }
 
+/** Profit on this month's invoices, from the private costs entered on them. */
+function ProfitCard({ invoices, currency }: Omit<Props, 'customers'>) {
+  const month = useMemo(() => monthProfit(invoices, currency), [invoices, currency]);
+  const plural = (n: number) => `${n} invoice${n === 1 ? '' : 's'}`;
+
+  return (
+    <GlassCard className="p-6">
+      <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+        <PiggyBank size={16} className="text-slate-400" /> Profit this month
+      </h3>
+      {month.jobs === 0 ? (
+        <p className="text-sm text-slate-500 mt-3">
+          Add your costs (fabric, labour, transport) under “My Costs” when creating an invoice to see what you actually make.
+        </p>
+      ) : (
+        <>
+          <p className={clsx("text-3xl font-bold mt-3 tabular-nums", month.profit < 0 ? "text-red-400" : "text-white")}>
+            {formatMoney(month.profit, currency)}
+          </p>
+          <p className="text-xs text-slate-400 mt-1">
+            {month.margin !== null && <>{month.margin}% margin · </>}
+            {formatMoney(month.revenue, currency)} sales − {formatMoney(month.cost, currency)} costs, from {plural(month.jobs)}
+          </p>
+          {month.jobsWithoutCosts > 0 && (
+            <p className="text-xs text-slate-500 mt-2">{plural(month.jobsWithoutCosts)} without costs entered {month.jobsWithoutCosts === 1 ? "isn't" : "aren't"} counted.</p>
+          )}
+        </>
+      )}
+    </GlassCard>
+  );
+}
+
 export function Reports({ invoices, customers, currency }: Props) {
   const exportCsv = async (kind: 'invoices' | 'payments') => {
     const day = new Date().toISOString().slice(0, 10);
@@ -185,6 +218,7 @@ export function Reports({ invoices, customers, currency }: Props) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <CollectionsChart invoices={invoices} currency={currency} />
         <TopClients invoices={invoices} customers={customers} currency={currency} />
+        <ProfitCard invoices={invoices} currency={currency} />
       </div>
     </section>
   );
