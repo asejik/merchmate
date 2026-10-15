@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { formatDate } from '../../lib/dates';
 import { DatabaseBackup, Download, Upload, Loader2, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { GlassCard } from '../ui/GlassCard';
 import { exportAllData, getLastBackupAt, isBackupDue, markBackedUp, restoreAllData } from '../../db/backup';
@@ -81,7 +82,7 @@ export function BackupCard() {
 
       <div className={`mb-4 flex items-center gap-2 text-xs ${due ? 'text-orange-300' : 'text-green-400'}`}>
         {due ? <AlertTriangle size={14} /> : <ShieldCheck size={14} />}
-        {lastBackup ? `Last backup on this device: ${lastBackup.toLocaleDateString()}` : 'No backup made on this device yet'}
+        {lastBackup ? `Last backup on this device: ${formatDate(lastBackup, 'long', { moment: true })}` : 'No backup made on this device yet'}
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">

@@ -1,5 +1,6 @@
 import type { BusinessProfile, Customer, Invoice } from '../types';
 import { formatMoney } from './currency';
+import { formatDate } from './dates';
 import { getBalance, isQuote } from './invoice';
 import { pdfTheme } from './color';
 
@@ -14,8 +15,8 @@ const INK = '#111827';
 const MUTED = '#6B7280';
 const RULE = '#E5E7EB';
 
-const formatDay = (date: Date | string) =>
-  new Date(date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+// Messages and images use the unambiguous "15 Oct 2026" whatever the date-format setting
+const formatDay = (date: Date | string) => formatDate(date, 'long');
 
 function loadImage(src: string): Promise<HTMLImageElement | null> {
   return new Promise(resolve => {

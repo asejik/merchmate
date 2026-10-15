@@ -3,6 +3,7 @@ export type DiscountType = 'percentage' | 'fixed';
 export type InvoiceStatus = 'draft' | 'pending' | 'paid' | 'partial';
 export type DocumentKind = 'invoice' | 'quote';
 export type InvoiceTemplate = 'classic' | 'modern';
+export type DateFormat = 'dmy' | 'mdy' | 'ymd' | 'long';
 export type OrderStage = 'in_progress' | 'ready' | 'delivered';
 
 export interface BusinessProfile {
@@ -25,6 +26,7 @@ export interface BusinessProfile {
   // PDF branding
   brandColor?: string; // "#RRGGBB"
   invoiceTemplate?: InvoiceTemplate;
+  dateFormat?: DateFormat; // undefined = day first (dmy)
 }
 
 export interface Customer {

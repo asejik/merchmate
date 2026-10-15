@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { DATE_FORMATS, DEFAULT_DATE_FORMAT } from '../../lib/dates';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { db } from '../../db';
@@ -31,6 +32,7 @@ const profileSchema = z.object({
   brandColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Pick a colour"),
   invoiceTemplate: z.enum(['classic', 'modern']),
   defaultCountryCode: z.string().trim().regex(/^\+?\d{1,4}$/, "Digits only, e.g. 234"),
+  dateFormat: z.enum(['dmy', 'mdy', 'ymd', 'long']),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -52,6 +54,7 @@ export function BusinessProfileForm() {
       defaultCountryCode: DEFAULT_COUNTRY_CODE,
       brandColor: DEFAULT_BRAND_COLOR,
       invoiceTemplate: 'classic',
+      dateFormat: DEFAULT_DATE_FORMAT,
     }
   });
 
@@ -76,6 +79,7 @@ export function BusinessProfileForm() {
         setValue('defaultCountryCode', profile.defaultCountryCode ?? DEFAULT_COUNTRY_CODE);
         setValue('brandColor', profile.brandColor ?? DEFAULT_BRAND_COLOR);
         setValue('invoiceTemplate', profile.invoiceTemplate ?? 'classic');
+        setValue('dateFormat', profile.dateFormat ?? DEFAULT_DATE_FORMAT);
 
         if (profile.logoUrl) {
           setLogoPreview(profile.logoUrl);
@@ -274,6 +278,13 @@ export function BusinessProfileForm() {
               <input {...register('defaultCountryCode')} className={inputClass} placeholder="234" inputMode="numeric" />
               {errors.defaultCountryCode && <span className="text-red-400 text-xs">{errors.defaultCountryCode.message}</span>}
               <p className="text-[11px] text-slate-500 mt-1">Used for WhatsApp reminders to local numbers like 0803…</p>
+            </div>
+            <div>
+              <label className={labelClass}>Date Format</label>
+              <select {...register('dateFormat')} className={clsx(inputClass, "[&>option]:bg-slate-900")}>
+                {DATE_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+              </select>
+              <p className="text-[11px] text-slate-500 mt-1">Used in the app, PDFs and receipts on every device.</p>
             </div>
           </div>
         </GlassCard>

@@ -3,6 +3,7 @@ import type { Invoice, BusinessProfile, Customer } from '../../types';
 import { DEFAULT_INVOICE_TERMS, getBalance, getConfirmedPayments, isQuote } from '../../lib/invoice';
 import { formatAmount, formatMoney } from '../../lib/currency';
 import { pdfTheme } from '../../lib/color';
+import { formatDate } from '../../lib/dates';
 
 // Built-in Helvetica ignores fontWeight, so bold text uses the Helvetica-Bold face.
 const styles = StyleSheet.create({
@@ -79,6 +80,7 @@ export const InvoicePDF = ({ invoice, business, customer }: PDFProps) => {
   // Helvetica has no ₦ glyph, so PDFs always use the ISO code
   const money = (amount: number) => formatMoney(amount, invoice.currency, { code: true });
   const theme = pdfTheme(business);
+  const day = (date: Date) => formatDate(date, business.dateFormat);
   // Modern: header sits on a full-width brand-colour band
   const headerText = theme.modern ? theme.onAccent : '#333';
   const headerMuted = theme.modern ? theme.onAccent : '#ccc';
@@ -105,17 +107,17 @@ export const InvoicePDF = ({ invoice, business, customer }: PDFProps) => {
             <Text style={{ fontSize: 12, marginTop: 4 }}>#{invoice.invoiceNumber}</Text>
             <View style={{ marginTop: 20 }}>
               <Text style={[styles.label, { color: theme.modern ? theme.onAccent : '#666' }]}>Date Issued</Text>
-              <Text style={styles.value}>{new Date(invoice.dateIssued).toLocaleDateString()}</Text>
+              <Text style={styles.value}>{day(invoice.dateIssued)}</Text>
               {invoice.dueDate && (
                 <>
                   <Text style={[styles.label, { color: theme.modern ? theme.onAccent : '#666' }]}>{quote ? 'Valid Until' : 'Due Date'}</Text>
-                  <Text style={styles.value}>{new Date(invoice.dueDate).toLocaleDateString()}</Text>
+                  <Text style={styles.value}>{day(invoice.dueDate)}</Text>
                 </>
               )}
               {invoice.deliveryDate && (
                 <>
                   <Text style={[styles.label, { color: theme.modern ? theme.onAccent : '#666' }]}>{quote ? 'Est. Delivery' : 'Delivery Date'}</Text>
-                  <Text style={styles.value}>{new Date(invoice.deliveryDate).toLocaleDateString()}</Text>
+                  <Text style={styles.value}>{day(invoice.deliveryDate)}</Text>
                 </>
               )}
             </View>
@@ -192,7 +194,7 @@ export const InvoicePDF = ({ invoice, business, customer }: PDFProps) => {
                {history.map((pay) => (
                  <View key={pay.id} style={styles.historyRow}>
                    <Text style={styles.historyText}>
-                     {new Date(pay.date).toLocaleDateString()} {pay.note ? `• ${pay.note}` : ''}
+                     {formatDate(pay.date, business.dateFormat, { moment: true })} {pay.note ? `• ${pay.note}` : ''}
                    </Text>
                    <Text style={[styles.historyText, { color: '#22c55e' }]}>
                      {money(pay.amount)}
@@ -229,7 +231,7 @@ export const InvoicePDF = ({ invoice, business, customer }: PDFProps) => {
         <View style={[styles.ruleBox, { backgroundColor: theme.tint, borderLeftColor: theme.accent }]}>
           <Text style={styles.ruleText}>
             {quote
-              ? `This quotation is valid${invoice.dueDate ? ` until ${new Date(invoice.dueDate).toLocaleDateString()}` : ' for 30 days'}. Prices may change after that.`
+              ? `This quotation is valid${invoice.dueDate ? ` until ${day(invoice.dueDate)}` : ' for 30 days'}. Prices may change after that.`
               : business.invoiceFooterText || DEFAULT_INVOICE_TERMS}
           </Text>
         </View>

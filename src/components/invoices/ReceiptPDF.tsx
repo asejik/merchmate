@@ -3,6 +3,7 @@ import type { Invoice, BusinessProfile, Customer } from '../../types';
 import type { ReceiptInfo } from '../../lib/invoice';
 import { formatMoney } from '../../lib/currency';
 import { pdfTheme } from '../../lib/color';
+import { formatDate } from '../../lib/dates';
 
 const styles = StyleSheet.create({
   page: { padding: 32, fontFamily: 'Helvetica', fontSize: 10, color: '#333' },
@@ -57,7 +58,7 @@ export const ReceiptPDF = ({ invoice, receipt, business, customer }: ReceiptPDFP
           </View>
           <View style={{ alignItems: 'flex-end' }}>
             <Text style={styles.label}>Payment Date</Text>
-            <Text style={styles.value}>{new Date(receipt.payment.date).toLocaleDateString()}</Text>
+            <Text style={styles.value}>{formatDate(receipt.payment.date, business.dateFormat, { moment: true })}</Text>
           </View>
         </View>
 

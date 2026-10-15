@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { GlassCard } from '../ui/GlassCard';
 import { X, Save, History, Calculator, ShieldAlert } from 'lucide-react';
 import { clsx } from 'clsx';
-import type { Invoice } from '../../types';
+import type { DateFormat, Invoice } from '../../types';
+import { formatDate } from '../../lib/dates';
 import { CURRENCY_SYMBOLS, formatMoney } from '../../lib/currency';
 import { getBalance, getPaymentHistory } from '../../lib/invoice';
 
 interface Props {
   invoice: Invoice;
+  dateFormat?: DateFormat;
   onClose: () => void;
   onSave: (amount: number, note: string, unconfirmed: boolean) => void;
 }
@@ -15,7 +17,7 @@ interface Props {
 const METHODS = ['Transfer', 'Cash', 'POS', 'Other'] as const;
 type Method = typeof METHODS[number];
 
-export function PaymentModal({ invoice, onClose, onSave }: Props) {
+export function PaymentModal({ invoice, dateFormat, onClose, onSave }: Props) {
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
   const [method, setMethod] = useState<Method>('Transfer');
@@ -65,7 +67,7 @@ export function PaymentModal({ invoice, onClose, onSave }: Props) {
                 {history.map((rec) => (
                   <div key={rec.id} className="flex justify-between items-center text-sm p-2 rounded bg-white/5 border border-white/5">
                     <div>
-                      <span className="text-slate-300 block">{new Date(rec.date).toLocaleDateString()}</span>
+                      <span className="text-slate-300 block">{formatDate(rec.date, dateFormat, { moment: true })}</span>
                       <span className="text-[10px] text-slate-500">{rec.note || 'Payment'}</span>
                       {rec.unconfirmed && <span className="ml-2 text-[10px] text-amber-300">Awaiting confirmation</span>}
                     </div>

@@ -13,6 +13,7 @@ import { downloadBlob, type ShareFile } from '../../lib/share';
 import { ShareModal, type ShareState } from '../ui/ShareModal';
 import { buildInvoiceText, clientWhatsAppLink, DEFAULT_COUNTRY_CODE, toWhatsAppNumber, whatsAppLink } from '../../lib/whatsapp';
 import { renderInvoiceImage } from '../../lib/invoiceImage';
+import { formatDate } from '../../lib/dates';
 import { isDeliveryLate, isOpenOrder, nextStage, ORDER_STAGES, stageLabel } from '../../lib/orders';
 
 interface Props {
@@ -121,6 +122,7 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
   const [filter, setFilter] = useState<Filter>('all');
 
   const business = useLiveQuery(() => db.businessProfile.orderBy('id').first());
+  const dateFormat = business?.dateFormat;
 
   const invoices = useLiveQuery(async (): Promise<InvoiceRow[]> => {
     const [allInvoices, allCustomers] = await Promise.all([
@@ -410,13 +412,13 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
                   <div className="flex-1">
                     <h3 className="text-white font-bold">{inv.customerName}</h3>
                     <p className="text-xs text-slate-400">
-                      #{inv.invoiceNumber} • {new Date(inv.dateIssued).toLocaleDateString()}
+                      #{inv.invoiceNumber} • {formatDate(inv.dateIssued, dateFormat)}
                       {inv.dueDate && (quote ? !inv.convertedInvoiceId : inv.status !== 'paid') && (
-                        <> • {quote ? 'Valid until' : 'Due'} {new Date(inv.dueDate).toLocaleDateString()}</>
+                        <> • {quote ? 'Valid until' : 'Due'} {formatDate(inv.dueDate, dateFormat)}</>
                       )}
                       {inv.deliveryDate && inv.orderStage !== 'delivered' && !inv.convertedInvoiceId && (
                         <> • <span className={clsx(deliveryLate && "text-red-400 font-medium")}>
-                          {deliveryLate ? 'Delivery was' : 'Delivery'} {new Date(inv.deliveryDate).toLocaleDateString()}
+                          {deliveryLate ? 'Delivery was' : 'Delivery'} {formatDate(inv.deliveryDate, dateFormat)}
                         </span></>
                       )}
                     </p>
@@ -558,7 +560,7 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
                     {history.map((rec) => (
                       <div key={rec.id} className={clsx("flex flex-wrap justify-between items-center gap-x-2 gap-y-1 text-xs px-2 py-1 rounded", rec.unconfirmed ? "bg-amber-500/10 border border-amber-500/20" : "bg-white/5")}>
                         <span className="text-slate-400">
-                           {new Date(rec.date).toLocaleDateString()}
+                           {formatDate(rec.date, dateFormat, { moment: true })}
                            {rec.note && <span className="opacity-50 ml-2 text-[10px] uppercase border border-slate-600 rounded px-1">{rec.note}</span>}
                         </span>
                         {rec.unconfirmed ? (
@@ -614,7 +616,7 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
       )}
 
       {selectedInvoice && (
-        <PaymentModal invoice={selectedInvoice} onClose={() => setSelectedInvoice(null)} onSave={handlePaymentUpdate} />
+        <PaymentModal invoice={selectedInvoice} dateFormat={dateFormat} onClose={() => setSelectedInvoice(null)} onSave={handlePaymentUpdate} />
       )}
 
       {shareModal && <ShareModal state={shareModal} onClose={() => setShareModal(null)} />}

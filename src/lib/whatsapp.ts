@@ -1,5 +1,6 @@
 import type { BusinessProfile, Customer, Invoice } from '../types';
 import { formatMoney } from './currency';
+import { formatDate } from './dates';
 import { getBalance, isOverdue, isQuote, todayInputValue, toDateInputValue } from './invoice';
 
 export const DEFAULT_COUNTRY_CODE = '234';
@@ -20,8 +21,8 @@ export function toWhatsAppNumber(phone: string, defaultCountryCode: string = DEF
   return code + digits;
 }
 
-const formatDay = (date: Date | string) =>
-  new Date(date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+// Messages and images use the unambiguous "15 Oct 2026" whatever the date-format setting
+const formatDay = (date: Date | string) => formatDate(date, 'long');
 
 type PaymentDetails = Pick<BusinessProfile, 'businessName' | 'bankName' | 'accountNumber' | 'accountName'>;
 

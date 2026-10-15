@@ -3,6 +3,7 @@ import type { BusinessProfile, Customer } from '../../types';
 import type { StatementGroup } from '../../lib/statement';
 import { formatAmount, formatMoney } from '../../lib/currency';
 import { pdfTheme } from '../../lib/color';
+import { formatDate } from '../../lib/dates';
 
 const styles = StyleSheet.create({
   page: { padding: 40, paddingBottom: 60, fontFamily: 'Helvetica', fontSize: 9, color: '#333' },
@@ -33,10 +34,9 @@ interface Props {
   generatedOn: Date;
 }
 
-const day = (date?: Date) => (date ? date.toLocaleDateString() : '—');
-
 export const StatementPDF = ({ business, customer, groups, generatedOn }: Props) => {
   const theme = pdfTheme(business);
+  const day = (date?: Date) => (date ? formatDate(date, business.dateFormat) : '—');
 
   return (
     <Document>
@@ -50,7 +50,7 @@ export const StatementPDF = ({ business, customer, groups, generatedOn }: Props)
           </View>
           <View style={{ alignItems: 'flex-end' }}>
             <Text style={styles.title}>STATEMENT</Text>
-            <Text style={{ marginTop: 4 }}>As of {generatedOn.toLocaleDateString()}</Text>
+            <Text style={{ marginTop: 4 }}>As of {formatDate(generatedOn, business.dateFormat, { moment: true })}</Text>
           </View>
         </View>
 
