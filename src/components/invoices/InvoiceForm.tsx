@@ -3,7 +3,7 @@ import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
 import { GlassCard } from '../ui/GlassCard';
-import { Save, Plus, Trash2, Calculator, ArrowLeft, Percent, Loader2 } from 'lucide-react';
+import { Save, Plus, Trash2, Calculator, ArrowLeft, Percent, Loader2, CalendarClock } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { DocumentKind, Invoice } from '../../types';
 import { CURRENCY_CODES, CURRENCY_SYMBOLS, formatMoney } from '../../lib/currency';
@@ -16,10 +16,13 @@ import {
   invoiceToDraft,
   kindOf,
   nextInvoiceNumber,
+  planAmounts,
   QUOTE_PREFIX,
   todayInputValue,
   toNumber,
+  validatePlan,
   type InvoiceDraft,
+  type PlanDraftStep,
 } from '../../lib/invoice';
 import { findCatalogItem, learnFromItems, sortCatalog } from '../../lib/catalog';
 
@@ -35,6 +38,13 @@ interface Props {
 }
 
 const EMPTY_ITEM = { description: '', quantity: 1, unitPrice: 0 };
+// Common splits for made-to-order work; the first instalment is due on the invoice date
+const PLAN_PRESETS: { label: string; steps: Omit<PlanDraftStep, 'dueDate'>[] }[] = [
+  { label: '50 / 50', steps: [{ label: 'Deposit', percent: 50 }, { label: 'Balance', percent: 50 }] },
+  { label: '50 / 30 / 20', steps: [{ label: 'Deposit', percent: 50 }, { label: 'At fitting', percent: 30 }, { label: 'On collection', percent: 20 }] },
+  { label: '70 / 30', steps: [{ label: 'Deposit', percent: 70 }, { label: 'On delivery', percent: 30 }] },
+];
+
 const DUE_PRESETS = [
   { label: 'On receipt', days: 0 },
   { label: '7 days', days: 7 },
@@ -106,6 +116,7 @@ async function loadInitialValues(mode: InvoiceEditorMode, sourceInvoiceId?: stri
       taxLabel: profile?.taxLabel || 'VAT',
       notes: '',
       deliveryDate: '',
+      plan: [],
       depositAmount: 0,
     },
   };
@@ -136,6 +147,7 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: "items" });
+  const { fields: planFields, append: appendStep, remove: removeStep, replace: replacePlan } = useFieldArray({ control, name: "plan" });
 
   const items = useWatch({ control, name: "items" });
   const deposit = useWatch({ control, name: "depositAmount" });
@@ -145,6 +157,7 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
   const taxRate = useWatch({ control, name: "taxRate" });
   const taxLabel = useWatch({ control, name: "taxLabel" });
   const dateIssued = useWatch({ control, name: "dateIssued" });
+  const plan = useWatch({ control, name: "plan" });
   const symbol = CURRENCY_SYMBOLS[currency];
   const suggestions = useMemo(() => sortCatalog(catalog.filter(c => c.currency === currency)), [catalog, currency]);
 
@@ -179,8 +192,16 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
     [items, amountPaid, discountRate, discountType, taxRate]
   );
 
+  const planSplit = useMemo(() => planAmounts(totals.grandTotal, plan ?? []), [totals.grandTotal, plan]);
+  const planPercentTotal = (plan ?? []).reduce((sum, step) => sum + toNumber(step.percent), 0);
+
   const onSubmit = async (data: InvoiceDraft) => {
     setError('');
+    const planError = validatePlan(data.plan);
+    if (planError) {
+      setError(planError);
+      return;
+    }
     const number = data.invoiceNumber.trim();
     const clash = await db.invoices.where('invoiceNumber').equals(number).first();
     if (clash && clash.id !== existing?.id) {
@@ -521,6 +542,75 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
                 )}
              </div>
           </div>
+        </GlassCard>
+
+        <GlassCard className="p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <CalendarClock size={18} className="text-indigo-400" /> Payment Plan
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">Optional. Split the total into instalments, e.g. deposit, at fitting, on collection.</p>
+            </div>
+            {planFields.length > 0 && (
+              <button type="button" onClick={() => replacePlan([])} className="text-xs text-slate-500 hover:text-red-400 shrink-0">
+                Remove plan
+              </button>
+            )}
+          </div>
+
+          {planFields.length === 0 ? (
+            <div className="flex flex-wrap gap-2 mt-4">
+              {PLAN_PRESETS.map(preset => (
+                <button
+                  key={preset.label}
+                  type="button"
+                  onClick={() => replacePlan(preset.steps.map((step, i) => ({ ...step, dueDate: i === 0 ? dateIssued : '' })))}
+                  className="text-xs bg-white/5 hover:bg-white/15 border border-white/10 px-3 py-2 rounded-lg text-slate-200 transition-colors"
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-4 space-y-2">
+              {planFields.map((field, index) => (
+                <div key={field.id} className="grid grid-cols-[1fr_5rem_2rem] sm:grid-cols-[1fr_5rem_10rem_8rem_2rem] gap-2 items-center bg-white/5 p-2 rounded-xl border border-white/5">
+                  <input {...register(`plan.${index}.label` as const)} className={inputClass} placeholder={`Instalment ${index + 1}`} aria-label="Instalment name" />
+                  <div className="relative">
+                    <input
+                      type="number"
+                      step="any"
+                      min="0"
+                      max="100"
+                      {...register(`plan.${index}.percent` as const, { valueAsNumber: true })}
+                      className={clsx(inputClass, "pr-6 text-right")}
+                      aria-label="Percentage"
+                    />
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 text-xs">%</span>
+                  </div>
+                  <button type="button" onClick={() => removeStep(index)} className="p-2 text-slate-500 hover:text-red-400 transition-colors sm:order-last" aria-label="Remove instalment">
+                    <Trash2 size={16} />
+                  </button>
+                  <input type="date" {...register(`plan.${index}.dueDate` as const)} className={inputClass} aria-label="Due by (optional)" title="Due by (leave empty for no fixed date)" />
+                  <span className="col-span-2 sm:col-span-1 text-xs sm:text-sm text-slate-300 text-right font-mono truncate">{formatMoney(planSplit[index] ?? 0, currency)}</span>
+                </div>
+              ))}
+              <div className="flex items-center justify-between pt-1">
+                <button
+                  type="button"
+                  onClick={() => appendStep({ label: '', percent: Math.max(0, 100 - planPercentTotal), dueDate: '' })}
+                  className="text-xs flex items-center gap-1 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-indigo-300 transition-colors"
+                >
+                  <Plus size={14} /> Add Instalment
+                </button>
+                <span className={clsx("text-xs", Math.abs(planPercentTotal - 100) > 0.01 ? "text-orange-400" : "text-slate-500")}>
+                  Total {Math.round(planPercentTotal * 100) / 100}% {Math.abs(planPercentTotal - 100) > 0.01 && '(must be 100%)'}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500">Leave a date empty for stages with no fixed day, like "on collection". Reminders ask for the instalment due, not the whole balance.</p>
+            </div>
+          )}
         </GlassCard>
 
         <div className="flex flex-col items-end gap-3 pt-4">

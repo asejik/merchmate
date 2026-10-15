@@ -236,7 +236,7 @@ describe('composeInvoice', () => {
   const draft: InvoiceDraft = {
     customerId: 'c-1', invoiceNumber: ' INV-004 ', currency: 'NGN', dateIssued: '2026-05-01', dueDate: '2026-05-15',
     items: [{ description: 'Consulting ', quantity: 2, unitPrice: 5000 }],
-    discountType: 'fixed', discountRate: 0, taxRate: 7.5, taxLabel: 'VAT', notes: '  Thanks! ', deliveryDate: '2026-05-20', depositAmount: 3000,
+    discountType: 'fixed', discountRate: 0, taxRate: 7.5, taxLabel: 'VAT', notes: '  Thanks! ', deliveryDate: '2026-05-20', plan: [], depositAmount: 3000,
   };
 
   it('creates a new invoice with the deposit recorded as a payment', () => {

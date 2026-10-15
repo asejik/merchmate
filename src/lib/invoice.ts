@@ -1,4 +1,4 @@
-import type { DiscountType, DocumentKind, Invoice, InvoiceStatus, PaymentRecord } from '../types';
+import type { DiscountType, DocumentKind, Invoice, InvoiceStatus, PaymentRecord, PlanInstallment } from '../types';
 
 export const DEFAULT_INVOICE_TERMS = 'Payment is due by the date shown on this invoice.\nThank you for your business.';
 
@@ -200,17 +200,118 @@ export function kindOf(invoice: Pick<Invoice, 'kind'>): DocumentKind {
   return invoice.kind ?? 'invoice';
 }
 
-export function isOverdue(invoice: Pick<Invoice, 'status' | 'dueDate' | 'kind'>, today: string = todayInputValue()): boolean {
-  return !isQuote(invoice) && invoice.status !== 'paid' && !!invoice.dueDate && toDateInputValue(invoice.dueDate) < today;
+type OverdueInput = Pick<Invoice, 'status' | 'dueDate' | 'kind'> & Partial<Pick<Invoice, 'paymentPlan' | 'grandTotal' | 'depositAmount'>>;
+
+/** Past the due date, or an instalment of its payment plan was missed. */
+export function isOverdue(invoice: OverdueInput, today: string = todayInputValue()): boolean {
+  if (isQuote(invoice) || invoice.status === 'paid') return false;
+  if (invoice.dueDate && toDateInputValue(invoice.dueDate) < today) return true;
+  return getPlanOverdueAmount(invoice, today) > 0;
 }
 
 /** Overdue/expired are derived from dueDate at read time, never stored. */
-export function getDisplayStatus(invoice: Pick<Invoice, 'status' | 'dueDate' | 'kind' | 'convertedInvoiceId'>, today: string = todayInputValue()): DisplayStatus {
+export function getDisplayStatus(invoice: OverdueInput & Pick<Invoice, 'convertedInvoiceId'>, today: string = todayInputValue()): DisplayStatus {
   if (isQuote(invoice)) {
     if (invoice.convertedInvoiceId) return 'converted';
     return invoice.dueDate && toDateInputValue(invoice.dueDate) < today ? 'expired' : 'open';
   }
   return isOverdue(invoice, today) ? 'overdue' : invoice.status;
+}
+
+// ---------- Payment plans ----------
+
+export type InstallmentState = 'paid' | 'part-paid' | 'overdue' | 'due-today' | 'upcoming';
+
+export interface InstallmentStatus {
+  installment: PlanInstallment;
+  amount: number;
+  paid: number; // portion of this instalment covered by payments so far
+  remaining: number;
+  state: InstallmentState;
+}
+
+/** Instalment amounts for a total. The last absorbs rounding so they always add up exactly. */
+export function planAmounts(grandTotal: number, plan: Pick<PlanInstallment, 'percent'>[]): number[] {
+  let allocated = 0;
+  return plan.map((step, i) => {
+    const amount = i === plan.length - 1 ? round2(grandTotal - allocated) : round2(grandTotal * toNumber(step.percent) / 100);
+    allocated = round2(allocated + amount);
+    return amount;
+  });
+}
+
+/** Each instalment with how much of it is paid. Payments fill instalments in order. */
+export function getPlanStatus(
+  invoice: Partial<Pick<Invoice, 'paymentPlan' | 'grandTotal' | 'depositAmount'>>,
+  today: string = todayInputValue(),
+): InstallmentStatus[] {
+  const plan = invoice.paymentPlan ?? [];
+  const grandTotal = invoice.grandTotal ?? 0;
+  let unallocated = Math.min(invoice.depositAmount ?? 0, grandTotal);
+  return planAmounts(grandTotal, plan).map((amount, i) => {
+    const installment = plan[i];
+    const paid = round2(Math.min(amount, Math.max(0, unallocated)));
+    unallocated = round2(unallocated - paid);
+    const remaining = round2(amount - paid);
+    const due = installment.dueDate ? toDateInputValue(installment.dueDate) : null;
+    const state: InstallmentState = remaining <= 0 ? 'paid'
+      : due && due < today ? 'overdue'
+      : due === today ? 'due-today'
+      : paid > 0 ? 'part-paid'
+      : 'upcoming';
+    return { installment, amount, paid, remaining, state };
+  });
+}
+
+/** Unpaid amount of instalments whose date has passed. */
+export function getPlanOverdueAmount(invoice: Partial<Pick<Invoice, 'paymentPlan' | 'grandTotal' | 'depositAmount'>>, today: string = todayInputValue()): number {
+  if (!invoice.paymentPlan?.length) return 0;
+  return round2(getPlanStatus(invoice, today).filter(s => s.state === 'overdue').reduce((sum, s) => sum + s.remaining, 0));
+}
+
+/** How much is overdue: the whole balance once past the due date, else any missed instalments. */
+export function getOverdueAmount(invoice: Invoice, today: string = todayInputValue()): number {
+  if (!isOverdue(invoice, today)) return 0;
+  if (invoice.dueDate && toDateInputValue(invoice.dueDate) < today) return getBalance(invoice);
+  return getPlanOverdueAmount(invoice, today);
+}
+
+/** The first instalment not yet fully paid, or null when the plan is settled (or there is none). */
+export function nextInstallment(invoice: Partial<Pick<Invoice, 'paymentPlan' | 'grandTotal' | 'depositAmount'>>, today: string = todayInputValue()): InstallmentStatus | null {
+  return getPlanStatus(invoice, today).find(s => s.remaining > 0) ?? null;
+}
+
+/**
+ * What to ask the client for now: with a plan, the missed and due instalments
+ * (or else the next one); without a plan, the whole balance.
+ */
+export function getAmountToRequest(invoice: Invoice, today: string = todayInputValue()): number {
+  if (!invoice.paymentPlan?.length) return getBalance(invoice);
+  const statuses = getPlanStatus(invoice, today);
+  const dueNow = round2(statuses.filter(s => s.state === 'overdue' || s.state === 'due-today').reduce((sum, s) => sum + s.remaining, 0));
+  return dueNow > 0 ? dueNow : statuses.find(s => s.remaining > 0)?.remaining ?? 0;
+}
+
+export interface PlanDraftStep {
+  label: string;
+  percent: number;
+  dueDate: string; // '' = no fixed date
+}
+
+/** Error message for a plan being entered, or null when it is valid (an empty plan is valid). */
+export function validatePlan(plan: PlanDraftStep[]): string | null {
+  if (plan.length === 0) return null;
+  if (plan.length === 1) return 'A payment plan needs at least two instalments.';
+  if (plan.some(step => !(toNumber(step.percent) > 0))) return 'Each instalment needs a percentage above 0.';
+  const total = round2(plan.reduce((sum, step) => sum + toNumber(step.percent), 0));
+  if (Math.abs(total - 100) > 0.01) return `Instalments add up to ${total}%. They must add up to 100%.`;
+  return null;
+}
+
+/** Moves plan dates along with the invoice date (for duplicates and converted quotes). */
+function shiftPlan(plan: PlanDraftStep[], fromDate: string, toDate: string): PlanDraftStep[] {
+  const offset = daysBetween(fromDate, toDate);
+  return plan.map(step => ({ ...step, dueDate: step.dueDate ? addDays(step.dueDate, offset) : '' }));
 }
 
 // ---------- Invoice form <-> stored invoice ----------
@@ -228,6 +329,7 @@ export interface InvoiceDraft {
   taxLabel: string;
   notes: string;
   deliveryDate: string; // '' = none
+  plan: PlanDraftStep[]; // [] = no payment plan
   depositAmount: number; // Only used when creating; edits keep the recorded payments
 }
 
@@ -279,6 +381,14 @@ export function composeInvoice(draft: InvoiceDraft, existing?: Invoice, now: Dat
     dueDate: draft.dueDate ? new Date(draft.dueDate) : undefined,
     notes: draft.notes.trim() || undefined,
     deliveryDate: draft.deliveryDate ? new Date(draft.deliveryDate) : undefined,
+    paymentPlan: draft.plan.length > 0
+      ? draft.plan.map((step, i) => ({
+        id: crypto.randomUUID(),
+        label: step.label.trim() || `Instalment ${i + 1}`,
+        percent: toNumber(step.percent),
+        dueDate: step.dueDate ? new Date(step.dueDate) : undefined,
+      }))
+      : undefined,
     // New invoices start in progress; edits keep their stage (untracked ones stay untracked)
     orderStage: docKind === 'quote' ? undefined : existing ? existing.orderStage : 'in_progress',
     isSynced: false,
@@ -302,6 +412,11 @@ export function invoiceToDraft(invoice: Invoice): InvoiceDraft {
     taxLabel: invoice.taxLabel ?? 'Tax',
     notes: invoice.notes ?? '',
     deliveryDate: invoice.deliveryDate ? toDateInputValue(invoice.deliveryDate) : '',
+    plan: (invoice.paymentPlan ?? []).map(step => ({
+      label: step.label,
+      percent: step.percent,
+      dueDate: step.dueDate ? toDateInputValue(step.dueDate) : '',
+    })),
     depositAmount: invoice.depositAmount,
   };
 }
@@ -316,6 +431,7 @@ export function duplicateDraft(invoice: Invoice, invoiceNumber: string, today: s
     dateIssued: today,
     dueDate: termDays === null ? '' : addDays(today, termDays),
     deliveryDate: '',
+    plan: shiftPlan(draft.plan, draft.dateIssued, today),
     depositAmount: 0,
   };
 }
@@ -345,8 +461,10 @@ export function getReceiptInfo(invoice: Invoice, paymentId: string): ReceiptInfo
 
 /** Form values for turning a quote into an invoice: same items and pricing, invoice numbering and terms. */
 export function convertQuoteDraft(quote: Invoice, invoiceNumber: string, defaultDueDays?: number, today: string = todayInputValue()): InvoiceDraft {
+  const draft = invoiceToDraft(quote);
   return {
-    ...invoiceToDraft(quote),
+    ...draft,
+    plan: shiftPlan(draft.plan, draft.dateIssued, today),
     invoiceNumber,
     dateIssued: today,
     dueDate: defaultDueDays !== undefined ? addDays(today, defaultDueDays) : '',

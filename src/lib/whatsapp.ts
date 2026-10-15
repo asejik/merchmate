@@ -1,7 +1,7 @@
 import type { BusinessProfile, Customer, Invoice } from '../types';
 import { formatMoney } from './currency';
 import { formatDate } from './dates';
-import { getBalance, isOverdue, isQuote, todayInputValue, toDateInputValue } from './invoice';
+import { getAmountToRequest, getBalance, getPlanStatus, isOverdue, isQuote, planAmounts, todayInputValue, toDateInputValue } from './invoice';
 
 export const DEFAULT_COUNTRY_CODE = '234';
 
@@ -59,26 +59,41 @@ export function buildReminderMessage(
   business: PaymentDetails,
   today: string = todayInputValue(),
 ): string {
-  const balance = formatMoney(getBalance(invoice), invoice.currency);
-  const firstName = firstNameOf(customer);
+  const money = (value: number) => formatMoney(value, invoice.currency);
+  const lines = [`Hello ${firstNameOf(customer)},`, ''];
+  const intro = `This is a friendly reminder from ${business.businessName} that`;
 
-  let dueLine: string;
-  if (invoice.dueDate && isOverdue(invoice, today)) {
-    dueLine = `was due on ${formatDay(invoice.dueDate)}`;
-  } else if (invoice.dueDate && toDateInputValue(invoice.dueDate) === today) {
-    dueLine = 'is due today';
-  } else if (invoice.dueDate) {
-    dueLine = `is due on ${formatDay(invoice.dueDate)}`;
+  if (invoice.paymentPlan?.length) {
+    // Ask for the instalment(s) due, not the whole balance
+    const statuses = getPlanStatus(invoice, today);
+    const dueNow = statuses.filter(s => s.state === 'overdue' || s.state === 'due-today');
+    const asking = dueNow.length > 0 ? dueNow : statuses.filter(s => s.remaining > 0).slice(0, 1);
+    const first = asking[0]?.installment;
+    const names = asking.map(s => `*${s.installment.label}*`).join(' and ');
+    let when: string;
+    if (first?.dueDate && toDateInputValue(first.dueDate) < today) when = `was due on ${formatDay(first.dueDate)}`;
+    else if (first?.dueDate && toDateInputValue(first.dueDate) === today) when = 'is due today';
+    else if (first?.dueDate) when = `is due on ${formatDay(first.dueDate)}`;
+    else when = 'is now due';
+    const amount = getAmountToRequest(invoice, today);
+    const balance = getBalance(invoice);
+    lines.push(
+      `${intro} the ${names} payment for invoice #${invoice.invoiceNumber} ${when}.`,
+      `Amount due: *${money(amount)}*${amount < balance ? ` (${money(balance)} in total still to pay)` : ''}`,
+    );
   } else {
-    dueLine = 'is still outstanding';
+    let dueLine: string;
+    if (invoice.dueDate && isOverdue(invoice, today)) {
+      dueLine = `was due on ${formatDay(invoice.dueDate)}`;
+    } else if (invoice.dueDate && toDateInputValue(invoice.dueDate) === today) {
+      dueLine = 'is due today';
+    } else if (invoice.dueDate) {
+      dueLine = `is due on ${formatDay(invoice.dueDate)}`;
+    } else {
+      dueLine = 'is still outstanding';
+    }
+    lines.push(`${intro} invoice #${invoice.invoiceNumber} ${dueLine}.`, `Balance due: *${money(getBalance(invoice))}*`);
   }
-
-  const lines = [
-    `Hello ${firstName},`,
-    '',
-    `This is a friendly reminder from ${business.businessName} that invoice #${invoice.invoiceNumber} ${dueLine}.`,
-    `Balance due: *${balance}*`,
-  ];
 
   lines.push(...paymentDetailLines(business), '', 'Please ignore this message if you have already paid. Thank you!');
   return lines.join('\n');
@@ -133,6 +148,15 @@ export function buildInvoiceText(invoice: Invoice, customer: Pick<Customer, 'nam
   if (invoice.discount > 0) lines.push(`Discount: -${money(invoice.discount)}`);
   if (invoice.tax > 0) lines.push(`${invoice.taxLabel || 'Tax'} (${invoice.taxRate ?? 0}%): ${money(invoice.tax)}`);
   lines.push(`*Total: ${money(invoice.grandTotal)}*`);
+
+  if (invoice.paymentPlan?.length) {
+    lines.push('', '*Payment plan*');
+    const amounts = planAmounts(invoice.grandTotal, invoice.paymentPlan);
+    invoice.paymentPlan.forEach((step, i) => {
+      lines.push(`• ${step.label} (${step.percent}%): ${money(amounts[i])}${step.dueDate ? `, by ${formatDay(step.dueDate)}` : ''}`);
+    });
+    lines.push('');
+  }
 
   if (!quote) {
     if (invoice.depositAmount > 0) lines.push(`Paid: ${money(Math.min(invoice.depositAmount, invoice.grandTotal))}`);

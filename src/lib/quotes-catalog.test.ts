@@ -6,7 +6,7 @@ import type { CatalogItem } from '../types';
 const draft: InvoiceDraft = {
   customerId: 'c-1', invoiceNumber: 'QUO-001', currency: 'NGN', dateIssued: '2026-05-01', dueDate: '2026-05-31',
   items: [{ description: 'Logo design', quantity: 1, unitPrice: 50000 }],
-  discountType: 'percentage', discountRate: 0, taxRate: 0, taxLabel: 'VAT', notes: '', deliveryDate: '', depositAmount: 20000,
+  discountType: 'percentage', discountRate: 0, taxRate: 0, taxLabel: 'VAT', notes: '', deliveryDate: '', plan: [], depositAmount: 20000,
 };
 
 describe('quotes', () => {

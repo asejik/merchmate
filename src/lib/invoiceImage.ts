@@ -1,7 +1,7 @@
 import type { BusinessProfile, Customer, Invoice } from '../types';
 import { formatMoney } from './currency';
 import { formatDate } from './dates';
-import { getBalance, isQuote } from './invoice';
+import { getBalance, getPlanStatus, isQuote } from './invoice';
 import { pdfTheme } from './color';
 
 // A phone-shaped PNG of the invoice. WhatsApp previews images inline, unlike PDFs.
@@ -125,6 +125,20 @@ function draw(ctx: CanvasRenderingContext2D, invoice: Invoice, business: Busines
   if (invoice.tax > 0) totalRow(`${invoice.taxLabel || 'Tax'} (${invoice.taxRate ?? 0}%)`, money(invoice.tax));
   totalRow('Total', money(invoice.grandTotal), { bold: true, size: 36, color: INK });
   if (!quote && invoice.depositAmount > 0) totalRow('Paid', money(Math.min(invoice.depositAmount, invoice.grandTotal)));
+
+  // Payment plan
+  if (invoice.paymentPlan?.length) {
+    y += 24;
+    text('PAYMENT PLAN', PAD, y + 24, 24, { color: MUTED, bold: true });
+    y += 40;
+    for (const { installment, amount, state } of getPlanStatus(invoice)) {
+      const done = !quote && state === 'paid';
+      const due = installment.dueDate ? ` · by ${formatDay(installment.dueDate)}` : '';
+      text(`${installment.label} (${installment.percent}%)${due}`, PAD, y + 34, 28, { color: done ? MUTED : INK, maxWidth: WIDTH * 0.6 });
+      text(done ? `${money(amount)} ✓` : money(amount), right, y + 34, 28, { bold: true, align: 'right', color: done ? '#15803D' : INK });
+      y += 50;
+    }
+  }
 
   // Balance (or paid) banner
   if (!quote) {

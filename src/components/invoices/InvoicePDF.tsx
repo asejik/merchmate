@@ -1,6 +1,6 @@
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
 import type { Invoice, BusinessProfile, Customer } from '../../types';
-import { DEFAULT_INVOICE_TERMS, getBalance, getConfirmedPayments, isQuote } from '../../lib/invoice';
+import { DEFAULT_INVOICE_TERMS, getBalance, getConfirmedPayments, getPlanStatus, isQuote } from '../../lib/invoice';
 import { formatAmount, formatMoney } from '../../lib/currency';
 import { pdfTheme } from '../../lib/color';
 import { formatDate } from '../../lib/dates';
@@ -77,6 +77,7 @@ export const InvoicePDF = ({ invoice, business, customer }: PDFProps) => {
   const balance = getBalance(invoice);
   const isPaid = !quote && balance <= 0;
   const history = getConfirmedPayments(invoice);
+  const plan = invoice.paymentPlan?.length ? getPlanStatus(invoice) : [];
   // Helvetica has no ₦ glyph, so PDFs always use the ISO code
   const money = (amount: number) => formatMoney(amount, invoice.currency, { code: true });
   const theme = pdfTheme(business);
@@ -220,6 +221,22 @@ export const InvoicePDF = ({ invoice, business, customer }: PDFProps) => {
             </>
           )}
         </View>
+
+        {plan.length > 0 && (
+          <View style={styles.notes}>
+            <Text style={styles.label}>Payment Plan</Text>
+            {plan.map(({ installment, amount, state }) => (
+              <View key={installment.id} style={[styles.historyRow, { paddingVertical: 3 }]}>
+                <Text>
+                  {installment.label} ({installment.percent}%){installment.dueDate ? `  ·  by ${day(installment.dueDate)}` : ''}
+                </Text>
+                <Text style={state === 'paid' && !quote ? { color: '#22c55e', fontFamily: 'Helvetica-Bold' } : { fontFamily: 'Helvetica-Bold' }}>
+                  {money(amount)}{state === 'paid' && !quote ? '  PAID' : ''}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         {invoice.notes && (
           <View style={styles.notes}>

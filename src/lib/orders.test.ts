@@ -8,7 +8,7 @@ const now = new Date('2026-05-01T09:00:00Z');
 const draft: InvoiceDraft = {
   customerId: 'c-1', invoiceNumber: 'INV-010', currency: 'NGN', dateIssued: '2026-05-01', dueDate: '',
   items: [{ description: 'Agbada', quantity: 1, unitPrice: 50000 }],
-  discountType: 'percentage', discountRate: 0, taxRate: 0, taxLabel: 'VAT', notes: '', deliveryDate: '2026-05-20', depositAmount: 20000,
+  discountType: 'percentage', discountRate: 0, taxRate: 0, taxLabel: 'VAT', notes: '', deliveryDate: '2026-05-20', plan: [], depositAmount: 20000,
 };
 const business = { businessName: 'Tailor Co', bankName: 'GTBank', accountNumber: '0123456789', accountName: 'Tailor Co' };
 const customer = { name: 'Ada Obi' };

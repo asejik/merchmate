@@ -8,7 +8,7 @@ import { Reports } from './Reports';
 import { FollowUps } from './FollowUps';
 import type { AppTab, CurrencyCode } from '../../types';
 import { CURRENCY_CODES, formatMoney } from '../../lib/currency';
-import { getAmountCollected, getBalance, getDisplayStatus, getUnconfirmedAmount, isQuote, todayInputValue } from '../../lib/invoice';
+import { getAmountCollected, getBalance, getDisplayStatus, getOverdueAmount, getUnconfirmedAmount, isQuote, todayInputValue } from '../../lib/invoice';
 import { clsx } from 'clsx';
 
 export function Dashboard({ onNavigate }: { onNavigate: (tab: AppTab) => void }) {
@@ -35,7 +35,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (tab: AppTab) => void })
     const pending = filtered.reduce((sum, inv) => sum + getBalance(inv), 0);
     const today = todayInputValue();
     const overdueInvoices = filtered.filter(inv => getDisplayStatus(inv, today) === 'overdue');
-    const overdue = overdueInvoices.reduce((sum, inv) => sum + getBalance(inv), 0);
+    const overdue = overdueInvoices.reduce((sum, inv) => sum + getOverdueAmount(inv, today), 0);
 
     // Get 3 most recent invoices with customer names
     const recent = [...filtered]

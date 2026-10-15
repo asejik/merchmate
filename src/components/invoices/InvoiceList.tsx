@@ -7,7 +7,7 @@ import { clsx } from 'clsx';
 import { PaymentModal } from './PaymentModal';
 import type { BusinessProfile, Customer, Invoice, ListView, OrderStage } from '../../types';
 import { formatMoney } from '../../lib/currency';
-import { applyPayment, confirmPayment, getBalance, getDisplayStatus, getPaymentHistory, getReceiptInfo, getUnconfirmedAmount, isQuote, removeUnconfirmedPayment, todayInputValue, type DisplayStatus } from '../../lib/invoice';
+import { applyPayment, confirmPayment, getBalance, nextInstallment, getDisplayStatus, getPaymentHistory, getReceiptInfo, getUnconfirmedAmount, isQuote, removeUnconfirmedPayment, todayInputValue, type DisplayStatus } from '../../lib/invoice';
 import { renderInvoicePdf, renderReceiptPdf } from '../../lib/pdf';
 import { downloadBlob, type ShareFile } from '../../lib/share';
 import { ShareModal, type ShareState } from '../ui/ShareModal';
@@ -400,6 +400,7 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
           const upcomingStage = inv.orderStage ? nextStage(inv.orderStage) : null;
           const deliveryLate = isDeliveryLate(inv, today);
           const unconfirmedAmount = quote ? 0 : getUnconfirmedAmount(inv);
+          const nextStep = unpaidInvoice ? nextInstallment(inv, today) : null;
 
           return (
             // Raise the card with an open menu above its siblings (each card is its own stacking context)
@@ -456,6 +457,12 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
                         <span className="text-[10px] text-slate-500">Messaged {timeAgo(inv.lastReminderAt)}</span>
                       )}
                     </div>
+                    {nextStep && (
+                      <p className={clsx("mt-1 text-[11px]", nextStep.state === 'overdue' ? "text-red-400" : "text-slate-400")}>
+                        Next: {nextStep.installment.label} · {formatMoney(nextStep.remaining, inv.currency)}
+                        {nextStep.installment.dueDate && <> · {nextStep.state === 'overdue' ? 'was due' : 'by'} {formatDate(nextStep.installment.dueDate, dateFormat)}</>}
+                      </p>
+                    )}
                   </div>
                 </div>
 

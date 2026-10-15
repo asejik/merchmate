@@ -77,6 +77,9 @@ export interface Invoice {
   notes?: string;
   lastReminderAt?: Date;
 
+  // Optional instalments, e.g. 50% now, 30% at fitting, 20% on collection
+  paymentPlan?: PlanInstallment[];
+
   // Order tracking (invoices only). undefined = not tracked (saved before order tracking existed)
   orderStage?: OrderStage;
   deliveryDate?: Date; // promised delivery / pickup day
@@ -85,6 +88,14 @@ export interface Invoice {
   isSynced: boolean;
   createdAt: Date; // Backfilled for pre-v2 invoices by the Dexie upgrade
   updatedAt: Date;
+}
+
+/** One stage of a payment plan. Stored as a percentage so it follows edits to the total. */
+export interface PlanInstallment {
+  id: string;
+  label: string; // e.g. "Deposit", "At fitting"
+  percent: number;
+  dueDate?: Date; // none = no fixed date (e.g. "on collection")
 }
 
 export interface PaymentRecord {

@@ -5,7 +5,7 @@ import { db } from '../../db';
 import { GlassCard } from '../ui/GlassCard';
 import type { AppTab, BusinessProfile, Customer, Invoice } from '../../types';
 import { formatMoney } from '../../lib/currency';
-import { getBalance, getUnconfirmedAmount } from '../../lib/invoice';
+import { getBalance, getOverdueAmount, getUnconfirmedAmount } from '../../lib/invoice';
 import { buildFollowUps, type FollowUpReason } from '../../lib/followups';
 import { clientWhatsAppLink } from '../../lib/whatsapp';
 
@@ -31,7 +31,7 @@ function reasonLabel(reason: FollowUpReason, invoice: Invoice): string {
   switch (reason) {
     case 'unconfirmed': return `Check bank for ${money(getUnconfirmedAmount(invoice))}`;
     case 'ready': return getBalance(invoice) > 0 ? `Ready · collect ${money(getBalance(invoice))}` : 'Ready · tell client';
-    case 'overdue': return `Overdue · ${money(getBalance(invoice))}`;
+    case 'overdue': return `Overdue · ${money(getOverdueAmount(invoice))}`;
     case 'delivery-late': return 'Delivery late';
     case 'delivery-today': return 'Deliver today';
   }
