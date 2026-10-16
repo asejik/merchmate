@@ -3,7 +3,7 @@ import { formatDate } from '../../lib/dates';
 import { DatabaseBackup, Download, Upload, Loader2, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { GlassCard } from '../ui/GlassCard';
 import { exportAllData, getLastBackupAt, isBackupDue, markBackedUp, restoreAllData } from '../../db/backup';
-import { backupFileName, parseBackup, serializeBackup } from '../../lib/backup';
+import { backupFileName, MAX_BACKUP_BYTES, parseBackup, serializeBackup } from '../../lib/backup';
 import { shareOrDownload } from '../../lib/share';
 
 export function BackupCard() {
@@ -40,6 +40,10 @@ export function BackupCard() {
     if (!file) return;
 
     setMessage(null);
+    if (file.size > MAX_BACKUP_BYTES) {
+      setMessage({ kind: 'error', text: 'This file is too large to be a MerchMate backup.' });
+      return;
+    }
     let parsed: ReturnType<typeof parseBackup>;
     try {
       parsed = parseBackup(await file.text());
