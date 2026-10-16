@@ -123,7 +123,7 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
             placeholder={`Search client or ${noun} #...`}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 min-h-11 text-white text-sm focus:outline-none focus:border-indigo-500 transition-all"
+            className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 min-h-11 text-white text-base focus:outline-none focus:border-indigo-500 transition-all"
           />
         </div>
         {view === 'invoices' && (

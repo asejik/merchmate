@@ -64,7 +64,7 @@ export function ItemsSection({ control, register, setValue, items, currency }: I
                 list="catalog-suggestions"
                 autoComplete="off"
                 placeholder={suggestions.length ? "Item description (start typing for saved items)" : "Item description"}
-                className="bg-transparent border-none text-white placeholder-slate-600 focus:ring-0 w-full p-0 text-sm"
+                className="bg-transparent border-none text-white placeholder-slate-600 focus:ring-0 w-full min-h-11 p-0 text-base"
               />
             </div>
             <div className="flex gap-2 w-full md:w-auto">
@@ -89,7 +89,7 @@ export function ItemsSection({ control, register, setValue, items, currency }: I
                   placeholder="Price"
                 />
               </div>
-              <button type="button" onClick={() => remove(index)} disabled={fields.length === 1} className="p-2 text-slate-500 hover:text-red-400 transition-colors disabled:opacity-30 disabled:hover:text-slate-500" aria-label="Remove item">
+              <button type="button" onClick={() => remove(index)} disabled={fields.length === 1} className="inline-flex items-center justify-center min-h-11 min-w-11 text-slate-500 hover:text-red-400 transition-colors disabled:opacity-30 disabled:hover:text-slate-500" aria-label="Remove item">
                 <Trash2 size={16} />
               </button>
             </div>

@@ -47,11 +47,11 @@ export function CostsSection({ control, register, currency, taxLabel, totals }: 
             <div key={field.id} className="flex gap-2 items-center">
               <input
                 {...register(`costs.${index}.description` as const)}
-                className={clsx(inputClass, "flex-1")}
+                className={clsx(inputClass, "flex-1 min-w-0")}
                 placeholder="e.g. Fabric, tailor, transport"
                 aria-label="Cost description"
               />
-              <div className="w-32 relative">
+              <div className="w-28 relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs">{symbol}</span>
                 <input
                   type="number"
@@ -62,7 +62,7 @@ export function CostsSection({ control, register, currency, taxLabel, totals }: 
                   aria-label="Cost amount"
                 />
               </div>
-              <button type="button" onClick={() => removeCost(index)} className="p-2 text-slate-500 hover:text-red-400 transition-colors" aria-label="Remove cost">
+              <button type="button" onClick={() => removeCost(index)} className="inline-flex items-center justify-center min-h-11 min-w-11 text-slate-500 hover:text-red-400 transition-colors" aria-label="Remove cost">
                 <Trash2 size={16} />
               </button>
             </div>

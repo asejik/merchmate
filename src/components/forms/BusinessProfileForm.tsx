@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { db } from '../../db';
 import { GlassCard } from '../ui/GlassCard';
+import { INPUT_CLASS } from '../ui/styles';
 import { useDialogs } from '../ui/dialogContext';
 import { Save, Upload, Loader2, FileText, Receipt } from 'lucide-react';
 import { clsx } from 'clsx';
@@ -149,7 +150,7 @@ export function BusinessProfileForm({ onLock }: { onLock?: () => void }) {
     }
   };
 
-  const inputClass = "w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all";
+  const inputClass = INPUT_CLASS;
   const labelClass = "block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider";
 
   return (

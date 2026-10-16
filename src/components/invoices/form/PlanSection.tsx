@@ -62,7 +62,7 @@ export function PlanSection({ control, register, currency, dateIssued, grandTota
       ) : (
         <div className="mt-4 space-y-2">
           {planFields.map((field, index) => (
-            <div key={field.id} className="grid grid-cols-[1fr_5rem_2rem] sm:grid-cols-[1fr_5rem_10rem_8rem_2rem] gap-2 items-center bg-white/5 p-2 rounded-xl border border-white/5">
+            <div key={field.id} className="grid grid-cols-[minmax(0,1fr)_5rem_2.75rem] sm:grid-cols-[minmax(0,1fr)_5rem_10rem_8rem_2.75rem] gap-2 items-center bg-white/5 p-2 rounded-xl border border-white/5">
               <input {...register(`plan.${index}.label` as const)} className={inputClass} placeholder={`Instalment ${index + 1}`} aria-label="Instalment name" />
               <div className="relative">
                 <input
@@ -76,11 +76,11 @@ export function PlanSection({ control, register, currency, dateIssued, grandTota
                 />
                 <span className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 text-xs">%</span>
               </div>
-              <button type="button" onClick={() => removeStep(index)} className="p-2 text-slate-500 hover:text-red-400 transition-colors sm:order-last" aria-label="Remove instalment">
+              <button type="button" onClick={() => removeStep(index)} className="inline-flex items-center justify-center min-h-11 min-w-11 text-slate-500 hover:text-red-400 transition-colors sm:order-last" aria-label="Remove instalment">
                 <Trash2 size={16} />
               </button>
-              <input type="date" {...register(`plan.${index}.dueDate` as const)} className={inputClass} aria-label="Due by (optional)" title="Due by (leave empty for no fixed date)" />
-              <span className="col-span-2 sm:col-span-1 text-xs sm:text-sm text-slate-300 text-right font-mono truncate">{formatMoney(planSplit[index] ?? 0, currency)}</span>
+              <input type="date" {...register(`plan.${index}.dueDate` as const)} className={clsx(inputClass, "col-span-3 sm:col-span-1")} aria-label="Due by (optional)" title="Due by (leave empty for no fixed date)" />
+              <span className="col-span-3 sm:col-span-1 text-xs sm:text-sm text-slate-300 text-right font-mono truncate">{formatMoney(planSplit[index] ?? 0, currency)}</span>
             </div>
           ))}
           <div className="flex items-center justify-between pt-1">

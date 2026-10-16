@@ -57,7 +57,7 @@ export function CatalogCard() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search saved items..."
-                className="w-full bg-white/5 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                className="w-full bg-white/5 border border-white/10 rounded-lg pl-9 pr-3 min-h-11 text-base text-white focus:outline-none focus:border-indigo-500"
               />
             </div>
           )}
@@ -78,7 +78,7 @@ export function CatalogCard() {
                     key={`${item.id}-${item.unitPrice}`}
                     onBlur={(e) => updatePrice(item, e.target.value)}
                     aria-label={`Price for ${item.name}`}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg pl-6 pr-2 py-1.5 text-sm text-right text-white focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-white/5 border border-white/10 rounded-lg pl-6 pr-2 min-h-11 text-base text-right text-white focus:outline-none focus:border-indigo-500"
                   />
                 </div>
                 <button onClick={() => remove(item)} className="p-2 text-slate-500 hover:text-red-400 transition-colors" aria-label={`Remove ${item.name}`}>

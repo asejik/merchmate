@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { GlassCard } from '../ui/GlassCard';
 import { useDialog } from '../ui/useDialog';
 import { useDialogs } from '../ui/dialogContext';
+import { INPUT_CLASS } from '../ui/styles';
 import { X, Save, History, Calculator, ShieldAlert } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { DateFormat, Invoice } from '../../types';
@@ -171,7 +172,7 @@ export function PaymentModal({ invoice, dateFormat, onClose, onSave }: Props) {
                     type="text"
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500"
+                    className={INPUT_CLASS}
                     placeholder="e.g. Sent by her husband"
                   />
               </div>

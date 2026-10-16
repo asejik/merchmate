@@ -5,6 +5,7 @@ import { db } from '../../db';
 import { deleteCustomer } from '../../db/mutations';
 import { failed } from '../../lib/messages';
 import { GlassCard } from '../ui/GlassCard';
+import { INPUT_CLASS } from '../ui/styles';
 import { useDialogs } from '../ui/dialogContext';
 import { Save, X, Globe, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -92,7 +93,7 @@ export function CustomerForm({ onComplete, onCancel, initialData }: Props) {
     }
   };
 
-  const inputClass = "w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-all";
+  const inputClass = INPUT_CLASS;
   const labelClass = "block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider";
 
   return (
