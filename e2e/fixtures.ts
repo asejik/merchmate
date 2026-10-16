@@ -51,6 +51,12 @@ export interface SeedInvoice {
   issuedDaysAgo?: number;
   dueInDays?: number;
   kind?: 'invoice' | 'quote';
+  /** Instalments as percentages; the first is due today unless dueInDays says otherwise. */
+  plan?: { label: string; percent: number; dueInDays?: number }[];
+  /** Private job costs. */
+  costs?: { description: string; amount: number }[];
+  orderStage?: 'in_progress' | 'ready' | 'delivered';
+  description?: string;
 }
 
 /** A well-formed stored invoice (what the app itself would save). */
@@ -59,12 +65,15 @@ function storedInvoice(i: SeedInvoice) {
   const paid = i.paid ?? 0;
   return {
     id: i.id, kind: i.kind ?? 'invoice', customerId: i.customerId ?? 'c1', invoiceNumber: i.number,
-    items: [{ id: `${i.id}-item`, description: 'Aso Oke set', quantity: 1, unitPrice: i.total, total: i.total }],
+    items: [{ id: `${i.id}-item`, description: i.description ?? 'Aso Oke set', quantity: 1, unitPrice: i.total, total: i.total }],
     subtotal: i.total, discount: 0, tax: 0, grandTotal: i.total, depositAmount: paid,
     payments: paid ? [{ id: `${i.id}-pay`, date: new Date().toISOString(), amount: paid, note: 'Cash' }] : [],
     currency: 'NGN', status: paid >= i.total ? 'paid' : paid > 0 ? 'partial' : 'pending',
     dateIssued: day(-(i.issuedDaysAgo ?? 1)), dueDate: day(i.dueInDays ?? 14),
-    createdAt: new Date(), updatedAt: new Date(), isSynced: false, orderStage: 'in_progress',
+    createdAt: new Date(), updatedAt: new Date(), isSynced: false,
+    ...(i.kind === 'quote' ? {} : { orderStage: i.orderStage ?? 'in_progress' }),
+    ...(i.costs ? { costs: i.costs.map((c, n) => ({ id: `${i.id}-cost${n}`, ...c })) } : {}),
+    ...(i.plan ? { paymentPlan: i.plan.map((p, n) => ({ id: `${i.id}-step${n}`, label: p.label, percent: p.percent, dueDate: day(p.dueInDays ?? 0) })) } : {}),
   };
 }
 

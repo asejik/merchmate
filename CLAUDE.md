@@ -15,7 +15,7 @@ npm run preview   # Serve the production build (use this to test PWA/offline beh
 npm run test:e2e  # Playwright smoke tests of the built app in Chromium at 360px (builds and serves it on :4173; ~90 s)
 ```
 
-- `e2e/` holds 16 Playwright smoke tests in 5 files (first run, payments, sharing/PDF, backup/lock/erase, guard rails + axe accessibility). They run the real build with the production headers from `vercel.json` applied and fail on any console error, page error or CSP violation (`e2e/fixtures.ts`), so run them after any change to UI, PDF, headers, dependencies or the build tooling. Vitest ignores `e2e/`. First time: `npx playwright install chromium`.
+- `e2e/` holds 23 Playwright smoke tests in 6 files (first run, payments, sharing/PDF, backup/lock/erase, guard rails + axe accessibility, documents: edit/duplicate/convert, plans, costs, orders, filters). They run the real build with the production headers from `vercel.json` applied and fail on any console error, page error or CSP violation (`e2e/fixtures.ts`), so run them after any change to UI, PDF, headers, dependencies or the build tooling. Vitest ignores `e2e/`. First time: `npx playwright install chromium`.
 - Tests cover pure logic in `src/lib/` and the Dexie layer in `src/db/` (via `fake-indexeddb`, imported at the top of the test file; there is no DOM environment).
 - `typescript-eslint` is pinned to `~8.70` because 8.71.0's dependency tarballs were missing from npm.
 - WSL: if `npm` resolves to `/mnt/c/...` (Windows) it fails on WSL paths; put the nvm Node first in `PATH`.
