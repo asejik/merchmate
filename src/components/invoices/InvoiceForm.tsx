@@ -248,7 +248,9 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
   const inputClass = "w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-all text-sm";
   const labelClass = "block text-xs font-medium text-slate-400 mb-1 uppercase";
 
-  if (!initial) {
+  // Wait for the client list too: a <select> mounted before its options exist cannot show the
+  // saved client, so editing, duplicating or converting would open with no client chosen
+  if (!initial || !customers) {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-slate-500 gap-3">
         {error ? <p className="text-red-400">{error}</p> : <Loader2 className="animate-spin" size={28} />}
