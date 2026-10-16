@@ -105,7 +105,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (tab: AppTab) => void })
           <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
             <Wallet size={80} />
           </div>
-          <h3 className="text-slate-400 text-xs font-medium uppercase tracking-wider">Cash Collected</h3>
+          <h2 className="text-slate-400 text-xs font-medium uppercase tracking-wider">Cash Collected</h2>
           <p className="text-3xl font-bold text-white mt-2">
             {formatMoney(stats.collected, currency)}
           </p>
@@ -126,7 +126,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (tab: AppTab) => void })
           <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
             <Clock size={80} />
           </div>
-          <h3 className="text-slate-400 text-xs font-medium uppercase tracking-wider">Pending / Outstanding</h3>
+          <h2 className="text-slate-400 text-xs font-medium uppercase tracking-wider">Pending / Outstanding</h2>
           <p className="text-3xl font-bold text-orange-400 mt-2">
             {formatMoney(stats.pending, currency)}
           </p>
@@ -144,7 +144,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (tab: AppTab) => void })
           <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
             <FileText size={80} />
           </div>
-          <h3 className="text-slate-400 text-xs font-medium uppercase tracking-wider">Total Invoices</h3>
+          <h2 className="text-slate-400 text-xs font-medium uppercase tracking-wider">Total Invoices</h2>
           <p className="text-3xl font-bold text-indigo-400 mt-2">
             {stats.count}
           </p>
@@ -165,7 +165,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (tab: AppTab) => void })
                   <FileText size={18} />
                 </div>
                 <div>
-                  <h4 className="text-white font-medium text-sm">{inv.customerName}</h4>
+                  <h3 className="text-white font-medium text-sm">{inv.customerName}</h3>
                   <p className="text-xs text-slate-500">#{inv.invoiceNumber}</p>
                 </div>
               </div>

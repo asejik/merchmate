@@ -170,7 +170,7 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h2 className="text-2xl font-bold text-white">{text.title}</h2>
+          <h1 className="text-2xl font-bold text-white">{text.title}</h1>
           <p className="text-slate-400 text-sm">{text.subtitle}</p>
         </div>
         {draftKind && isDirty && (

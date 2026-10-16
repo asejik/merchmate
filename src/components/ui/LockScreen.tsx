@@ -91,7 +91,7 @@ export function LockScreen({ onUnlock }: LockScreenProps) {
   const waiting = waitMs > 0 ? `Too many wrong tries. Try again in ${formatWait(waitMs)}.` : message;
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
+    <main className="min-h-screen flex items-center justify-center p-6">
       <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-white/5 p-6 space-y-5">
         {mode === 'pin' && (
           <form onSubmit={unlock} className="space-y-4">
@@ -133,7 +133,7 @@ export function LockScreen({ onUnlock }: LockScreenProps) {
           </form>
         )}
 
-        {mode === 'new-code' && <RecoveryCodePanel code={newCode} onDone={() => onUnlock(false)} />}
+        {mode === 'new-code' && <RecoveryCodePanel code={newCode} onDone={() => onUnlock(false)} headingLevel={1} />}
 
         {mode === 'erase' && (
           <form onSubmit={erase} className="space-y-4">
@@ -164,6 +164,6 @@ export function LockScreen({ onUnlock }: LockScreenProps) {
           </form>
         )}
       </div>
-    </div>
+    </main>
   );
 }

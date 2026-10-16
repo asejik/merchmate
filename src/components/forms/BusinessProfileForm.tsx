@@ -10,6 +10,7 @@ import { INPUT_CLASS } from '../ui/styles';
 import { useDialogs } from '../ui/dialogContext';
 import { Save, Upload, Loader2, FileText, Receipt } from 'lucide-react';
 import { clsx } from 'clsx';
+import { FieldError } from '../ui/FieldError';
 import type { BusinessProfile } from '../../types';
 import { DEFAULT_INVOICE_TERMS } from '../../lib/invoice';
 import { DEFAULT_COUNTRY_CODE } from '../../lib/whatsapp';
@@ -155,15 +156,15 @@ export function BusinessProfileForm({ onLock }: { onLock?: () => void }) {
 
   return (
     <div className="max-w-2xl mx-auto pb-20">
-      <h2 className="text-2xl font-bold text-white mb-6">Business Settings</h2>
+      <h1 className="text-2xl font-bold text-white mb-6">Business Settings</h1>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
 
         {/* Card 1: Brand & Contact */}
         <GlassCard className="p-6 md:p-8">
-            <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
                 <Upload size={20} className="text-indigo-400"/> Brand Identity
-            </h3>
+            </h2>
 
             <div className="flex items-center gap-6 mb-6">
                 <div className={clsx(
@@ -189,8 +190,8 @@ export function BusinessProfileForm({ onLock }: { onLock?: () => void }) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
                 <label className={labelClass} htmlFor="biz-businessName">Business Name</label>
-                <input id="biz-businessName" {...register('businessName')} className={inputClass} placeholder="e.g. Acme Supplies Ltd" />
-                {errors.businessName && <span className="text-red-400 text-xs">{errors.businessName.message}</span>}
+                <input id="biz-businessName" aria-invalid={!!errors.businessName} aria-describedby={errors.businessName ? 'biz-businessName-error' : undefined} {...register('businessName')} className={inputClass} placeholder="e.g. Acme Supplies Ltd" />
+                <FieldError id="biz-businessName-error" message={errors.businessName?.message} />
             </div>
             <div>
                 <label className={labelClass} htmlFor="biz-ownerName">Owner Name</label>
@@ -198,8 +199,8 @@ export function BusinessProfileForm({ onLock }: { onLock?: () => void }) {
             </div>
             <div>
                 <label className={labelClass} htmlFor="biz-phone">Phone</label>
-                <input id="biz-phone" {...register('phone')} className={inputClass} placeholder="+234..." />
-                {errors.phone && <span className="text-red-400 text-xs">{errors.phone.message}</span>}
+                <input id="biz-phone" aria-invalid={!!errors.phone} aria-describedby={errors.phone ? 'biz-phone-error' : undefined} {...register('phone')} className={inputClass} placeholder="+234..." />
+                <FieldError id="biz-phone-error" message={errors.phone?.message} />
             </div>
              <div>
                 <label className={labelClass} htmlFor="biz-email">Email (Optional)</label>
@@ -211,10 +212,10 @@ export function BusinessProfileForm({ onLock }: { onLock?: () => void }) {
               <div>
                 <label className={labelClass} htmlFor="biz-brandColor">Brand Colour</label>
                 <div className="flex items-center gap-3">
-                  <input id="biz-brandColor" type="color" {...register('brandColor')} className="h-11 w-14 rounded-lg bg-transparent border border-white/10 cursor-pointer" />
+                  <input id="biz-brandColor" aria-invalid={!!errors.brandColor} aria-describedby={errors.brandColor ? 'biz-brandColor-error' : undefined} type="color" {...register('brandColor')} className="h-11 w-14 rounded-lg bg-transparent border border-white/10 cursor-pointer" />
                   <span className="text-xs text-slate-500">Used for your name, table headers and highlights on PDFs.</span>
                 </div>
-                {errors.brandColor && <span className="text-red-400 text-xs">{errors.brandColor.message}</span>}
+                <FieldError id="biz-brandColor-error" message={errors.brandColor?.message} />
               </div>
               <div>
                 <label className={labelClass} htmlFor="biz-invoiceTemplate">PDF Template</label>
@@ -227,40 +228,40 @@ export function BusinessProfileForm({ onLock }: { onLock?: () => void }) {
 
             <div className="mt-4">
             <label className={labelClass} htmlFor="biz-address">Office Address</label>
-            <textarea id="biz-address" {...register('address')} rows={2} className={inputClass} placeholder="Full street address..." />
-            {errors.address && <span className="text-red-400 text-xs">{errors.address.message}</span>}
+            <textarea id="biz-address" aria-invalid={!!errors.address} aria-describedby={errors.address ? 'biz-address-error' : undefined} {...register('address')} rows={2} className={inputClass} placeholder="Full street address..." />
+            <FieldError id="biz-address-error" message={errors.address?.message} />
             </div>
         </GlassCard>
 
         {/* Card 2: Bank Details */}
         <GlassCard className="p-6 md:p-8">
-          <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
             <Save size={20} className="text-indigo-400"/> Payment Details
-          </h3>
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className={labelClass} htmlFor="biz-bankName">Bank Name</label>
-              <input id="biz-bankName" {...register('bankName')} className={inputClass} placeholder="e.g. GTBank" />
-              {errors.bankName && <span className="text-red-400 text-xs">{errors.bankName.message}</span>}
+              <input id="biz-bankName" aria-invalid={!!errors.bankName} aria-describedby={errors.bankName ? 'biz-bankName-error' : undefined} {...register('bankName')} className={inputClass} placeholder="e.g. GTBank" />
+              <FieldError id="biz-bankName-error" message={errors.bankName?.message} />
             </div>
             <div>
               <label className={labelClass} htmlFor="biz-accountNumber">Account Number</label>
-              <input id="biz-accountNumber" {...register('accountNumber')} className={inputClass} placeholder="0123456789" />
-              {errors.accountNumber && <span className="text-red-400 text-xs">{errors.accountNumber.message}</span>}
+              <input id="biz-accountNumber" aria-invalid={!!errors.accountNumber} aria-describedby={errors.accountNumber ? 'biz-accountNumber-error' : undefined} {...register('accountNumber')} className={inputClass} placeholder="0123456789" />
+              <FieldError id="biz-accountNumber-error" message={errors.accountNumber?.message} />
             </div>
             <div className="md:col-span-2">
               <label className={labelClass} htmlFor="biz-accountName">Account Name</label>
-              <input id="biz-accountName" {...register('accountName')} className={inputClass} placeholder="Account Holder Name" />
-              {errors.accountName && <span className="text-red-400 text-xs">{errors.accountName.message}</span>}
+              <input id="biz-accountName" aria-invalid={!!errors.accountName} aria-describedby={errors.accountName ? 'biz-accountName-error' : undefined} {...register('accountName')} className={inputClass} placeholder="Account Holder Name" />
+              <FieldError id="biz-accountName-error" message={errors.accountName?.message} />
             </div>
           </div>
         </GlassCard>
 
         {/* Card 3: Invoice Defaults */}
         <GlassCard className="p-6 md:p-8">
-          <h3 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
             <Receipt size={20} className="text-indigo-400"/> Invoice Defaults
-          </h3>
+          </h2>
           <p className="text-xs text-slate-500 mb-6">Pre-filled on every new invoice. You can still change them per invoice.</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
@@ -269,8 +270,8 @@ export function BusinessProfileForm({ onLock }: { onLock?: () => void }) {
             </div>
             <div>
               <label className={labelClass} htmlFor="biz-defaultTaxRate">Tax Rate (%)</label>
-              <input id="biz-defaultTaxRate" type="number" step="any" min="0" max="100" {...register('defaultTaxRate')} className={inputClass} placeholder="e.g. 7.5" />
-              {errors.defaultTaxRate && <span className="text-red-400 text-xs">{errors.defaultTaxRate.message}</span>}
+              <input id="biz-defaultTaxRate" aria-invalid={!!errors.defaultTaxRate} aria-describedby={errors.defaultTaxRate ? 'biz-defaultTaxRate-error' : undefined} type="number" step="any" min="0" max="100" {...register('defaultTaxRate')} className={inputClass} placeholder="e.g. 7.5" />
+              <FieldError id="biz-defaultTaxRate-error" message={errors.defaultTaxRate?.message} />
             </div>
             <div>
               <label className={labelClass} htmlFor="biz-defaultDueDays">Payment Terms</label>
@@ -284,8 +285,8 @@ export function BusinessProfileForm({ onLock }: { onLock?: () => void }) {
             </div>
             <div>
               <label className={labelClass} htmlFor="biz-defaultCountryCode">Phone Country Code</label>
-              <input id="biz-defaultCountryCode" {...register('defaultCountryCode')} className={inputClass} placeholder="234" inputMode="numeric" />
-              {errors.defaultCountryCode && <span className="text-red-400 text-xs">{errors.defaultCountryCode.message}</span>}
+              <input id="biz-defaultCountryCode" aria-invalid={!!errors.defaultCountryCode} aria-describedby={errors.defaultCountryCode ? 'biz-defaultCountryCode-error' : undefined} {...register('defaultCountryCode')} className={inputClass} placeholder="234" inputMode="numeric" />
+              <FieldError id="biz-defaultCountryCode-error" message={errors.defaultCountryCode?.message} />
               <p className="text-[11px] text-slate-500 mt-1">Used for WhatsApp reminders to local numbers like 0803…</p>
             </div>
             <div>
@@ -300,10 +301,10 @@ export function BusinessProfileForm({ onLock }: { onLock?: () => void }) {
 
         {/* Card 4: Invoice Terms */}
         <GlassCard className="p-6 md:p-8">
-            <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                 <FileText size={20} className="text-indigo-400"/>
                 Invoice Footer / Terms
-            </h3>
+            </h2>
 
             <div>
                 <label className={labelClass} htmlFor="biz-invoiceFooterText">
@@ -323,7 +324,7 @@ export function BusinessProfileForm({ onLock }: { onLock?: () => void }) {
 
         {/* Floating Save Button */}
         <div className="flex justify-end pt-4">
-            {successMsg && <span className="text-green-400 text-sm font-medium animate-pulse mr-4 self-center">{successMsg}</span>}
+            {successMsg && <span role="status" className="text-green-400 text-sm font-medium animate-pulse mr-4 self-center">{successMsg}</span>}
 
             <button
                 type="submit"

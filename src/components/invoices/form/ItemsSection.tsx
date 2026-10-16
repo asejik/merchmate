@@ -38,7 +38,7 @@ export function ItemsSection({ control, register, setValue, items, currency }: I
   return (
     <GlassCard className="p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-white">Items</h3>
+        <h2 className="text-lg font-semibold text-white">Items</h2>
         <button
           type="button"
           onClick={() => append(EMPTY_ITEM)}

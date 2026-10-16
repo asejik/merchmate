@@ -1,5 +1,6 @@
 import type { FieldErrors, UseFormRegister, UseFormSetValue } from 'react-hook-form';
 import { clsx } from 'clsx';
+import { FieldError } from '../../ui/FieldError';
 import { GlassCard } from '../../ui/GlassCard';
 import { HIT_AREA } from '../../ui/styles';
 import { inputClass, labelClass } from './formStyles';
@@ -53,12 +54,12 @@ export function DetailsSection({ register, errors, setValue, currency, dateIssue
         </div>
         <div>
           <label className={labelClass} htmlFor="inv-invoiceNumber">{noun} #</label>
-          <input id="inv-invoiceNumber" {...register('invoiceNumber', { required: "Required" })} className={inputClass} />
-          {errors.invoiceNumber && <span className="text-red-400 text-xs">{errors.invoiceNumber.message}</span>}
+          <input id="inv-invoiceNumber" aria-invalid={!!errors.invoiceNumber} aria-describedby={errors.invoiceNumber ? 'inv-invoiceNumber-error' : undefined} {...register('invoiceNumber', { required: "Required" })} className={inputClass} />
+          <FieldError id="inv-invoiceNumber-error" message={errors.invoiceNumber?.message} />
         </div>
         <div>
           <label className={labelClass} htmlFor="inv-customerId">Customer</label>
-          <select id="inv-customerId"
+          <select id="inv-customerId" aria-invalid={!!errors.customerId} aria-describedby={errors.customerId ? 'inv-customerId-error' : undefined}
             {...register('customerId', { required: "Select a client" })}
             className={clsx(inputClass, "[&>option]:bg-slate-900 [&>option]:text-white")}
           >
@@ -67,7 +68,7 @@ export function DetailsSection({ register, errors, setValue, currency, dateIssue
               <option key={c.id} value={c.id}>{c.name} ({c.phone})</option>
             ))}
           </select>
-          {errors.customerId && <span className="text-red-400 text-xs">{errors.customerId.message}</span>}
+          <FieldError id="inv-customerId-error" message={errors.customerId?.message} />
         </div>
       </div>
 

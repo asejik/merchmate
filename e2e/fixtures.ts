@@ -155,9 +155,9 @@ export class App {
     }));
   }
 
-  /** Accessibility violations (WCAG 2.2 AA) on the current screen. */
+  /** Accessibility violations (WCAG 2.2 AA plus axe's best-practice rules: headings, landmarks, ...) on the current screen. */
   async accessibilityViolations() {
-    const result = await new AxeBuilder({ page: this.page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
+    const result = await new AxeBuilder({ page: this.page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice']).analyze();
     return result.violations.map(v => `${v.id} (${v.nodes.length}): ${v.nodes[0].target.join(' ')}`);
   }
 }

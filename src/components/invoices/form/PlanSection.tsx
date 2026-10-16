@@ -34,9 +34,9 @@ export function PlanSection({ control, register, currency, dateIssued, grandTota
     <GlassCard className="p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
             <CalendarClock size={18} className="text-indigo-400" /> Payment Plan
-          </h3>
+          </h2>
           <p className="text-xs text-slate-500 mt-1">Optional. Split the total into instalments, e.g. deposit, at fitting, on collection.</p>
         </div>
         {planFields.length > 0 && (

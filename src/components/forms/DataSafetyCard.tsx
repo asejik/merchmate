@@ -24,9 +24,9 @@ export function DataSafetyCard() {
 
   return (
     <GlassCard className="p-6 md:p-8 mt-6">
-      <h3 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
+      <h2 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
         <HardDrive size={20} className="text-indigo-400" /> Data Protection
-      </h3>
+      </h2>
       <p className="text-xs text-slate-500 mb-4">
         Your invoices live in this browser. When a phone runs low on space, a browser can clear data it has not been asked to keep.
       </p>

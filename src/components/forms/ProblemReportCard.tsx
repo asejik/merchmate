@@ -48,9 +48,9 @@ export function ProblemReportCard() {
 
   return (
     <GlassCard className="p-6 md:p-8 mt-6">
-      <h3 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
+      <h2 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
         <Bug size={20} className="text-indigo-400" /> Report a Problem
-      </h3>
+      </h2>
       <p className="text-xs text-slate-500 mb-4">
         Something not working? This makes a small text file about your phone, the app version and recent errors, which you can send on WhatsApp.
         It has no client names, phone numbers, amounts or bank details, and nothing is sent unless you choose to share it.

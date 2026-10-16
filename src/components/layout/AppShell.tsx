@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { LayoutDashboard, FileText, Settings, PlusCircle, Menu, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { LucideIcon } from 'lucide-react';
@@ -9,7 +10,29 @@ interface AppShellProps {
   onTabChange: (id: AppTab) => void;
 }
 
+/** Names shown in the browser tab and announced by screen readers when the screen changes. */
+const SCREEN_TITLES: Record<AppTab, string> = {
+  dashboard: 'Dashboard',
+  invoices: 'Invoices',
+  create: 'New invoice',
+  customers: 'Clients',
+  settings: 'Settings',
+};
+
 export function AppShell({ children, activeTab, onTabChange }: AppShellProps) {
+  const mainRef = useRef<HTMLElement>(null);
+  const firstRender = useRef(true);
+
+  // Name the page, and move keyboard and screen-reader focus to the new screen when it changes
+  useEffect(() => {
+    document.title = `${SCREEN_TITLES[activeTab]} | MerchMate`;
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    mainRef.current?.focus({ preventScroll: true });
+  }, [activeTab]);
+
   const navItems: { id: AppTab; label: string; icon: LucideIcon; isPrimary?: boolean }[] = [
     { id: 'dashboard', label: 'Home', icon: LayoutDashboard },
     { id: 'invoices', label: 'Invoices', icon: FileText },
@@ -20,6 +43,13 @@ export function AppShell({ children, activeTab, onTabChange }: AppShellProps) {
 
   return (
     <div className="min-h-screen text-white/90 selection:bg-indigo-500/30">
+      <a
+        href="#main"
+        onClick={(e) => { e.preventDefault(); mainRef.current?.focus(); }}
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:rounded-lg focus:bg-indigo-600 focus:px-4 focus:py-3 focus:text-white"
+      >
+        Skip to main content
+      </a>
 
       {/* Background Ambient Glow */}
       <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
@@ -28,12 +58,12 @@ export function AppShell({ children, activeTab, onTabChange }: AppShellProps) {
       </div>
 
       {/* Main Content Area */}
-      <main className="pb-24 pt-8 px-4 md:pl-24 md:pt-12 max-w-7xl mx-auto">
+      <main id="main" ref={mainRef} tabIndex={-1} className="pb-24 pt-8 px-4 md:pl-24 md:pt-12 max-w-7xl mx-auto focus:outline-none">
         {children}
       </main>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden">
+      <nav aria-label="Main" className="fixed bottom-0 left-0 right-0 z-50 md:hidden">
         <div className="mx-4 mb-4 rounded-2xl border border-[var(--color-glass-border)] bg-[#0f172a]/80 backdrop-blur-2xl shadow-2xl">
           <div className="flex justify-around items-center p-2">
             {navItems.map((item) => (
@@ -66,7 +96,7 @@ export function AppShell({ children, activeTab, onTabChange }: AppShellProps) {
       </nav>
 
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex fixed left-0 top-0 bottom-0 w-20 flex-col items-center py-8 border-r border-[var(--color-glass-border)] bg-[var(--color-glass-bg)] backdrop-blur-md">
+      <nav aria-label="Main" className="hidden md:flex fixed left-0 top-0 bottom-0 w-20 flex-col items-center py-8 border-r border-[var(--color-glass-border)] bg-[var(--color-glass-bg)] backdrop-blur-md">
         <div className="mb-8 p-2 bg-indigo-500/20 rounded-lg">
           <Menu size={24} className="text-indigo-400" />
         </div>
@@ -83,13 +113,13 @@ export function AppShell({ children, activeTab, onTabChange }: AppShellProps) {
               }`}
             >
               <item.icon size={24} className="transition-transform group-hover:scale-110" />
-              <span className="absolute left-16 px-2 py-1 bg-slate-800 border border-slate-700 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+              <span className="absolute left-16 px-2 py-1 bg-slate-800 border border-slate-700 rounded text-xs opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
                 {item.label}
               </span>
             </button>
           ))}
         </div>
-      </aside>
+      </nav>
 
     </div>
   );

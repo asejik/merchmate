@@ -83,9 +83,9 @@ export function AppLockCard({ onLockNow }: { onLockNow?: () => void }) {
 
   return (
     <GlassCard className="p-6 md:p-8 mt-6">
-      <h3 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
+      <h2 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
         <Lock size={20} className="text-indigo-400" /> App Lock
-      </h3>
+      </h2>
       <p className="text-xs text-slate-500 mb-4">
         Ask for a PIN when MerchMate opens and after it has been in the background for a minute. It keeps casual snoopers out of your clients and bank details.
         It does not encrypt your data, so keep your phone's own lock on too.
@@ -123,7 +123,7 @@ export function AppLockCard({ onLockNow }: { onLockNow?: () => void }) {
 
       {mode === 'backup-nudge' && (
         <div className="space-y-4">
-          <h4 className="text-base font-semibold text-white flex items-center gap-2"><DatabaseBackup size={18} className="text-orange-300" /> Back up your data now</h4>
+          <h3 className="text-base font-semibold text-white flex items-center gap-2"><DatabaseBackup size={18} className="text-orange-300" /> Back up your data now</h3>
           <p className="text-sm text-slate-300">
             App Lock is on. If you ever lose both your PIN and your recovery code, the only way back is to erase this device and restore a backup, so a recent one matters.
             Save one now, and again each day you use the app (we will remind you).

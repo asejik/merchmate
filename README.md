@@ -65,7 +65,7 @@ An offline-first invoicing app for small businesses. Create invoices, quotes and
 - An opt-in "Report a problem" that creates a text file (no client or money details) you can send for support.
 - Update prompt: new versions wait until you tap *Update*, so a half-written invoice is never lost.
 - A short **Get started** guide for new users, a **draft** that saves itself while you type a new invoice or quote (it is still there if the phone call, a crash or the system closes the app), a warning before you lose changes to an existing one, and an **Erase All Data** option for when you sell or hand over your phone.
-- Built to be usable by everyone: labelled forms, keyboard-friendly dialogs, large touch targets and support for the phone's "reduce motion" setting.
+- Built to be usable by everyone: every screen is checked automatically against WCAG 2.2 AA (labelled forms, headings and landmarks, a skip link, keyboard-friendly menus and dialogs, visible focus, 44px touch targets and fields, reflow at 320px, the phone's "reduce motion" setting).
 - Choose how dates are shown (day first, month first, long or ISO), identical on every device.
 
 ## How your data is stored

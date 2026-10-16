@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { FileText, Download, Share2, CreditCard, History, MoreVertical, Pencil, Copy, Trash2, MessageCircle, Receipt, FileCheck2, Check, ChevronRight, X, ShieldAlert, Ban, Undo2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { GlassCard } from '../../ui/GlassCard';
@@ -11,6 +12,9 @@ import { clientWhatsAppLink } from '../../../lib/whatsapp';
 import { STAGE_STYLES, STATUS_STYLES, timeAgo, type InvoiceRow } from './invoiceRow';
 import type { InvoiceActions } from './useInvoiceActions';
 
+// React 18 has no typed `inert` prop; the attribute itself works in every current browser
+const INERT = { inert: '' } as Record<string, string>;
+
 interface InvoiceCardProps {
   inv: InvoiceRow;
   business?: BusinessProfile;
@@ -19,6 +23,8 @@ interface InvoiceCardProps {
   isGenerating: boolean;
   menuOpen: boolean;
   menuUp: boolean; // open upwards near the bottom so the nav bar doesn't cover it
+  /** Another card's menu is open: this one is covered by it, so it must not be reachable. */
+  inert: boolean;
   onToggleMenu: (openUp: boolean) => void;
   onCloseMenu: () => void;
   onRecordPayment: () => void;
@@ -29,7 +35,30 @@ interface InvoiceCardProps {
 }
 
 /** One invoice or quote in the list: status, actions menu, and payment history. */
-export function InvoiceCard({ inv, business, dateFormat, today, isGenerating, menuOpen, menuUp, onToggleMenu, onCloseMenu, onRecordPayment, onEdit, onDuplicate, onConvert, actions }: InvoiceCardProps) {
+export function InvoiceCard({ inv, business, dateFormat, today, isGenerating, menuOpen, menuUp, inert, onToggleMenu, onCloseMenu, onRecordPayment, onEdit, onDuplicate, onConvert, actions }: InvoiceCardProps) {
+  const menuRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  // Opening the menu moves focus into it; closing it puts focus back on the button that opened it
+  useEffect(() => {
+    if (!menuOpen) return;
+    const trigger = triggerRef.current;
+    menuRef.current?.querySelector<HTMLElement>('[role^="menuitem"]')?.focus();
+    return () => trigger?.focus();
+  }, [menuOpen]);
+
+  /** Arrow keys, Home and End move between the menu items; Tab leaves the menu and closes it. */
+  const handleMenuKeys = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const items = [...event.currentTarget.querySelectorAll<HTMLElement>('[role^="menuitem"]')];
+    const at = items.indexOf(document.activeElement as HTMLElement);
+    const move = (to: number) => { event.preventDefault(); items[(to + items.length) % items.length]?.focus(); };
+    if (event.key === 'ArrowDown') move(at + 1);
+    else if (event.key === 'ArrowUp') move(at - 1);
+    else if (event.key === 'Home') move(0);
+    else if (event.key === 'End') move(items.length - 1);
+    else if (event.key === 'Tab') onCloseMenu();
+  };
+
   const { setStage, markReminded, handlePrepareShare, handleReceipt, handleConfirmTransfer, handleRemoveTransfer, handleDownload, handleDelete, handleVoid, handleReinstate } = actions;
 
   const history = getPaymentHistory(inv);
@@ -50,14 +79,14 @@ export function InvoiceCard({ inv, business, dateFormat, today, isGenerating, me
 
   return (
     // Raise the card with an open menu above its siblings (each card is its own stacking context)
-    <GlassCard className={clsx("p-4 flex flex-col gap-4 group", menuOpen && "relative z-30")}>
+    <GlassCard className={clsx("p-4 flex flex-col gap-4 group", menuOpen && "relative z-30")} {...(inert ? INERT : undefined)}>
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex items-start gap-4 w-full">
           <div className={`p-3 rounded-full ${statusStyle}`}>
             <FileText size={20} />
           </div>
           <div className="flex-1">
-            <h3 className="text-white font-bold">{inv.customerName}</h3>
+            <h2 className="text-white font-bold">{inv.customerName}</h2>
             <p className="text-xs text-slate-400">
               #{inv.invoiceNumber} • {formatDate(inv.dateIssued, dateFormat)}
               {inv.dueDate && (quote ? !inv.convertedInvoiceId : inv.status !== 'paid') && (
@@ -161,6 +190,7 @@ export function InvoiceCard({ inv, business, dateFormat, today, isGenerating, me
           </>)}
           <div className="relative">
             <button
+              ref={triggerRef}
               onClick={(e) => onToggleMenu(e.currentTarget.getBoundingClientRect().top > window.innerHeight / 2)}
               className="inline-flex items-center justify-center min-h-11 min-w-11 hover:bg-white/10 rounded-lg text-slate-400 transition-colors"
               title="More actions"
@@ -171,7 +201,7 @@ export function InvoiceCard({ inv, business, dateFormat, today, isGenerating, me
             </button>
             {menuOpen && (
               <>
-                <div className={clsx("absolute right-0 z-20 w-48", menuUp ? "bottom-full mb-1" : "top-full mt-1", "rounded-xl border border-white/10 bg-slate-900/95 backdrop-blur-xl shadow-2xl py-1 text-sm")} role="menu">
+                <div className={clsx("absolute right-0 z-20 w-48", menuUp ? "bottom-full mb-1" : "top-full mt-1", "rounded-xl border border-white/10 bg-slate-900/95 backdrop-blur-xl shadow-2xl py-1 text-sm")} role="menu" aria-label="Actions" ref={menuRef} onKeyDown={handleMenuKeys}>
                   {quote && !inv.convertedInvoiceId && (
                     <button role="menuitem" onClick={() => { onCloseMenu(); onConvert(); }} className="w-full flex items-center gap-2 px-3 py-2 text-green-300 hover:bg-white/10">
                       <FileCheck2 size={14} /> Convert to Invoice

@@ -38,9 +38,9 @@ export function CatalogCard() {
 
   return (
     <GlassCard className="p-6 md:p-8 mt-6">
-      <h3 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
+      <h2 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
         <Package size={20} className="text-indigo-400" /> Saved Items
-      </h3>
+      </h2>
       <p className="text-xs text-slate-500 mb-4">
         Items you invoice are remembered with their latest price and suggested as you type. Adjust or remove them here.
       </p>

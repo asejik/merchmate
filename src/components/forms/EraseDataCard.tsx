@@ -43,9 +43,9 @@ export function EraseDataCard() {
 
   return (
     <GlassCard className="p-6 md:p-8 mt-6 border-red-500/20">
-      <h3 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
+      <h2 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
         <Trash2 size={20} className="text-red-400" /> Erase All Data
-      </h3>
+      </h2>
       <p className="text-xs text-slate-500 mb-4">
         Deletes every client, invoice, quote and setting stored on this device, including App Lock. Use it before selling or giving away this phone, or to start again.
         There is no way to undo it except restoring a backup.

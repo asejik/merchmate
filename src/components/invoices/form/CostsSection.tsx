@@ -27,9 +27,9 @@ export function CostsSection({ control, register, currency, taxLabel, totals }: 
     <GlassCard className="p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
             <Lock size={18} className="text-indigo-400" /> My Costs
-          </h3>
+          </h2>
           <p className="text-xs text-slate-500 mt-1">Optional and private: never shown to the client. See what you actually make on this job.</p>
         </div>
         <button

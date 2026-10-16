@@ -1,3 +1,4 @@
+import { FieldError } from '../ui/FieldError';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -99,9 +100,9 @@ export function CustomerForm({ onComplete, onCancel, initialData }: Props) {
   return (
     <GlassCard className="max-w-xl mx-auto p-6">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold text-white">
+        <h1 className="text-xl font-bold text-white">
           {initialData ? 'Edit Customer' : 'New Customer'}
-        </h2>
+        </h1>
         <button onClick={onCancel} className="text-slate-400 hover:text-white" aria-label="Close">
           <X size={24} />
         </button>
@@ -113,20 +114,20 @@ export function CustomerForm({ onComplete, onCancel, initialData }: Props) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className={labelClass} htmlFor="cust-name">Customer Name</label>
-            <input id="cust-name" {...register('name')} className={inputClass} placeholder="e.g. Mrs. Adebayo" />
-            {errors.name && <span className="text-red-400 text-xs">{errors.name.message}</span>}
+            <input id="cust-name" aria-invalid={!!errors.name} aria-describedby={errors.name ? 'cust-name-error' : undefined} {...register('name')} className={inputClass} placeholder="e.g. Mrs. Adebayo" />
+            <FieldError id="cust-name-error" message={errors.name?.message} />
           </div>
           <div>
             <label className={labelClass} htmlFor="cust-phone">Phone</label>
-            <input id="cust-phone" {...register('phone')} className={inputClass} placeholder="080..." />
-            {errors.phone && <span className="text-red-400 text-xs">{errors.phone.message}</span>}
+            <input id="cust-phone" aria-invalid={!!errors.phone} aria-describedby={errors.phone ? 'cust-phone-error' : undefined} {...register('phone')} className={inputClass} placeholder="080..." />
+            <FieldError id="cust-phone-error" message={errors.phone?.message} />
           </div>
         </div>
 
         <div>
           <label className={labelClass} htmlFor="cust-email">Email (Optional)</label>
-          <input id="cust-email" {...register('email')} className={inputClass} placeholder="client@example.com" />
-          {errors.email && <span className="text-red-400 text-xs">{errors.email.message}</span>}
+          <input id="cust-email" aria-invalid={!!errors.email} aria-describedby={errors.email ? 'cust-email-error' : undefined} {...register('email')} className={inputClass} placeholder="client@example.com" />
+          <FieldError id="cust-email-error" message={errors.email?.message} />
         </div>
 
         {/* International Toggle */}

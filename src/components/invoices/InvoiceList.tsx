@@ -74,6 +74,7 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
 
   return (
     <div className="space-y-6">
+      <h1 className="sr-only">{view === 'quotes' ? 'Quotes' : 'Invoices'}</h1>
       <div className="flex items-center justify-between gap-4">
         <div className="flex bg-white/5 rounded-xl p-1 border border-white/10" role="tablist" aria-label="Document type">
           {(['invoices', 'quotes'] as ListView[]).map(v => (
@@ -160,6 +161,7 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
             isGenerating={generatingId === inv.id}
             menuOpen={menuId === inv.id}
             menuUp={menuUp}
+            inert={menuId !== null && menuId !== inv.id}
             onToggleMenu={openUp => { setMenuUp(openUp); setMenuId(menuId === inv.id ? null : inv.id ?? null); }}
             onCloseMenu={() => setMenuId(null)}
             onRecordPayment={() => setSelectedInvoice(inv)}

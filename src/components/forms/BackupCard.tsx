@@ -77,9 +77,9 @@ export function BackupCard() {
 
   return (
     <GlassCard className="p-6 md:p-8 mt-6">
-      <h3 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
+      <h2 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
         <DatabaseBackup size={20} className="text-indigo-400" /> Backup & Restore
-      </h3>
+      </h2>
       <p className="text-xs text-slate-500 mb-4">
         Your data is stored only on this device. Clearing browser data or losing your phone deletes it.
         Save a backup to Google Drive, email or WhatsApp every day you use the app. You can also use it to move to a new phone.

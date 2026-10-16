@@ -55,10 +55,10 @@ export function PaymentModal({ invoice, dateFormat, onClose, onSave }: Props) {
       <GlassCard className="w-full max-w-md p-0 overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="p-4 border-b border-white/10 flex justify-between items-center bg-white/5">
-          <h3 id="payment-heading" className="text-lg font-bold text-white flex items-center gap-2">
+          <h2 id="payment-heading" className="text-lg font-bold text-white flex items-center gap-2">
             <Calculator size={20} className="text-indigo-400" />
             Record Payment
-          </h3>
+          </h2>
           <button onClick={onClose} className="text-slate-400 hover:text-white" aria-label="Close">
             <X size={20} />
           </button>
@@ -67,9 +67,9 @@ export function PaymentModal({ invoice, dateFormat, onClose, onSave }: Props) {
         <div className="p-6 overflow-y-auto">
           {/* Section 1: Payment History */}
           <div className="mb-6">
-            <h4 className="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center gap-2">
+            <h3 className="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center gap-2">
               <History size={14} /> Payment History
-            </h4>
+            </h3>
             {history.length === 0 ? (
               <p className="text-sm text-slate-500 italic">No payments recorded yet.</p>
             ) : (

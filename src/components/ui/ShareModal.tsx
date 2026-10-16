@@ -38,7 +38,7 @@ export function ShareModal({ state, onClose }: Props) {
         <div className="mx-auto w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center mb-4 text-green-400">
           <Share2 size={24} />
         </div>
-        <h3 id="share-heading" className="text-xl font-bold text-white mb-2">{state.heading}</h3>
+        <h2 id="share-heading" className="text-xl font-bold text-white mb-2">{state.heading}</h2>
         <p className="text-slate-400 text-sm mb-6">{state.description}</p>
         <div className="space-y-3">
           {state.files.map((item, i) => (
