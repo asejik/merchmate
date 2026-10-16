@@ -2,6 +2,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { db } from '../../db';
+import { deleteCustomer } from '../../db/mutations';
 import { GlassCard } from '../ui/GlassCard';
 import { Save, X, Globe, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -70,7 +71,11 @@ export function CustomerForm({ onComplete, onCancel, initialData }: Props) {
     }
     if (!confirm(`Delete ${initialData.name}? This cannot be undone.`)) return;
     try {
-      await db.customers.delete(initialData.id);
+      // Re-checked inside the delete itself, in case a document was added since the check above
+      if (await deleteCustomer(initialData.id) > 0) {
+        alert(`${initialData.name} now has invoices or quotes. Delete those first to keep your records consistent.`);
+        return;
+      }
       onComplete();
     } catch (err) {
       console.error(err);

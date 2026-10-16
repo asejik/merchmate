@@ -2,6 +2,7 @@ import { useMemo, useEffect, useState } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
+import { DocumentGoneError, NumberInUseError, saveDocument } from '../../db/mutations';
 import { GlassCard } from '../ui/GlassCard';
 import { Save, Plus, Trash2, Calculator, ArrowLeft, Percent, Loader2, CalendarClock, Lock } from 'lucide-react';
 import { clsx } from 'clsx';
@@ -10,7 +11,6 @@ import { CURRENCY_CODES, CURRENCY_SYMBOLS, formatMoney } from '../../lib/currenc
 import {
   addDays,
   calculateTotals,
-  composeInvoice,
   convertQuoteDraft,
   duplicateDraft,
   invoiceToDraft,
@@ -24,7 +24,7 @@ import {
   type InvoiceDraft,
   type PlanDraftStep,
 } from '../../lib/invoice';
-import { findCatalogItem, learnFromItems, sortCatalog } from '../../lib/catalog';
+import { findCatalogItem, sortCatalog } from '../../lib/catalog';
 import { computeProfit } from '../../lib/profit';
 
 export type InvoiceEditorMode = 'create' | 'create-quote' | 'edit' | 'duplicate' | 'convert';
@@ -207,31 +207,28 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
       setError(planError);
       return;
     }
-    const number = data.invoiceNumber.trim();
-    const clash = await db.invoices.where('invoiceNumber').equals(number).first();
-    if (clash && clash.id !== existing?.id) {
-      setError(`Number ${number} is already used. Choose another.`);
-      return;
-    }
     if (data.dueDate && data.dueDate < data.dateIssued) {
       setError(`${isQuoteDoc ? 'Valid-until' : 'Due'} date cannot be before the ${noun.toLowerCase()} date.`);
+      return;
+    }
+    if (totals.grandTotal <= 0) {
+      setError(`The ${noun.toLowerCase()} total must be more than 0. Enter a price for each item.`);
       return;
     }
 
     setSaving(true);
     try {
-      const doc = composeInvoice(data, existing, new Date(), kind);
-      await db.transaction('rw', db.invoices, db.catalog, async () => {
-        await db.invoices.put(doc);
-        if (initial?.convertFrom?.id) {
-          await db.invoices.update(initial.convertFrom.id, { convertedInvoiceId: doc.id, updatedAt: new Date() });
-        }
-        await db.catalog.bulkPut(learnFromItems(await db.catalog.toArray(), doc.items, doc.currency));
-      });
+      await saveDocument(data, existing, kind, initial?.convertFrom?.id);
       onComplete(kind);
     } catch (err) {
-      console.error(err);
-      setError(`Failed to save ${noun.toLowerCase()}.`);
+      if (err instanceof NumberInUseError) {
+        setError(`Number ${err.number} is already used. Choose another.`);
+      } else if (err instanceof DocumentGoneError) {
+        setError(`This ${noun.toLowerCase()} was deleted, so your changes were not saved.`);
+      } else {
+        console.error(err);
+        setError(`Failed to save ${noun.toLowerCase()}.`);
+      }
     } finally {
       setSaving(false);
     }

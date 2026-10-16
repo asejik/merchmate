@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
+import { confirmTransfer, deleteInvoice, discardTransfer, recordPayment } from '../../db/mutations';
 import { GlassCard } from '../ui/GlassCard';
 import { FileText, Download, Share2, CreditCard, History, Search, MoreVertical, Pencil, Copy, Trash2, MessageCircle, Receipt, FileCheck2, Plus, Check, ChevronRight, X, ShieldAlert } from 'lucide-react';
 import { clsx } from 'clsx';
 import { PaymentModal } from './PaymentModal';
 import type { BusinessProfile, Customer, Invoice, ListView, OrderStage } from '../../types';
 import { formatMoney } from '../../lib/currency';
-import { applyPayment, confirmPayment, getBalance, nextInstallment, getDisplayStatus, getPaymentHistory, getReceiptInfo, getUnconfirmedAmount, isQuote, removeUnconfirmedPayment, todayInputValue, type DisplayStatus } from '../../lib/invoice';
+import { getBalance, nextInstallment, getDisplayStatus, getPaymentHistory, getReceiptInfo, getUnconfirmedAmount, isQuote, todayInputValue, type DisplayStatus } from '../../lib/invoice';
 import { renderInvoicePdf, renderReceiptPdf } from '../../lib/pdf';
 import { downloadBlob, type ShareFile } from '../../lib/share';
 import { ShareModal, type ShareState } from '../ui/ShareModal';
@@ -227,17 +228,8 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
     if (file) setShareModal({ heading: 'Receipt Ready', description: `${file.title} is ready to send.`, files: [file] });
   });
 
-  /** Saves payment changes, then offers the receipt for the payment just received (and the updated invoice). */
-  const savePaymentAndShare = async (invoice: Invoice, changes: Partial<Invoice>, paymentId: string | undefined, withInvoice: boolean) => {
-    if (!invoice.id) return;
-    try {
-      await db.invoices.update(invoice.id, changes);
-    } catch (error) {
-      console.error(error);
-      alert("Failed to update payment");
-      return;
-    }
-    const updated: Invoice = { ...invoice, ...changes };
+  /** Offers the receipt for the payment just saved (and the updated invoice). */
+  const shareAfterPayment = async (updated: Invoice, paymentId: string | undefined, withInvoice: boolean) => {
     await withGenerating(updated, async () => {
       const parties = await loadParties(updated);
       if (!parties || !paymentId) return;
@@ -257,39 +249,40 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
     });
   };
 
-  const handlePaymentUpdate = async (amount: number, note: string, unconfirmed: boolean) => {
-    if (!selectedInvoice?.id) return;
-    const invoice = selectedInvoice;
-    const changes = applyPayment(invoice, amount, note, new Date(), { unconfirmed });
-    setSelectedInvoice(null);
-    if (unconfirmed) {
-      // Nothing to send yet: the receipt comes when the transfer is confirmed
-      try {
-        await db.invoices.update(invoice.id!, changes);
-      } catch (error) {
-        console.error(error);
-        alert("Failed to update payment");
-      }
-      return;
-    }
-    await savePaymentAndShare(invoice, changes, changes.payments?.at(-1)?.id, true);
-  };
-
-  const handleConfirmTransfer = async (invoice: Invoice, paymentId: string) => {
-    const changes = confirmPayment(invoice, paymentId);
-    if (changes) await savePaymentAndShare(invoice, changes, paymentId, false);
-  };
-
-  const handleRemoveTransfer = async (invoice: Invoice, paymentId: string, amount: number) => {
-    const changes = removeUnconfirmedPayment(invoice, paymentId);
-    if (!changes || !invoice.id) return;
-    if (!confirm(`Remove this ${formatMoney(amount, invoice.currency)} transfer?\n\nOnly do this if the money never arrived in your account.`)) return;
+  /** Runs a payment change against the stored invoice; returns it, or null (with a message) when it failed. */
+  const savePayment = async (change: () => Promise<Invoice | null>): Promise<Invoice | null> => {
     try {
-      await db.invoices.update(invoice.id, changes);
+      const saved = await change();
+      if (!saved) alert("This payment could not be updated. The invoice may have changed or been deleted. Please check it and try again.");
+      return saved;
     } catch (error) {
       console.error(error);
       alert("Failed to update payment");
+      return null;
     }
+  };
+
+  const handlePaymentUpdate = async (amount: number, note: string, unconfirmed: boolean) => {
+    if (!selectedInvoice?.id) return;
+    const invoiceId = selectedInvoice.id;
+    setSelectedInvoice(null);
+    const saved = await savePayment(() => recordPayment(invoiceId, amount, note, unconfirmed));
+    // An unconfirmed transfer has nothing to send yet: the receipt comes when it is confirmed
+    if (saved && !unconfirmed) await shareAfterPayment(saved, saved.payments?.at(-1)?.id, true);
+  };
+
+  const handleConfirmTransfer = async (invoice: Invoice, paymentId: string) => {
+    if (!invoice.id) return;
+    const invoiceId = invoice.id;
+    const saved = await savePayment(() => confirmTransfer(invoiceId, paymentId));
+    if (saved) await shareAfterPayment(saved, paymentId, false);
+  };
+
+  const handleRemoveTransfer = async (invoice: Invoice, paymentId: string, amount: number) => {
+    if (!invoice.id) return;
+    const invoiceId = invoice.id;
+    if (!confirm(`Remove this ${formatMoney(amount, invoice.currency)} transfer?\n\nOnly do this if the money never arrived in your account.`)) return;
+    await savePayment(() => discardTransfer(invoiceId, paymentId));
   };
 
   const handleDownload = (invoice: Invoice) => withGenerating(invoice, async () => {
@@ -305,7 +298,7 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
     const docNoun = isQuote(invoice) ? 'quote' : 'invoice';
     if (!confirm(`Delete ${docNoun} #${invoice.invoiceNumber} for ${invoice.customerName}? This cannot be undone.${paidNote}`)) return;
     try {
-      await db.invoices.delete(invoice.id);
+      await deleteInvoice(invoice.id);
     } catch (err) {
       console.error(err);
       alert("Failed to delete invoice");
