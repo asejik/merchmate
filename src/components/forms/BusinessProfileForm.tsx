@@ -13,6 +13,7 @@ import { DEFAULT_COUNTRY_CODE } from '../../lib/whatsapp';
 import { BackupCard } from './BackupCard';
 import { DataSafetyCard } from './DataSafetyCard';
 import { ProblemReportCard } from './ProblemReportCard';
+import { AboutCard } from './AboutCard';
 import { CatalogCard } from './CatalogCard';
 import { DEFAULT_BRAND_COLOR } from '../../lib/color';
 
@@ -334,6 +335,7 @@ export function BusinessProfileForm() {
       <BackupCard />
       <DataSafetyCard />
       <ProblemReportCard />
+      <AboutCard />
     </div>
   );
 }
