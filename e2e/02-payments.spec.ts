@@ -54,8 +54,10 @@ test.describe('payments', () => {
 
     await page.getByRole('button', { name: 'More actions' }).click();
     await expect(page.getByRole('menuitem', { name: 'Delete' })).toHaveCount(0);
-    page.once('dialog', d => d.accept());
     await page.getByRole('menuitem', { name: 'Void' }).click();
+    const confirmVoid = page.getByRole('alertdialog', { name: 'Void this invoice?' });
+    await expect(confirmVoid).toContainText('handle any refund yourself');
+    await confirmVoid.getByRole('button', { name: 'Void invoice' }).click();
     await expect(page.getByText('void', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Record payment' })).toHaveCount(0);
 

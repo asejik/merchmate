@@ -110,14 +110,14 @@ test.describe('documents', () => {
     await expect(link).toHaveAttribute('href', /^https:\/\/wa\.me\/2348035554444\?text=/);
     expect(decodeURIComponent((await link.getAttribute('href')) ?? '')).toMatch(/ready/i);
 
-    let question = '';
-    page.once('dialog', d => { question = d.message(); void d.dismiss(); });
     await page.getByRole('button', { name: /Order Ready/ }).click();
-    await expect.poll(() => question).toContain('still owes ₦30,000.00');
+    const ask = page.getByRole('alertdialog', { name: 'Mark as delivered?' });
+    await expect(ask).toContainText('still owes ₦30,000.00');
+    await ask.getByRole('button', { name: 'Cancel' }).click();
     await expect(page.getByRole('button', { name: /Order Ready/ })).toBeVisible(); // declined: unchanged
 
-    page.once('dialog', d => void d.accept());
     await page.getByRole('button', { name: /Order Ready/ }).click();
+    await page.getByRole('alertdialog', { name: 'Mark as delivered?' }).getByRole('button', { name: 'Mark delivered' }).click();
     await expect(page.getByRole('button', { name: /Order delivered/i })).toBeVisible();
   });
 

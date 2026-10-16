@@ -3,12 +3,14 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { Package, Trash2, Search } from 'lucide-react';
 import { db } from '../../db';
 import { GlassCard } from '../ui/GlassCard';
+import { useDialogs } from '../ui/dialogContext';
 import { sortCatalog } from '../../lib/catalog';
 import { CURRENCY_SYMBOLS } from '../../lib/currency';
 import { round2, toNumber } from '../../lib/invoice';
 import type { CatalogItem } from '../../types';
 
 export function CatalogCard() {
+  const { confirm } = useDialogs();
   const catalog = useLiveQuery(() => db.catalog.toArray(), [], []);
   const [search, setSearch] = useState('');
 
@@ -24,10 +26,14 @@ export function CatalogCard() {
     }
   };
 
-  const remove = (item: CatalogItem) => {
-    if (confirm(`Remove "${item.name}" from saved items? Existing invoices are not affected.`)) {
-      db.catalog.delete(item.id).catch(console.error);
-    }
+  const remove = async (item: CatalogItem) => {
+    const sure = await confirm({
+      title: 'Remove saved item?',
+      message: `"${item.name}" will be removed from your saved items. Existing invoices are not affected.`,
+      confirmLabel: 'Remove',
+      danger: true,
+    });
+    if (sure) db.catalog.delete(item.id).catch(console.error);
   };
 
   return (

@@ -30,8 +30,10 @@ test.describe('protect and recover', () => {
 
     // Restore
     await app.go('Settings');
-    page.once('dialog', d => d.accept());
     await page.locator('input[type=file][accept*="json"]').setInputFiles(backupPath);
+    const confirmRestore = page.getByRole('alertdialog', { name: 'Restore this backup?' });
+    await expect(confirmRestore).toContainText('REPLACES everything');
+    await confirmRestore.getByRole('button', { name: 'Replace everything' }).click();
     await expect(page.getByText('Restored 1 invoices and 1 clients.')).toBeVisible();
     await app.go('Invoices');
     await expect(page.getByText('#INV-001')).toBeVisible();

@@ -5,6 +5,7 @@ import { db } from '../../db';
 import { deleteCustomer } from '../../db/mutations';
 import { failed } from '../../lib/messages';
 import { GlassCard } from '../ui/GlassCard';
+import { useDialogs } from '../ui/dialogContext';
 import { Save, X, Globe, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Customer } from '../../types';
@@ -30,6 +31,7 @@ interface Props {
 }
 
 export function CustomerForm({ onComplete, onCancel, initialData }: Props) {
+  const { confirm, alert } = useDialogs();
   const { register, handleSubmit, control, formState: { errors } } = useForm<CustomerFormValues>({
     resolver: zodResolver(customerSchema),
     defaultValues: initialData
@@ -59,7 +61,7 @@ export function CustomerForm({ onComplete, onCancel, initialData }: Props) {
       onComplete();
     } catch (err) {
       console.error(err);
-      alert(failed('save this client'));
+      await alert(failed('save this client'));
     }
   };
 
@@ -67,20 +69,26 @@ export function CustomerForm({ onComplete, onCancel, initialData }: Props) {
     if (!initialData?.id) return;
     const invoiceCount = await db.invoices.where('customerId').equals(initialData.id).count();
     if (invoiceCount > 0) {
-      alert(`${initialData.name} has ${invoiceCount} invoice${invoiceCount === 1 ? '' : 's'} or quote${invoiceCount === 1 ? '' : 's'}. Delete those first to keep your records consistent.`);
+      await alert(`${initialData.name} has ${invoiceCount} invoice${invoiceCount === 1 ? '' : 's'} or quote${invoiceCount === 1 ? '' : 's'}. Delete those first to keep your records consistent.`);
       return;
     }
-    if (!confirm(`Delete ${initialData.name}? This cannot be undone.`)) return;
+    const sure = await confirm({
+      title: 'Delete this client?',
+      message: `${initialData.name} will be deleted. This cannot be undone.`,
+      confirmLabel: 'Delete',
+      danger: true,
+    });
+    if (!sure) return;
     try {
       // Re-checked inside the delete itself, in case a document was added since the check above
       if (await deleteCustomer(initialData.id) > 0) {
-        alert(`${initialData.name} now has invoices or quotes. Delete those first to keep your records consistent.`);
+        await alert(`${initialData.name} now has invoices or quotes. Delete those first to keep your records consistent.`);
         return;
       }
       onComplete();
     } catch (err) {
       console.error(err);
-      alert(failed('delete this client'));
+      await alert(failed('delete this client'));
     }
   };
 

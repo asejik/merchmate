@@ -5,13 +5,14 @@ import { getReceiptInfo, isQuote } from '../../../lib/invoice';
 import { renderInvoicePdf, renderReceiptPdf } from '../../../lib/pdf';
 import type { ShareFile } from '../../../lib/share';
 
-export async function loadParties(invoice: Invoice): Promise<{ business: BusinessProfile; customer: Customer } | null> {
+/** Both parties of a document, or null after telling the user (through `notify`) what is missing. */
+export async function loadParties(invoice: Invoice, notify: (message: string) => void | Promise<void>): Promise<{ business: BusinessProfile; customer: Customer } | null> {
   const [business, customer] = await Promise.all([
     db.businessProfile.orderBy('id').first(),
     db.customers.get(invoice.customerId),
   ]);
   if (!business || !customer) {
-    alert(!business ? "Add your business details in Settings first." : "This invoice's client no longer exists.");
+    void notify(!business ? "Add your business details in Settings first." : "This invoice's client no longer exists.");
     return null;
   }
   return { business, customer };

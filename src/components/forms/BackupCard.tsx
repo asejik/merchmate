@@ -2,11 +2,13 @@ import { useRef, useState } from 'react';
 import { formatDate } from '../../lib/dates';
 import { DatabaseBackup, Download, Upload, Loader2, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { GlassCard } from '../ui/GlassCard';
+import { useDialogs } from '../ui/dialogContext';
 import { exportAllData, getLastBackupAt, isBackupDue, restoreAllData, saveBackup } from '../../db/backup';
 import { MAX_BACKUP_BYTES, parseBackup } from '../../lib/backup';
 import { failed } from '../../lib/messages';
 
 export function BackupCard() {
+  const { confirm } = useDialogs();
   const fileInput = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState<'export' | 'import' | null>(null);
   const [lastBackup, setLastBackup] = useState(getLastBackupAt);
@@ -50,12 +52,15 @@ export function BackupCard() {
 
     const { summary } = parsed;
     const current = await exportAllData();
-    const ok = confirm(
-      `Restore backup from ${summary.exportedAt.toLocaleString()}?\n\n` +
-      `It contains ${summary.invoices} invoices and ${summary.customers} clients.\n\n` +
-      `This REPLACES everything on this device (currently ${current.invoices.length} invoices and ${current.customers.length} clients). ` +
-      `If unsure, cancel and download a backup first.`
-    );
+    const ok = await confirm({
+      title: 'Restore this backup?',
+      message:
+        `Backup from ${summary.exportedAt.toLocaleString()}, with ${summary.invoices} invoices and ${summary.customers} clients.\n\n` +
+        `This REPLACES everything on this device (currently ${current.invoices.length} invoices and ${current.customers.length} clients). ` +
+        `If unsure, cancel and save a backup first.`,
+      confirmLabel: 'Replace everything',
+      danger: true,
+    });
     if (!ok) return;
 
     setBusy('import');

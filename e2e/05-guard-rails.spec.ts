@@ -5,42 +5,38 @@ test.describe('guard rails', () => {
   test('leaving a half-typed invoice asks first; saving or an untouched form does not', async ({ app, page }) => {
     await app.open();
     await app.seed({});
-    const questions: string[] = [];
-    let answer = false;
-    page.on('dialog', d => { questions.push(d.message()); return answer ? d.accept() : d.dismiss(); });
+    const ask = page.getByRole('alertdialog', { name: 'Discard this invoice?' });
 
     // Untouched form: leave freely
     await app.go('New');
     await expect(page.getByRole('heading', { name: 'New Invoice' })).toBeVisible();
     await app.go('Home');
-    expect(questions).toHaveLength(0);
+    await expect(ask).toHaveCount(0);
 
-    // Typed something: tab bar, Back arrow and "New" all ask, and Cancel keeps the text
+    // Typed something: tab bar, Back arrow and "New" all ask, and "Keep editing" keeps the text
     await app.go('New');
     await page.getByPlaceholder(/^Item description/).fill('Aso Oke set');
-    await app.go('Home');
-    await page.getByRole('button', { name: 'Back' }).click();
-    await app.go('New');
-    expect(questions).toHaveLength(3);
-    expect(questions[0]).toContain('Discard this unsaved invoice');
-    await expect(page.getByPlaceholder(/^Item description/)).toHaveValue('Aso Oke set');
+    for (const leave of [() => app.go('Home'), () => page.getByRole('button', { name: 'Back' }).click(), () => app.go('New')]) {
+      await leave();
+      await expect(ask).toContainText('unsaved changes');
+      await ask.getByRole('button', { name: 'Keep editing' }).click();
+      await expect(page.getByPlaceholder(/^Item description/)).toHaveValue('Aso Oke set');
+    }
 
     // Saving does not ask
-    questions.length = 0;
     await page.getByLabel('Customer').selectOption({ index: 1 });
     await page.getByPlaceholder('Qty').fill('1');
     await page.getByPlaceholder('Price').fill('1000');
     await page.getByRole('button', { name: /Generate Invoice/ }).click();
     await expect(page.getByText('#INV-001')).toBeVisible();
-    expect(questions).toHaveLength(0);
+    await expect(ask).toHaveCount(0);
 
-    // Choosing OK discards
-    answer = true;
+    // Choosing Discard leaves
     await app.go('New');
     await page.getByPlaceholder(/^Item description/).fill('temporary');
     await app.go('Home');
+    await ask.getByRole('button', { name: 'Discard' }).click();
     await expect(page.getByRole('heading', { name: 'New Invoice' })).toHaveCount(0);
-    expect(questions).toHaveLength(1);
   });
 
   test('windows close with Escape and give focus back', async ({ app, page }) => {
@@ -90,6 +86,11 @@ test.describe('guard rails', () => {
     await page.getByRole('button', { name: 'Record payment' }).first().click();
     await expect(page.getByRole('dialog')).toBeVisible();
     expect(await app.accessibilityViolations(), 'payment window').toEqual([]);
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'More actions' }).first().click();
+    await page.getByRole('menuitem', { name: 'Delete' }).click();
+    await expect(page.getByRole('alertdialog')).toBeVisible();
+    expect(await app.accessibilityViolations(), 'confirmation dialog').toEqual([]);
   });
 
   test('with "reduce motion" on, nothing keeps animating', async ({ app, page }) => {

@@ -11,6 +11,7 @@ import type { ShareState } from '../../ui/ShareModal';
 import { buildInvoiceText, DEFAULT_COUNTRY_CODE, toWhatsAppNumber, whatsAppLink } from '../../../lib/whatsapp';
 import { renderInvoiceImage } from '../../../lib/invoiceImage';
 import { invoiceShareFile, loadParties, receiptShareFile } from './documents';
+import { useDialogs } from '../../ui/dialogContext';
 import type { InvoiceRow } from './invoiceRow';
 
 /** Everything the invoice list can do to a document: share, pay, deliver, void, delete. */
@@ -18,16 +19,22 @@ export function useInvoiceActions(closeMenu: () => void) {
   const [generatingId, setGeneratingId] = useState<string | null>(null);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [shareModal, setShareModal] = useState<ShareState | null>(null);
+  const { confirm, alert } = useDialogs();
 
   const setStage = async (invoice: InvoiceRow, stage: OrderStage) => {
     closeMenu();
     if (!invoice.id || stage === invoice.orderStage) return;
     const balance = getBalance(invoice);
-    if (stage === 'delivered' && balance > 0 &&
-        !confirm(`${invoice.customerName} still owes ${formatMoney(balance, invoice.currency)} on #${invoice.invoiceNumber}.${
-          getUnconfirmedAmount(invoice) > 0 ? `\n\n${formatMoney(getUnconfirmedAmount(invoice), invoice.currency)} in transfers is not yet confirmed. Check your bank app first.` : ''
-        }\n\nMark as delivered anyway?`)) {
-      return;
+    if (stage === 'delivered' && balance > 0) {
+      const unconfirmed = getUnconfirmedAmount(invoice);
+      const deliver = await confirm({
+        title: 'Mark as delivered?',
+        message: `${invoice.customerName} still owes ${formatMoney(balance, invoice.currency)} on #${invoice.invoiceNumber}.${
+          unconfirmed > 0 ? `\n\n${formatMoney(unconfirmed, invoice.currency)} in transfers is not yet confirmed. Check your bank app first.` : ''
+        }`,
+        confirmLabel: 'Mark delivered',
+      });
+      if (!deliver) return;
     }
     try {
       await db.invoices.update(invoice.id, { orderStage: stage, updatedAt: new Date() });
@@ -56,7 +63,7 @@ export function useInvoiceActions(closeMenu: () => void) {
   };
 
   const handlePrepareShare = (invoice: Invoice) => withGenerating(invoice, async () => {
-    const parties = await loadParties(invoice);
+    const parties = await loadParties(invoice, alert);
     if (!parties) return;
     const { business, customer } = parties;
     const [file, image] = await Promise.all([
@@ -78,7 +85,7 @@ export function useInvoiceActions(closeMenu: () => void) {
   });
 
   const handleReceipt = (invoice: Invoice, paymentId: string) => withGenerating(invoice, async () => {
-    const parties = await loadParties(invoice);
+    const parties = await loadParties(invoice, alert);
     if (!parties) return;
     const file = await receiptShareFile(invoice, paymentId, parties.business, parties.customer);
     if (file) setShareModal({ heading: 'Receipt Ready', description: `${file.title} is ready to send.`, files: [file] });
@@ -87,7 +94,7 @@ export function useInvoiceActions(closeMenu: () => void) {
   /** Offers the receipt for the payment just saved (and the updated invoice). */
   const shareAfterPayment = async (updated: Invoice, paymentId: string | undefined, withInvoice: boolean) => {
     await withGenerating(updated, async () => {
-      const parties = await loadParties(updated);
+      const parties = await loadParties(updated, alert);
       if (!parties || !paymentId) return;
       const [receipt, invoiceFile] = await Promise.all([
         receiptShareFile(updated, paymentId, parties.business, parties.customer),
@@ -137,12 +144,18 @@ export function useInvoiceActions(closeMenu: () => void) {
   const handleRemoveTransfer = async (invoice: Invoice, paymentId: string, amount: number) => {
     if (!invoice.id) return;
     const invoiceId = invoice.id;
-    if (!confirm(`Remove this ${formatMoney(amount, invoice.currency)} transfer?\n\nOnly do this if the money never arrived in your account.`)) return;
+    const remove = await confirm({
+      title: 'Remove this transfer?',
+      message: `Remove the ${formatMoney(amount, invoice.currency)} transfer? Only do this if the money never arrived in your account.`,
+      confirmLabel: 'Remove',
+      danger: true,
+    });
+    if (!remove) return;
     await savePayment(() => discardTransfer(invoiceId, paymentId));
   };
 
   const handleDownload = (invoice: Invoice) => withGenerating(invoice, async () => {
-    const parties = await loadParties(invoice);
+    const parties = await loadParties(invoice, alert);
     if (!parties) return;
     downloadBlob(await renderInvoicePdf(invoice, parties.business, parties.customer), `${invoice.invoiceNumber}.pdf`);
   });
@@ -151,7 +164,13 @@ export function useInvoiceActions(closeMenu: () => void) {
     closeMenu();
     if (!invoice.id) return;
     const docNoun = isQuote(invoice) ? 'quote' : 'invoice';
-    if (!confirm(`Delete ${docNoun} #${invoice.invoiceNumber} for ${invoice.customerName}? This cannot be undone.`)) return;
+    const sure = await confirm({
+      title: `Delete this ${docNoun}?`,
+      message: `${docNoun[0].toUpperCase()}${docNoun.slice(1)} #${invoice.invoiceNumber} for ${invoice.customerName} will be deleted. This cannot be undone.`,
+      confirmLabel: 'Delete',
+      danger: true,
+    });
+    if (!sure) return;
     try {
       if (!await deleteInvoice(invoice.id)) {
         alert(`${docNoun} #${invoice.invoiceNumber} has payments on record, so it can't be deleted. Use Void instead.`);
@@ -165,12 +184,16 @@ export function useInvoiceActions(closeMenu: () => void) {
   const handleVoid = async (invoice: InvoiceRow) => {
     closeMenu();
     if (!invoice.id) return;
-    if (!confirm(
-      `Void invoice #${invoice.invoiceNumber} for ${invoice.customerName}?\n\n` +
-      `It stays on record with its ${formatMoney(invoice.depositAmount, invoice.currency)} of payments and receipts, ` +
-      `but it no longer counts as money owed, and can't be edited or sent. You can reinstate it later.\n\n` +
-      `Money you already received is not refunded by this: handle any refund yourself.`
-    )) return;
+    const sure = await confirm({
+      title: 'Void this invoice?',
+      message:
+        `Invoice #${invoice.invoiceNumber} for ${invoice.customerName} stays on record with its ${formatMoney(invoice.depositAmount, invoice.currency)} of payments and receipts, ` +
+        `but it no longer counts as money owed, and can't be edited or sent. You can reinstate it later.\n\n` +
+        `Money you already received is not refunded by this: handle any refund yourself.`,
+      confirmLabel: 'Void invoice',
+      danger: true,
+    });
+    if (!sure) return;
     try {
       const result = await voidInvoice(invoice.id);
       if (result === 'unconfirmed-transfers') alert("This invoice has transfers you haven't confirmed yet. Confirm them, or remove the ones that never arrived, then void it.");

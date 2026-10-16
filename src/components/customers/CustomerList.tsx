@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
 import { GlassCard } from '../ui/GlassCard';
+import { useDialogs } from '../ui/dialogContext';
 import { CustomerForm } from './CustomerForm';
 import { Search, Plus, User, MapPin, Globe, ScrollText, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -13,6 +14,7 @@ import { formatMoney } from '../../lib/currency';
 import { ShareModal, type ShareState } from '../ui/ShareModal';
 
 export function CustomerList() {
+  const { alert } = useDialogs();
   const [isCreating, setIsCreating] = useState(false);
   const [editing, setEditing] = useState<Customer | null>(null);
   const [search, setSearch] = useState('');
@@ -39,7 +41,7 @@ export function CustomerList() {
     try {
       const business = await db.businessProfile.orderBy('id').first();
       if (!business) {
-        alert("Add your business details in Settings first.");
+        await alert("Add your business details in Settings first.");
         return;
       }
       const list = await db.invoices.where('customerId').equals(customer.id).toArray();
@@ -54,7 +56,7 @@ export function CustomerList() {
       });
     } catch (error) {
       console.error(error);
-      alert(failed('create the statement'));
+      await alert(failed('create the statement'));
     } finally {
       setGeneratingId(null);
     }

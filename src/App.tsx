@@ -9,6 +9,7 @@ import { Dashboard } from './components/dashboard/Dashboard';
 import { FatalError } from './components/ui/FatalError';
 import { UpdateBanner } from './components/ui/UpdateBanner';
 import { LockScreen } from './components/ui/LockScreen';
+import { useDialogs } from './components/ui/dialogContext';
 import { AUTO_LOCK_MS, isLockEnabled } from './lib/appLock';
 import type { AppTab, ListView } from './types';
 
@@ -30,6 +31,7 @@ interface EditorState {
 }
 
 function App() {
+  const { confirm } = useDialogs();
   const [activeTab, setActiveTab] = useState<AppTab>(readSavedTab);
   const [editor, setEditor] = useState<EditorState>({ mode: 'create' });
   const [listView, setListView] = useState<ListView>('invoices');
@@ -44,9 +46,18 @@ function App() {
   const setUnsaved = useCallback((dirty: boolean) => { unsavedRef.current = dirty; }, []);
 
   // The nav's "New" button always starts a blank invoice
-  const handleTabChange = (tab: AppTab) => {
+  const handleTabChange = async (tab: AppTab) => {
     // Leaving the form (or restarting it with "New") would throw away what was typed
-    if (activeTab === 'create' && unsavedRef.current && !confirm('Discard this unsaved invoice? What you typed will be lost.')) return;
+    if (activeTab === 'create' && unsavedRef.current) {
+      const discard = await confirm({
+        title: 'Discard this invoice?',
+        message: 'You have unsaved changes. What you typed will be lost.',
+        confirmLabel: 'Discard',
+        cancelLabel: 'Keep editing',
+        danger: true,
+      });
+      if (!discard) return;
+    }
     unsavedRef.current = false;
     if (tab === 'create') setEditor({ mode: 'create' });
     setActiveTab(tab);

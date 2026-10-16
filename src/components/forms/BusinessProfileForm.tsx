@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { db } from '../../db';
 import { GlassCard } from '../ui/GlassCard';
+import { useDialogs } from '../ui/dialogContext';
 import { Save, Upload, Loader2, FileText, Receipt } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { BusinessProfile } from '../../types';
@@ -45,6 +46,7 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 
 
 export function BusinessProfileForm({ onLock }: { onLock?: () => void }) {
+  const { alert } = useDialogs();
   const [loading, setLoading] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -100,7 +102,7 @@ export function BusinessProfileForm({ onLock }: { onLock?: () => void }) {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 2 * 1024 * 1024) {
-        alert("That logo is larger than 2 MB. Please choose a smaller image.");
+        void alert("That logo is larger than 2 MB. Please choose a smaller image.");
         return;
       }
       setLogoFile(file);
@@ -141,7 +143,7 @@ export function BusinessProfileForm({ onLock }: { onLock?: () => void }) {
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (error) {
       console.error(error);
-      alert(failed('save your settings'));
+      await alert(failed('save your settings'));
     } finally {
       setLoading(false);
     }

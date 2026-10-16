@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { GlassCard } from '../ui/GlassCard';
 import { useDialog } from '../ui/useDialog';
+import { useDialogs } from '../ui/dialogContext';
 import { X, Save, History, Calculator, ShieldAlert } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { DateFormat, Invoice } from '../../types';
@@ -20,6 +21,7 @@ type Method = typeof METHODS[number];
 
 export function PaymentModal({ invoice, dateFormat, onClose, onSave }: Props) {
   const dialogRef = useDialog<HTMLDivElement>(onClose);
+  const { confirm } = useDialogs();
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
   const [method, setMethod] = useState<Method>('Transfer');
@@ -31,12 +33,17 @@ export function PaymentModal({ invoice, dateFormat, onClose, onSave }: Props) {
   const remaining = getBalance(invoice);
   const money = (value: number) => formatMoney(value, invoice.currency);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const val = Number(amount);
     if (!val || val <= 0) return;
     if (val > remaining) {
-      if(!confirm("Amount exceeds balance. Continue?")) return;
+      const proceed = await confirm({
+        title: 'More than the balance',
+        message: `${money(val)} is more than the ${money(remaining)} still owed on this invoice. Record it anyway?`,
+        confirmLabel: 'Record anyway',
+      });
+      if (!proceed) return;
     }
     const label = method === 'Other' ? '' : method;
     onSave(val, [label, note.trim()].filter(Boolean).join(' - '), unconfirmed);
