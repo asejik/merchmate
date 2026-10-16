@@ -47,10 +47,12 @@ function App() {
 
   // The nav's "New" button always starts a blank invoice
   const handleTabChange = async (tab: AppTab) => {
-    // Leaving the form (or restarting it with "New") would throw away what was typed
-    if (activeTab === 'create' && unsavedRef.current) {
+    // A new invoice or quote saves itself as a draft, so leaving it loses nothing. Editing, duplicating
+    // or converting changes an existing document: leaving that would throw away what was typed.
+    const savesDraft = editor.mode === 'create' || editor.mode === 'create-quote';
+    if (activeTab === 'create' && unsavedRef.current && !savesDraft) {
       const discard = await confirm({
-        title: 'Discard this invoice?',
+        title: 'Discard your changes?',
         message: 'You have unsaved changes. What you typed will be lost.',
         confirmLabel: 'Discard',
         cancelLabel: 'Keep editing',

@@ -7,6 +7,7 @@ import { BackupReminder } from '../ui/BackupReminder';
 import { Reports } from './Reports';
 import { InstallHint } from '../ui/InstallHint';
 import { GetStarted } from './GetStarted';
+import { ContinueDraft } from './ContinueDraft';
 import { FollowUps } from './FollowUps';
 import type { AppTab, CurrencyCode } from '../../types';
 import { CURRENCY_CODES, formatMoney } from '../../lib/currency';
@@ -89,6 +90,8 @@ export function Dashboard({ onNavigate }: { onNavigate: (tab: AppTab) => void })
           onNavigate={onNavigate}
         />
       )}
+
+      <ContinueDraft dateFormat={data?.profile?.dateFormat} onContinue={() => onNavigate('create')} />
 
       <BackupReminder hasData={(data?.invoices.length ?? 0) > 0} />
 

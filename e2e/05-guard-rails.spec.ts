@@ -2,41 +2,45 @@ import { expect, test } from './fixtures';
 
 // S5: unsaved-work protection, keyboard behaviour of windows, accessibility, reduced motion.
 test.describe('guard rails', () => {
-  test('leaving a half-typed invoice asks first; saving or an untouched form does not', async ({ app, page }) => {
+  test('leaving an edit of an existing invoice asks first; saving or an untouched form does not', async ({ app, page }) => {
     await app.open();
-    await app.seed({});
-    const ask = page.getByRole('alertdialog', { name: 'Discard this invoice?' });
+    await app.seed({ invoices: [{ id: 'i1', number: 'INV-001', total: 50000 }] });
+    const ask = page.getByRole('alertdialog', { name: 'Discard your changes?' });
+    const openEditor = async () => {
+      await app.go('Invoices');
+      await page.getByRole('button', { name: 'More actions' }).click();
+      await page.getByRole('menuitem', { name: 'Edit' }).click();
+      await expect(page.getByRole('heading', { name: 'Edit Invoice' })).toBeVisible();
+    };
 
-    // Untouched form: leave freely
-    await app.go('New');
-    await expect(page.getByRole('heading', { name: 'New Invoice' })).toBeVisible();
+    // Untouched edit form: leave freely
+    await openEditor();
     await app.go('Home');
     await expect(ask).toHaveCount(0);
 
-    // Typed something: tab bar, Back arrow and "New" all ask, and "Keep editing" keeps the text
-    await app.go('New');
-    await page.getByPlaceholder(/^Item description/).fill('Aso Oke set');
+    // Changed something: tab bar, Back arrow and "New" all ask, and "Keep editing" keeps the change
+    await openEditor();
+    await page.getByLabel(/^Notes/).fill('Collect on Friday');
     for (const leave of [() => app.go('Home'), () => page.getByRole('button', { name: 'Back' }).click(), () => app.go('New')]) {
       await leave();
       await expect(ask).toContainText('unsaved changes');
       await ask.getByRole('button', { name: 'Keep editing' }).click();
-      await expect(page.getByPlaceholder(/^Item description/)).toHaveValue('Aso Oke set');
+      await expect(page.getByLabel(/^Notes/)).toHaveValue('Collect on Friday');
     }
 
     // Saving does not ask
-    await page.getByLabel('Customer').selectOption({ index: 1 });
-    await page.getByPlaceholder('Qty').fill('1');
-    await page.getByPlaceholder('Price').fill('1000');
-    await page.getByRole('button', { name: /Generate Invoice/ }).click();
+    await page.getByRole('button', { name: 'Save Changes' }).click();
     await expect(page.getByText('#INV-001')).toBeVisible();
     await expect(ask).toHaveCount(0);
 
-    // Choosing Discard leaves
-    await app.go('New');
-    await page.getByPlaceholder(/^Item description/).fill('temporary');
+    // Choosing Discard leaves, and the change is not saved
+    await openEditor();
+    await page.getByLabel(/^Notes/).fill('temporary');
     await app.go('Home');
     await ask.getByRole('button', { name: 'Discard' }).click();
-    await expect(page.getByRole('heading', { name: 'New Invoice' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Edit Invoice' })).toHaveCount(0);
+    await openEditor();
+    await expect(page.getByLabel(/^Notes/)).toHaveValue('Collect on Friday'); // the saved note, not "temporary"
   });
 
   test('windows close with Escape and give focus back', async ({ app, page }) => {

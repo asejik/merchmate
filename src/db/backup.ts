@@ -3,6 +3,7 @@ import { backupFileName, serializeBackup, type BackupData } from '../lib/backup'
 import { isBackupDue as isDueOn, nextLocalMidnight, shouldRemindBackup } from '../lib/backupReminder';
 import { shareOrDownload } from '../lib/share';
 import { clearLock } from '../lib/appLock';
+import { clearAllDrafts } from '../lib/drafts';
 
 const LAST_BACKUP_KEY = 'lastBackupAt';
 const SNOOZE_KEY = 'backupSnoozedUntil';
@@ -37,6 +38,7 @@ export async function eraseAllData(): Promise<void> {
     await Promise.all([db.businessProfile.clear(), db.customers.clear(), db.invoices.clear(), db.catalog.clear()]);
   });
   clearLock();
+  clearAllDrafts();
   try {
     localStorage.removeItem(LAST_BACKUP_KEY);
   } catch {

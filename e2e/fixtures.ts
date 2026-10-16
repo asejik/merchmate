@@ -22,7 +22,8 @@ export const test = base.extend<{ app: App }>({
   page: async ({ page, baseURL }, use) => {
     const problems: string[] = [];
     await page.route(`${baseURL}/**`, async route => {
-      const response = await route.fetch();
+      // The local preview server occasionally resets a connection under parallel load: retry once
+      const response = await route.fetch().catch(() => route.fetch());
       await route.fulfill({ response, headers: { ...response.headers(), ...securityHeaders } });
     });
     await page.exposeFunction('__reportCsp', (message: string) => problems.push(`CSP violation: ${message}`));

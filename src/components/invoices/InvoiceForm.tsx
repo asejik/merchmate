@@ -5,8 +5,10 @@ import { db } from '../../db';
 import { DocumentGoneError, NumberInUseError, saveDocument } from '../../db/mutations';
 import { Save, ArrowLeft, Loader2 } from 'lucide-react';
 import { failed } from '../../lib/messages';
+import { formatDate } from '../../lib/dates';
+import { clearDraft, loadDraft, restoreValues, saveDraft } from '../../lib/drafts';
 import type { DocumentKind } from '../../types';
-import { calculateTotals, validatePlan, type InvoiceDraft } from '../../lib/invoice';
+import { calculateTotals, todayInputValue, validatePlan, type InvoiceDraft } from '../../lib/invoice';
 import { EMPTY_ITEM, loadInitialValues, titles, type InitialState, type InvoiceEditorMode } from './form/formState';
 import { DetailsSection } from './form/DetailsSection';
 import { ItemsSection } from './form/ItemsSection';
@@ -32,13 +34,16 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
   const [initial, setInitial] = useState<Omit<InitialState, 'values'> | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  // New invoices and quotes keep an auto-saved draft; editing, duplicating and converting do not
+  const draftKind: DocumentKind | null = mode === 'create' ? 'invoice' : mode === 'create-quote' ? 'quote' : null;
+  const [restoredFrom, setRestoredFrom] = useState<Date | null>(null);
   const existing = initial?.existing;
   const kind = initial?.kind ?? (mode === 'create-quote' ? 'quote' : 'invoice');
   const isQuoteDoc = kind === 'quote';
   const noun = isQuoteDoc ? 'Quote' : 'Invoice';
   const text = titles(mode, kind);
 
-  const { register, control, handleSubmit, setValue, reset, formState: { errors, isDirty } } = useForm<InvoiceDraft>({
+  const { register, control, handleSubmit, setValue, reset, subscribe, getValues, formState: { errors, isDirty } } = useForm<InvoiceDraft>({
     defaultValues: {
       currency: 'NGN',
       items: [EMPTY_ITEM],
@@ -62,9 +67,19 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
   useEffect(() => {
     let cancelled = false;
     loadInitialValues(mode, sourceInvoiceId)
-      .then(({ values, ...rest }) => {
+      .then(async ({ values, ...rest }) => {
         if (cancelled) return;
-        reset(values);
+        const stored = draftKind ? loadDraft(draftKind) : null;
+        if (stored) {
+          // Pick up where the user left off (the number is replaced if someone has used it since)
+          const numberTaken = !!(await db.invoices.where('invoiceNumber').equals(stored.values.invoiceNumber).first());
+          if (cancelled) return;
+          reset(values);
+          reset(restoreValues(stored, values, todayInputValue(), numberTaken), { keepDefaultValues: true });
+          setRestoredFrom(new Date(stored.savedAt));
+        } else {
+          reset(values);
+        }
         setInitial(rest);
       })
       .catch(err => {
@@ -72,7 +87,22 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
         if (!cancelled) setError('Could not load this document. It may have been deleted.');
       });
     return () => { cancelled = true; };
-  }, [mode, sourceInvoiceId, reset]);
+  }, [mode, sourceInvoiceId, reset, draftKind]);
+
+  // Save the draft on every change (a few kilobytes), so closing or losing the app never loses what was typed
+  useEffect(() => {
+    if (!draftKind || !initial) return;
+    return subscribe({ formState: { values: true }, callback: () => saveDraft(draftKind, getValues()) });
+  }, [draftKind, initial, subscribe, getValues]);
+
+  /** Throws the draft away and returns to a blank form. */
+  const startOver = async () => {
+    if (!draftKind) return;
+    clearDraft(draftKind);
+    setRestoredFrom(null);
+    const fresh = await loadInitialValues(mode, sourceInvoiceId);
+    reset(fresh.values);
+  };
 
   // Tell the app whether there is unsaved work, and clear it when this screen goes away
   useEffect(() => {
@@ -107,6 +137,7 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
     setSaving(true);
     try {
       await saveDocument(data, existing, kind, initial?.convertFrom?.id);
+      if (draftKind) clearDraft(draftKind);
       onDirtyChange?.(false); // saved: leaving is not losing anything
       onComplete(kind);
     } catch (err) {
@@ -142,7 +173,18 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
           <h2 className="text-2xl font-bold text-white">{text.title}</h2>
           <p className="text-slate-400 text-sm">{text.subtitle}</p>
         </div>
+        {draftKind && isDirty && (
+          <button type="button" onClick={startOver} className="ml-auto min-h-11 px-3 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-white/10">
+            Start over
+          </button>
+        )}
       </div>
+
+      {restoredFrom && (
+        <p role="status" className="mb-6 rounded-xl border border-indigo-400/20 bg-indigo-500/10 px-4 py-3 text-sm text-indigo-100">
+          Restored your unsaved {noun.toLowerCase()} (saved on this device {formatDate(restoredFrom, 'long', { moment: true })}). It is saved automatically as you type.
+        </p>
+      )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <DetailsSection register={register} errors={errors} setValue={setValue} currency={currency} dateIssued={dateIssued} noun={noun} isQuoteDoc={isQuoteDoc} customers={customers} onAddClient={onAddClient} />
