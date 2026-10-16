@@ -68,6 +68,16 @@ export function getAmountCollected(invoice: Pick<Invoice, 'grandTotal' | 'deposi
 }
 
 /**
+ * A real moment inside a calendar day (local noon). Calendar dates are UTC midnight, which is
+ * the previous evening west of UTC: using it as a payment time would show the wrong day and
+ * count the payment in the wrong month. Noon lands on the same day in every timezone.
+ */
+export function calendarDayMoment(day: Date | string): Date {
+  const d = new Date(day);
+  return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 12);
+}
+
+/**
  * Invoices created before payment tracking have a depositAmount but no payments array.
  * Synthesize a single record for them so every screen shows the same history.
  */
@@ -76,7 +86,7 @@ export function getPaymentHistory(invoice: Pick<Invoice, 'payments' | 'depositAm
   if (invoice.depositAmount <= 0) return [];
   return [{
     id: 'legacy',
-    date: new Date(invoice.dateIssued).toISOString(),
+    date: calendarDayMoment(invoice.dateIssued).toISOString(),
     amount: invoice.depositAmount,
     note: 'Initial Deposit',
   }];
@@ -350,7 +360,7 @@ export function composeInvoice(draft: InvoiceDraft, existing?: Invoice, now: Dat
     : existing
     ? getPaymentHistory(existing)
     : amountPaid > 0
-      ? [{ id: crypto.randomUUID(), date: new Date(draft.dateIssued).toISOString(), amount: amountPaid, note: 'Initial Deposit' }]
+      ? [{ id: crypto.randomUUID(), date: calendarDayMoment(draft.dateIssued).toISOString(), amount: amountPaid, note: 'Initial Deposit' }]
       : [];
 
   return {

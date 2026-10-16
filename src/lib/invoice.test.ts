@@ -23,6 +23,7 @@ import {
   removeUnconfirmedPayment,
 } from './invoice';
 import { formatMoney } from './currency';
+import { formatDate } from './dates';
 import type { Invoice } from '../types';
 
 const baseInvoice = (overrides: Partial<Invoice> = {}): Invoice => ({
@@ -116,8 +117,17 @@ describe('getPaymentHistory', () => {
   it('synthesizes a legacy deposit record with an ISO string date', () => {
     const history = getPaymentHistory(baseInvoice({ depositAmount: 300 }));
     expect(history).toHaveLength(1);
-    expect(history[0].date).toBe('2026-01-15T00:00:00.000Z');
     expect(typeof history[0].date).toBe('string');
+  });
+
+  // Run with TZ=America/New_York (or Pacific/Auckland) to see the day shift this guards against
+  it('dates a deposit on the day the invoice was issued, in any timezone', () => {
+    const issued = baseInvoice({ depositAmount: 300 }).dateIssued;
+    const legacy = getPaymentHistory(baseInvoice({ depositAmount: 300 }))[0];
+    const created = composeInvoice({ ...invoiceToDraft(baseInvoice()), depositAmount: 300 }, undefined, new Date()).payments![0];
+    for (const record of [legacy, created]) {
+      expect(formatDate(record.date, 'ymd', { moment: true })).toBe(formatDate(issued, 'ymd'));
+    }
   });
 
   it('returns nothing when there is no deposit', () => {
