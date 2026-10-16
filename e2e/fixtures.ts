@@ -30,6 +30,9 @@ export const test = base.extend<{ app: App }>({
     await page.addInitScript(() => {
       document.addEventListener('securitypolicyviolation', e => window.__reportCsp(`${e.violatedDirective} ${e.blockedURI}`));
     });
+    // E2E_CPU_SLOWDOWN=6 imitates a slow CI runner on a fast machine
+    const slowdown = Number(process.env.E2E_CPU_SLOWDOWN ?? 1);
+    if (slowdown > 1) await (await page.context().newCDPSession(page)).send('Emulation.setCPUThrottlingRate', { rate: slowdown });
     page.on('pageerror', e => problems.push(`page error: ${e.message}`));
     page.on('console', m => { if (m.type() === 'error') problems.push(`console error: ${m.text()}`); });
     await use(page);
@@ -157,6 +160,11 @@ export class App {
 
   /** Accessibility violations (WCAG 2.2 AA plus axe's best-practice rules: headings, landmarks, ...) on the current screen. */
   async accessibilityViolations() {
+    // Colours blend while a fade or transition runs, so scan only once the screen has settled
+    await this.page.evaluate(async () => {
+      await Promise.all(document.getAnimations().filter(a => a.effect?.getComputedTiming().endTime !== Infinity).map(a => a.finished.catch(() => undefined)));
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    });
     const result = await new AxeBuilder({ page: this.page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice']).analyze();
     return result.violations.map(v => `${v.id} (${v.nodes.length}): ${v.nodes[0].target.join(' ')}`);
   }

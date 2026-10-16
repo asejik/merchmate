@@ -68,6 +68,7 @@ test.describe('guard rails', () => {
   });
 
   test('key screens have no accessibility violations (WCAG 2.2 AA)', async ({ app, page }) => {
+    test.setTimeout(180_000); // several strict scans in one test: slow runners need the room
     await app.open();
     await app.seed({ invoices: [
       { id: 'i1', number: 'INV-001', total: 50000, paid: 20000, dueInDays: -3 },
