@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -9,13 +9,14 @@ const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]):not([t
  */
 export function useDialog<T extends HTMLElement>(onClose: () => void) {
   const ref = useRef<T>(null);
+  // Captured while rendering, which happens before the dialog's own autoFocus can move focus
+  const [opener] = useState(() => (document.activeElement instanceof HTMLElement ? document.activeElement : null));
   const closeRef = useRef(onClose);
   useEffect(() => { closeRef.current = onClose; });
 
   useEffect(() => {
     const root = ref.current;
     if (!root) return;
-    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     // Respect an autoFocus the dialog already set; otherwise start on its first control
     if (!root.contains(document.activeElement)) root.querySelector<HTMLElement>(FOCUSABLE)?.focus();
 
@@ -42,7 +43,7 @@ export function useDialog<T extends HTMLElement>(onClose: () => void) {
       document.removeEventListener('keydown', onKeyDown);
       if (opener?.isConnected) opener.focus();
     };
-  }, []);
+  }, [opener]);
 
   return ref;
 }

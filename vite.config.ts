@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+import { configDefaults, defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { nodePolyfills } from 'vite-plugin-node-polyfills'; // Import 1
@@ -48,6 +48,10 @@ export default defineConfig({
       }
     })
   ],
+  test: {
+    // Browser tests in e2e/ are run by Playwright (npm run test:e2e), not Vitest
+    exclude: [...configDefaults.exclude, 'e2e/**'],
+  },
   define: {
     global: 'window',
     // Shown in the problem report so a bug can be matched to a release

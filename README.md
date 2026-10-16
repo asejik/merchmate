@@ -113,10 +113,11 @@ There are no environment variables to set: the app has no backend. (`.env.exampl
 | `npm test` | Vitest, single run |
 | `npm run test:watch` | Vitest in watch mode |
 | `npm run preview` | Serve the production build, including the service worker |
+| `npm run test:e2e` | Playwright smoke tests of the built app (first run, payments, PDFs, backup and App Lock, accessibility). Needs `npx playwright install chromium` once. |
 
 Run a single file or test: `npx vitest run src/lib/invoice.test.ts -t "applyPayment"`.
 
-Before pushing a change, run `npm run typecheck && npm run lint && npm test && npm run build`.
+Before pushing a change, run `npm run typecheck && npm run lint && npm test && npm run build && npm run test:e2e`.
 
 ## Project structure
 
@@ -205,7 +206,7 @@ Audit reports are kept in [`docs/audits/`](docs/audits/). The first is the [prod
 
 1. Fork the repository and create a branch (`git checkout -b feature/short-description`).
 2. Make your change, following the conventions in [`CLAUDE.md`](CLAUDE.md), and add tests for any logic in `src/lib` or `src/db`.
-3. Run `npm run typecheck && npm run lint && npm test && npm run build`.
+3. Run `npm run typecheck && npm run lint && npm test && npm run build && npm run test:e2e`.
 4. Commit with a message that says what changed and why, push, and open a pull request.
 
 ## License

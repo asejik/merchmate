@@ -117,35 +117,33 @@ export function CustomerList() {
               exit={{ opacity: 0, scale: 0.95 }}
               layout
             >
-              <GlassCard
-                className="p-4 hover:bg-white/10 transition-colors cursor-pointer group"
-                onClick={() => setEditing(customer)}
-                role="button"
-                tabIndex={0}
-                aria-label={`Edit ${customer.name}`}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEditing(customer); } }}
-              >
+              <GlassCard className="relative p-4 hover:bg-white/10 transition-colors cursor-pointer group">
                 <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-lg">
+                  {/* The button's invisible overlay makes the whole card open the editor, while the
+                      statement button below stays a separate, sibling control (no nesting) */}
+                  <button
+                    type="button"
+                    onClick={() => setEditing(customer)}
+                    className="flex items-center gap-3 text-left after:absolute after:inset-0 after:content-['']"
+                  >
+                    <span className="h-10 w-10 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-lg" aria-hidden="true">
                       {customer.name.charAt(0)}
-                    </div>
-                    <div>
-                      <h3 className="text-white font-medium group-hover:text-indigo-400 transition-colors">{customer.name}</h3>
-                      <p className="text-slate-500 text-xs">{customer.phone}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1">
+                    </span>
+                    <span>
+                      <span className="block text-white font-medium group-hover:text-indigo-400 transition-colors">{customer.name}</span>
+                      <span className="block text-slate-500 text-xs">{customer.phone}</span>
+                    </span>
+                  </button>
+                  <div className="relative z-10 flex items-center gap-1">
                     {customer.country && (
                       <div className="bg-blue-500/10 text-blue-400 p-1.5 rounded-lg" title="International">
                         <Globe size={16} />
                       </div>
                     )}
                     <button
-                      onClick={(e) => { e.stopPropagation(); handleStatement(customer); }}
-                      onKeyDown={(e) => e.stopPropagation()}
+                      onClick={() => handleStatement(customer)}
                       disabled={generatingId === customer.id}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-300 hover:bg-white/10 transition-colors"
+                      className="inline-flex items-center justify-center min-h-11 min-w-11 rounded-lg text-slate-400 hover:text-indigo-300 hover:bg-white/10 transition-colors"
                       title="Account statement"
                       aria-label={`Account statement for ${customer.name}`}
                     >
