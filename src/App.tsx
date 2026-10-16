@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { db } from './db';
 import { AppShell } from './components/layout/AppShell';
 import { BusinessProfileForm } from './components/forms/BusinessProfileForm';
@@ -39,8 +39,15 @@ function App() {
     setActiveTab('create');
   };
 
+  // True while the invoice form holds changes that have not been saved
+  const unsavedRef = useRef(false);
+  const setUnsaved = useCallback((dirty: boolean) => { unsavedRef.current = dirty; }, []);
+
   // The nav's "New" button always starts a blank invoice
   const handleTabChange = (tab: AppTab) => {
+    // Leaving the form (or restarting it with "New") would throw away what was typed
+    if (activeTab === 'create' && unsavedRef.current && !confirm('Discard this unsaved invoice? What you typed will be lost.')) return;
+    unsavedRef.current = false;
     if (tab === 'create') setEditor({ mode: 'create' });
     setActiveTab(tab);
   };
@@ -107,6 +114,7 @@ function App() {
             }}
             onCancel={() => handleTabChange(editor.mode === 'create' ? 'dashboard' : 'invoices')}
             onAddClient={() => handleTabChange('customers')}
+            onDirtyChange={setUnsaved}
           />
         );
 

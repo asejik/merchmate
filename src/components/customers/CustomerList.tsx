@@ -7,6 +7,7 @@ import { Search, Plus, User, MapPin, Globe, ScrollText, Loader2 } from 'lucide-r
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Customer } from '../../types';
 import { buildStatement } from '../../lib/statement';
+import { failed } from '../../lib/messages';
 import { renderStatementPdf } from '../../lib/pdf';
 import { formatMoney } from '../../lib/currency';
 import { ShareModal, type ShareState } from '../ui/ShareModal';
@@ -53,7 +54,7 @@ export function CustomerList() {
       });
     } catch (error) {
       console.error(error);
-      alert(`Could not generate the statement: ${(error as Error).message}`);
+      alert(failed('create the statement'));
     } finally {
       setGeneratingId(null);
     }

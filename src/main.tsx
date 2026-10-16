@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { MotionConfig } from 'framer-motion';
 import App from './App';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { installErrorCapture } from './lib/diagnostics';
@@ -18,7 +19,10 @@ installErrorCapture();
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary>
-      <App />
+      {/* Honour the phone's "reduce motion" setting for Framer Motion animations too */}
+      <MotionConfig reducedMotion="user">
+        <App />
+      </MotionConfig>
     </ErrorBoundary>
   </React.StrictMode>,
 );

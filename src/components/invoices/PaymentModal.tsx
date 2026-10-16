@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { GlassCard } from '../ui/GlassCard';
+import { useDialog } from '../ui/useDialog';
 import { X, Save, History, Calculator, ShieldAlert } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { DateFormat, Invoice } from '../../types';
@@ -18,6 +19,7 @@ const METHODS = ['Transfer', 'Cash', 'POS', 'Other'] as const;
 type Method = typeof METHODS[number];
 
 export function PaymentModal({ invoice, dateFormat, onClose, onSave }: Props) {
+  const dialogRef = useDialog<HTMLDivElement>(onClose);
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
   const [method, setMethod] = useState<Method>('Transfer');
@@ -41,11 +43,11 @@ export function PaymentModal({ invoice, dateFormat, onClose, onSave }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+    <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="payment-heading" className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
       <GlassCard className="w-full max-w-md p-0 overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="p-4 border-b border-white/10 flex justify-between items-center bg-white/5">
-          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+          <h3 id="payment-heading" className="text-lg font-bold text-white flex items-center gap-2">
             <Calculator size={20} className="text-indigo-400" />
             Record Payment
           </h3>
@@ -88,7 +90,7 @@ export function PaymentModal({ invoice, dateFormat, onClose, onSave }: Props) {
             </div>
             <div className="flex justify-between text-sm text-green-400 mb-2">
               <span>Total Paid</span>
-              <span>-{money(invoice.depositAmount)}</span>
+              <span>{invoice.depositAmount > 0 ? '−' : ''}{money(invoice.depositAmount)}</span>
             </div>
             <div className="h-px bg-white/10 my-2" />
             <div className="flex justify-between text-lg font-bold text-white">
@@ -101,10 +103,11 @@ export function PaymentModal({ invoice, dateFormat, onClose, onSave }: Props) {
           {remaining > 0 ? (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1 uppercase">New Amount</label>
+                <label htmlFor="pay-amount" className="block text-xs font-medium text-slate-400 mb-1 uppercase">New Amount</label>
                 <div className="relative">
                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold">{CURRENCY_SYMBOLS[invoice.currency]}</span>
                    <input
+                    id="pay-amount"
                     type="number"
                     step="any"
                     min="0"
@@ -127,7 +130,7 @@ export function PaymentModal({ invoice, dateFormat, onClose, onSave }: Props) {
                       aria-checked={method === m}
                       onClick={() => setMethod(m)}
                       className={clsx(
-                        "flex-1 py-1.5 text-xs font-medium rounded-md transition-all",
+                        "flex-1 min-h-11 text-xs font-medium rounded-md transition-all",
                         method === m ? "bg-indigo-600 text-white shadow" : "text-slate-400 hover:text-white"
                       )}
                     >
@@ -156,8 +159,8 @@ export function PaymentModal({ invoice, dateFormat, onClose, onSave }: Props) {
                 </div>
               )}
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1 uppercase">Note (Optional)</label>
-                <input
+                <label className="block text-xs font-medium text-slate-400 mb-1 uppercase" htmlFor="pay-note-optional">Note (Optional)</label>
+                <input id="pay-note-optional"
                     type="text"
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
@@ -170,7 +173,7 @@ export function PaymentModal({ invoice, dateFormat, onClose, onSave }: Props) {
                 type="submit"
                 className={clsx(
                   "w-full text-white py-3 rounded-xl font-bold shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2",
-                  unconfirmed ? "bg-amber-600 hover:bg-amber-500 shadow-amber-500/20" : "bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/20"
+                  unconfirmed ? "bg-amber-700 hover:bg-amber-600 shadow-amber-500/20" : "bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/20"
                 )}
               >
                 <Save size={18} />

@@ -6,11 +6,13 @@ import { TrendingUp, Clock, FileText, Wallet, AlertCircle, ShieldAlert } from 'l
 import { BackupReminder } from '../ui/BackupReminder';
 import { Reports } from './Reports';
 import { InstallHint } from '../ui/InstallHint';
+import { GetStarted } from './GetStarted';
 import { FollowUps } from './FollowUps';
 import type { AppTab, CurrencyCode } from '../../types';
 import { CURRENCY_CODES, formatMoney } from '../../lib/currency';
 import { getAmountCollected, getBalance, getDisplayStatus, getOverdueAmount, getUnconfirmedAmount, isQuote, todayInputValue } from '../../lib/invoice';
 import { clsx } from 'clsx';
+import { HIT_AREA } from '../ui/styles';
 
 export function Dashboard({ onNavigate }: { onNavigate: (tab: AppTab) => void }) {
   const [currency, setCurrency] = useState<CurrencyCode>('NGN');
@@ -70,7 +72,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (tab: AppTab) => void })
               key={c}
               onClick={() => setCurrency(c)}
               className={clsx(
-                "px-3 py-1 text-xs font-medium rounded-md transition-all",
+                HIT_AREA, "px-3 py-1 text-xs font-medium rounded-md transition-all",
                 currency === c ? "bg-indigo-600 text-white shadow-lg" : "text-slate-400 hover:text-white"
               )}
             >
@@ -79,6 +81,14 @@ export function Dashboard({ onNavigate }: { onNavigate: (tab: AppTab) => void })
           ))}
         </div>
       </div>
+
+
+      {data && (
+        <GetStarted
+          state={{ hasBusiness: !!data.profile?.businessName, clients: data.customers.length, invoices: data.invoices.length }}
+          onNavigate={onNavigate}
+        />
+      )}
 
       <BackupReminder hasData={(data?.invoices.length ?? 0) > 0} />
 

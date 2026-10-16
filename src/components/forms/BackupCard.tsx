@@ -4,6 +4,7 @@ import { DatabaseBackup, Download, Upload, Loader2, ShieldCheck, AlertTriangle }
 import { GlassCard } from '../ui/GlassCard';
 import { exportAllData, getLastBackupAt, isBackupDue, restoreAllData, saveBackup } from '../../db/backup';
 import { MAX_BACKUP_BYTES, parseBackup } from '../../lib/backup';
+import { failed } from '../../lib/messages';
 
 export function BackupCard() {
   const fileInput = useRef<HTMLInputElement>(null);
@@ -22,7 +23,7 @@ export function BackupCard() {
     } catch (error) {
       if ((error as Error).name !== 'AbortError') {
         console.error(error);
-        setMessage({ kind: 'error', text: 'Could not create the backup.' });
+        setMessage({ kind: 'error', text: failed('create the backup') });
       }
     } finally {
       setBusy(null);

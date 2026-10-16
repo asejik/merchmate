@@ -6,6 +6,8 @@ import { DocumentGoneError, NumberInUseError, saveDocument } from '../../db/muta
 import { GlassCard } from '../ui/GlassCard';
 import { Save, Plus, Trash2, Calculator, ArrowLeft, Percent, Loader2, CalendarClock, Lock } from 'lucide-react';
 import { clsx } from 'clsx';
+import { failed } from '../../lib/messages';
+import { HIT_AREA } from '../ui/styles';
 import type { DocumentKind, Invoice } from '../../types';
 import { CURRENCY_CODES, CURRENCY_SYMBOLS, formatMoney } from '../../lib/currency';
 import {
@@ -36,6 +38,8 @@ interface Props {
   onComplete: (kind: DocumentKind) => void;
   onCancel: () => void;
   onAddClient: () => void;
+  /** Lets the app warn before an unsaved invoice is thrown away by leaving the screen. */
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 const EMPTY_ITEM = { description: '', quantity: 1, unitPrice: 0 };
@@ -124,7 +128,7 @@ async function loadInitialValues(mode: InvoiceEditorMode, sourceInvoiceId?: stri
   };
 }
 
-export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAddClient }: Props) {
+export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAddClient, onDirtyChange }: Props) {
   const customers = useLiveQuery(() => db.customers.orderBy('name').toArray());
   const catalog = useLiveQuery(() => db.catalog.toArray(), [], []);
   const [initial, setInitial] = useState<Omit<InitialState, 'values'> | null>(null);
@@ -136,7 +140,7 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
   const noun = isQuoteDoc ? 'Quote' : 'Invoice';
   const text = titles(mode, kind);
 
-  const { register, control, handleSubmit, setValue, reset, formState: { errors } } = useForm<InvoiceDraft>({
+  const { register, control, handleSubmit, setValue, reset, formState: { errors, isDirty } } = useForm<InvoiceDraft>({
     defaultValues: {
       currency: 'NGN',
       items: [EMPTY_ITEM],
@@ -188,6 +192,12 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
     return () => { cancelled = true; };
   }, [mode, sourceInvoiceId, reset]);
 
+  // Tell the app whether there is unsaved work, and clear it when this screen goes away
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
+  useEffect(() => () => onDirtyChange?.(false), [onDirtyChange]);
+
   // On edit, the amount paid comes from recorded payments, not the form. Quotes are never paid.
   const amountPaid = isQuoteDoc ? 0 : existing ? existing.depositAmount : deposit;
 
@@ -219,6 +229,7 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
     setSaving(true);
     try {
       await saveDocument(data, existing, kind, initial?.convertFrom?.id);
+      onDirtyChange?.(false); // saved: leaving is not losing anything
       onComplete(kind);
     } catch (err) {
       if (err instanceof NumberInUseError) {
@@ -227,7 +238,7 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
         setError(`This ${noun.toLowerCase()} was deleted, so your changes were not saved.`);
       } else {
         console.error(err);
-        setError(`Failed to save ${noun.toLowerCase()}.`);
+        setError(failed(`save this ${noun.toLowerCase()}`));
       }
     } finally {
       setSaving(false);
@@ -262,15 +273,17 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
         <GlassCard className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className={labelClass}>Currency</label>
-              <div className="flex bg-white/5 rounded-lg p-1 border border-white/10">
+              <span id="inv-currency-label" className={labelClass}>Currency</span>
+              <div className="flex bg-white/5 rounded-lg p-1 border border-white/10" role="radiogroup" aria-labelledby="inv-currency-label">
                 {CURRENCY_CODES.map((c) => (
                   <button
                     key={c}
                     type="button"
+                    role="radio"
+                    aria-checked={currency === c}
                     onClick={() => setValue('currency', c)}
                     className={clsx(
-                      "flex-1 py-1.5 text-xs font-medium rounded-md transition-all",
+                      "flex-1 min-h-11 text-xs font-medium rounded-md transition-all",
                       currency === c ? "bg-indigo-600 text-white shadow-lg" : "text-slate-400 hover:text-white"
                     )}
                   >
@@ -280,13 +293,13 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
               </div>
             </div>
             <div>
-              <label className={labelClass}>{noun} #</label>
-              <input {...register('invoiceNumber', { required: "Required" })} className={inputClass} />
+              <label className={labelClass} htmlFor="inv-invoiceNumber">{noun} #</label>
+              <input id="inv-invoiceNumber" {...register('invoiceNumber', { required: "Required" })} className={inputClass} />
               {errors.invoiceNumber && <span className="text-red-400 text-xs">{errors.invoiceNumber.message}</span>}
             </div>
             <div>
-              <label className={labelClass}>Customer</label>
-              <select
+              <label className={labelClass} htmlFor="inv-customerId">Customer</label>
+              <select id="inv-customerId"
                 {...register('customerId', { required: "Select a client" })}
                 className={clsx(inputClass, "[&>option]:bg-slate-900 [&>option]:text-white")}
               >
@@ -308,20 +321,20 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
             <div>
-              <label className={labelClass}>{noun} Date</label>
-              <input type="date" {...register('dateIssued', { required: true })} className={inputClass} />
+              <label className={labelClass} htmlFor="inv-dateIssued">{noun} Date</label>
+              <input id="inv-dateIssued" type="date" {...register('dateIssued', { required: true })} className={inputClass} />
             </div>
             <div className="md:col-span-2">
-              <label className={labelClass}>{isQuoteDoc ? 'Valid Until' : 'Due Date'}</label>
+              <label className={labelClass} htmlFor="inv-dueDate">{isQuoteDoc ? 'Valid Until' : 'Due Date'}</label>
               <div className="flex flex-col sm:flex-row gap-2">
-                <input type="date" {...register('dueDate')} className={clsx(inputClass, "sm:max-w-[180px]")} />
+                <input id="inv-dueDate" type="date" {...register('dueDate')} className={clsx(inputClass, "sm:max-w-[180px]")} />
                 <div className="flex flex-wrap gap-1">
                   {DUE_PRESETS.map(preset => (
                     <button
                       key={preset.days}
                       type="button"
                       onClick={() => setValue('dueDate', addDays(dateIssued, preset.days))}
-                      className="text-[11px] bg-white/5 hover:bg-white/15 border border-white/10 px-2.5 py-1.5 rounded-md text-slate-300 transition-colors"
+                      className={clsx(HIT_AREA, "text-[11px] bg-white/5 hover:bg-white/15 border border-white/10 px-2.5 py-1.5 rounded-md text-slate-300 transition-colors")}
                     >
                       {preset.label}
                     </button>
@@ -329,7 +342,7 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
                   <button
                     type="button"
                     onClick={() => setValue('dueDate', '')}
-                    className="text-[11px] px-2.5 py-1.5 rounded-md text-slate-500 hover:text-slate-300 transition-colors"
+                    className={clsx(HIT_AREA, "text-[11px] px-2.5 py-1.5 rounded-md text-slate-500 hover:text-slate-300 transition-colors")}
                   >
                     None
                   </button>
@@ -337,8 +350,8 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
               </div>
             </div>
             <div>
-              <label className={labelClass}>Delivery / Pickup Date</label>
-              <input type="date" {...register('deliveryDate')} className={inputClass} />
+              <label className={labelClass} htmlFor="inv-deliveryDate">Delivery / Pickup Date</label>
+              <input id="inv-deliveryDate" type="date" {...register('deliveryDate')} className={inputClass} />
             </div>
             <p className="md:col-span-2 self-end text-xs text-slate-500 pb-2">
               Optional. When you promised the order. Shown on the {noun.toLowerCase()} and flagged if it slips.
@@ -352,7 +365,7 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
             <button
               type="button"
               onClick={() => append(EMPTY_ITEM)}
-              className="text-xs flex items-center gap-1 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-indigo-300 transition-colors"
+              className={clsx(HIT_AREA, "text-xs flex items-center gap-1 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-indigo-300 transition-colors")}
             >
               <Plus size={14} /> Add Item
             </button>
@@ -415,11 +428,11 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <div className="flex justify-between items-center mb-1">
-                       <label className={labelClass}>Discount</label>
+                       <label className={labelClass} htmlFor="inv-discountRate">Discount</label>
                        <button
                          type="button"
                          onClick={() => setValue('discountType', discountType === 'percentage' ? 'fixed' : 'percentage')}
-                         className="text-[10px] bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded text-indigo-300 transition-colors uppercase font-bold tracking-wide"
+                         className={clsx(HIT_AREA, "text-[10px] bg-white/10 hover:bg-white/20 px-2 py-1.5 rounded text-indigo-300 transition-colors uppercase font-bold tracking-wide")}
                        >
                          {discountType === 'percentage' ? 'Use amount' : 'Use %'}
                        </button>
@@ -429,6 +442,7 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
                         {discountType === 'percentage' ? <Percent size={14} /> : symbol}
                       </span>
                       <input
+                        id="inv-discountRate"
                         type="number"
                         step="any"
                         {...register('discountRate', { valueAsNumber: true })}
@@ -440,12 +454,13 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
                   </div>
 
                   <div>
-                    <label className={labelClass}>Tax</label>
+                    <label className={labelClass} htmlFor="inv-taxRate">Tax</label>
                     <div className="flex gap-2">
                       <input {...register('taxLabel')} className={clsx(inputClass, "w-20")} placeholder="VAT" aria-label="Tax name" />
                       <div className="relative flex-1">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"><Percent size={14} /></span>
                         <input
+                          id="inv-taxRate"
                           type="number"
                           step="any"
                           min="0"
@@ -467,10 +482,11 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
                   </div>
                 ) : (
                   <div>
-                    <label className={labelClass}>Deposit / Initial Payment</label>
+                    <label className={labelClass} htmlFor="inv-depositAmount">Deposit / Initial Payment</label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">{symbol}</span>
                       <input
+                        id="inv-depositAmount"
                         type="number"
                         step="any"
                         min="0"
@@ -486,8 +502,8 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
                 )}
 
                 <div>
-                  <label className={labelClass}>Notes (shown on {noun.toLowerCase()})</label>
-                  <textarea
+                  <label className={labelClass} htmlFor="inv-notes">Notes (shown on {noun.toLowerCase()})</label>
+                  <textarea id="inv-notes"
                     {...register('notes')}
                     rows={2}
                     className={inputClass}
@@ -568,7 +584,7 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
                   key={preset.label}
                   type="button"
                   onClick={() => replacePlan(preset.steps.map((step, i) => ({ ...step, dueDate: i === 0 ? dateIssued : '' })))}
-                  className="text-xs bg-white/5 hover:bg-white/15 border border-white/10 px-3 py-2 rounded-lg text-slate-200 transition-colors"
+                  className={clsx(HIT_AREA, "text-xs bg-white/5 hover:bg-white/15 border border-white/10 px-3 py-2 rounded-lg text-slate-200 transition-colors")}
                 >
                   {preset.label}
                 </button>

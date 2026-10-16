@@ -1,6 +1,7 @@
 import { MessageCircle, Send, Share2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { GlassCard } from './GlassCard';
+import { useDialog } from './useDialog';
 import { shareOrDownload, type ShareFile } from '../../lib/share';
 
 // Files are generated *before* this modal opens: navigator.share needs a fresh tap,
@@ -19,6 +20,7 @@ interface Props {
 }
 
 export function ShareModal({ state, onClose }: Props) {
+  const dialogRef = useDialog<HTMLDivElement>(onClose);
   const share = async (item: ShareFile) => {
     try {
       await shareOrDownload(item.file, item.title, item.text);
@@ -31,7 +33,7 @@ export function ShareModal({ state, onClose }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200" role="dialog" aria-modal="true" aria-labelledby="share-heading">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="share-heading" ref={dialogRef}>
       <GlassCard className="w-full max-w-sm p-6 text-center">
         <div className="mx-auto w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center mb-4 text-green-400">
           <Share2 size={24} />
@@ -46,7 +48,7 @@ export function ShareModal({ state, onClose }: Props) {
               className={clsx(
                 "w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold active:scale-95 transition-all",
                 i === 0
-                  ? "bg-green-600 hover:bg-green-500 text-white shadow-lg shadow-green-500/20"
+                  ? "bg-green-700 hover:bg-green-600 text-white shadow-lg shadow-green-500/20"
                   : "bg-white/10 hover:bg-white/20 text-white"
               )}
             >

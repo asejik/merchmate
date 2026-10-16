@@ -64,6 +64,8 @@ An offline-first invoicing app for small businesses. Create invoices, quotes and
 - A data-protection status screen, and an install prompt for iPhone/iPad where Safari can erase data of websites that are not installed.
 - An opt-in "Report a problem" that creates a text file (no client or money details) you can send for support.
 - Update prompt: new versions wait until you tap *Update*, so a half-written invoice is never lost.
+- A short **Get started** guide for new users, a warning before you lose an unsaved invoice, and an **Erase All Data** option for when you sell or hand over your phone.
+- Built to be usable by everyone: labelled forms, keyboard-friendly dialogs, large touch targets and support for the phone's "reduce motion" setting.
 - Choose how dates are shown (day first, month first, long or ISO), identical on every device.
 
 ## How your data is stored

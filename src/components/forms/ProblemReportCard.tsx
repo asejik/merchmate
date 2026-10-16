@@ -39,7 +39,7 @@ export function ProblemReportCard() {
     } catch (error) {
       if ((error as Error).name !== 'AbortError') {
         console.error(error);
-        setMessage({ kind: 'error', text: 'Could not create the report.' });
+        setMessage({ kind: 'error', text: "Couldn't create the report. Please try again, or email info@asejik.com and describe what happened." });
       }
     } finally {
       setBusy(false);

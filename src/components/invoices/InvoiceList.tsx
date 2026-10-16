@@ -1,13 +1,15 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
 import { confirmTransfer, deleteInvoice, discardTransfer, recordPayment, reinstateInvoice, voidInvoice } from '../../db/mutations';
 import { GlassCard } from '../ui/GlassCard';
 import { FileText, Download, Share2, CreditCard, History, Search, MoreVertical, Pencil, Copy, Trash2, MessageCircle, Receipt, FileCheck2, Plus, Check, ChevronRight, X, ShieldAlert, Ban, Undo2 } from 'lucide-react';
 import { clsx } from 'clsx';
+import { HIT_AREA } from '../ui/styles';
 import { PaymentModal } from './PaymentModal';
 import type { BusinessProfile, Customer, Invoice, ListView, OrderStage } from '../../types';
 import { formatMoney } from '../../lib/currency';
+import { failed } from '../../lib/messages';
 import { getBalance, getConfirmedPayments, nextInstallment, getDisplayStatus, getPaymentHistory, getReceiptInfo, getUnconfirmedAmount, isQuote, todayInputValue, type DisplayStatus } from '../../lib/invoice';
 import { renderInvoicePdf, renderReceiptPdf } from '../../lib/pdf';
 import { downloadBlob, type ShareFile } from '../../lib/share';
@@ -164,13 +166,21 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
       await db.invoices.update(invoice.id, { orderStage: stage, updatedAt: new Date() });
     } catch (err) {
       console.error(err);
-      alert("Failed to update the order");
+      alert(failed('update the order'));
     }
   };
 
   const markReminded = (invoice: Invoice) => {
     if (invoice.id) db.invoices.update(invoice.id, { lastReminderAt: new Date() }).catch(console.error);
   };
+
+  // Escape closes the actions menu
+  useEffect(() => {
+    if (!menuId) return;
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') setMenuId(null); };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [menuId]);
 
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -193,7 +203,7 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
       await job();
     } catch (error) {
       console.error("Error generating PDF:", error);
-      alert(`Could not generate the PDF: ${(error as Error).message}`);
+      alert(failed('create the PDF'));
     } finally {
       setGeneratingId(null);
     }
@@ -257,7 +267,7 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
       return saved;
     } catch (error) {
       console.error(error);
-      alert("Failed to update payment");
+      alert(failed('save the payment'));
       return null;
     }
   };
@@ -302,7 +312,7 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
       }
     } catch (err) {
       console.error(err);
-      alert("Failed to delete invoice");
+      alert(failed('delete this document'));
     }
   };
 
@@ -320,7 +330,7 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
       if (result === 'unconfirmed-transfers') alert("This invoice has transfers you haven't confirmed yet. Confirm them, or remove the ones that never arrived, then void it.");
     } catch (err) {
       console.error(err);
-      alert("Failed to void invoice");
+      alert(failed('void this invoice'));
     }
   };
 
@@ -331,7 +341,7 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
       await reinstateInvoice(invoice.id);
     } catch (err) {
       console.error(err);
-      alert("Failed to reinstate invoice");
+      alert(failed('reinstate this invoice'));
     }
   };
 
@@ -346,7 +356,7 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
               aria-selected={view === v}
               onClick={() => { onViewChange(v); setMenuId(null); }}
               className={clsx(
-                "px-4 py-1.5 text-lg font-bold rounded-lg transition-all capitalize",
+                "px-4 min-h-11 text-lg font-bold rounded-lg transition-all capitalize",
                 view === v ? "bg-white/10 text-white" : "text-slate-500 hover:text-slate-300"
               )}
             >
@@ -371,21 +381,22 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
           <FileText size={48} className="mb-4 opacity-20" />
           <p>No {noun}s created yet.</p>
           {view === 'quotes' && <p className="text-xs mt-1 max-w-xs">Quotes let clients approve a price before you start. Convert one to an invoice in a tap.</p>}
-          <button onClick={view === 'quotes' ? onCreateQuote : onCreate} className="mt-4 text-indigo-400 hover:text-indigo-300 text-sm font-medium">
+          <button onClick={view === 'quotes' ? onCreateQuote : onCreate} className={clsx(HIT_AREA, "mt-4 text-indigo-400 hover:text-indigo-300 text-sm font-medium")}>
             Create your first {noun} &rarr;
           </button>
         </div>
       ) : (
       <>
-      <div className="flex flex-col md:flex-row gap-3">
+      <div className="flex flex-col md:flex-row md:items-center gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
           <input
             type="search"
+            aria-label={`Search ${noun}s by client or number`}
             placeholder={`Search client or ${noun} #...`}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-white text-sm focus:outline-none focus:border-indigo-500 transition-all"
+            className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 min-h-11 text-white text-sm focus:outline-none focus:border-indigo-500 transition-all"
           />
         </div>
         {view === 'invoices' && (
@@ -397,7 +408,7 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
               aria-selected={filter === f.id}
               onClick={() => setFilter(f.id)}
               className={clsx(
-                "flex-1 md:flex-none px-2 sm:px-3 py-1.5 text-xs font-medium rounded-lg transition-all whitespace-nowrap",
+                "flex-1 md:flex-none px-2 sm:px-3 min-h-11 text-xs font-medium rounded-lg transition-all whitespace-nowrap",
                 filter === f.id ? "bg-indigo-600 text-white shadow" : "text-slate-400 hover:text-white"
               )}
             >
@@ -459,7 +470,7 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
                           onClick={() => upcomingStage && setStage(inv, upcomingStage)}
                           disabled={!upcomingStage}
                           className={clsx(
-                            "text-[10px] uppercase px-2 py-0.5 rounded border inline-flex items-center gap-0.5 transition-opacity",
+                            "relative text-[10px] uppercase px-2 py-0.5 rounded border inline-flex items-center gap-0.5 transition-opacity after:absolute after:-inset-x-1 after:-inset-y-3.5 after:content-['']",
                             STAGE_STYLES[inv.orderStage],
                             upcomingStage && "hover:opacity-80"
                           )}
@@ -501,7 +512,7 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
 
                 <div className="flex items-center gap-2 w-full md:w-auto justify-end">
                   {unpaidInvoice && (
-                    <button onClick={() => setSelectedInvoice(inv)} className="p-2 hover:bg-green-500/10 rounded-lg text-green-400 transition-colors" title="Record Payment" aria-label="Record payment">
+                    <button onClick={() => setSelectedInvoice(inv)} className="inline-flex items-center justify-center min-h-11 min-w-11 hover:bg-green-500/10 rounded-lg text-green-400 transition-colors" title="Record Payment" aria-label="Record payment">
                       <CreditCard size={20} />
                     </button>
                   )}
@@ -511,14 +522,14 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={() => markReminded(inv)}
-                      className="p-2 hover:bg-emerald-500/10 rounded-lg text-emerald-400 transition-colors"
+                      className="inline-flex items-center justify-center min-h-11 min-w-11 hover:bg-emerald-500/10 rounded-lg text-emerald-400 transition-colors"
                       title={orderReady ? "Tell client on WhatsApp that the order is ready" : "Send WhatsApp payment reminder"}
                       aria-label={orderReady ? "Tell client on WhatsApp that the order is ready" : "Send WhatsApp payment reminder"}
                     >
                       <MessageCircle size={20} />
                     </a>
                   ) : (
-                    <span className="p-2 text-slate-600" title={business ? "Client has no phone number" : "Add your business details in Settings first"}>
+                    <span className="inline-flex items-center justify-center min-h-11 min-w-11 text-slate-600" title={business ? "Client has no phone number" : "Add your business details in Settings first"}>
                       <MessageCircle size={20} />
                     </span>
                   ))}
@@ -526,7 +537,7 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
                   <button
                     onClick={() => handlePrepareShare(inv)}
                     disabled={isGenerating}
-                    className="p-2 hover:bg-green-500/10 rounded-lg text-green-500 transition-colors"
+                    className="inline-flex items-center justify-center min-h-11 min-w-11 hover:bg-green-500/10 rounded-lg text-green-500 transition-colors"
                     title="Share PDF"
                     aria-label="Share PDF"
                   >
@@ -536,7 +547,7 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
                         <Share2 size={20} />
                     )}
                   </button>
-                  <button onClick={() => handleDownload(inv)} disabled={isGenerating} className="p-2 hover:bg-white/10 rounded-lg text-indigo-400 transition-colors" title="Download PDF" aria-label="Download PDF">
+                  <button onClick={() => handleDownload(inv)} disabled={isGenerating} className="inline-flex items-center justify-center min-h-11 min-w-11 hover:bg-white/10 rounded-lg text-indigo-400 transition-colors" title="Download PDF" aria-label="Download PDF">
                     <Download size={20} />
                   </button>
                   </>)}
@@ -546,7 +557,7 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
                         setMenuUp(e.currentTarget.getBoundingClientRect().top > window.innerHeight / 2);
                         setMenuId(menuId === inv.id ? null : inv.id ?? null);
                       }}
-                      className="p-2 hover:bg-white/10 rounded-lg text-slate-400 transition-colors"
+                      className="inline-flex items-center justify-center min-h-11 min-w-11 hover:bg-white/10 rounded-lg text-slate-400 transition-colors"
                       title="More actions"
                       aria-label="More actions"
                       aria-expanded={menuId === inv.id}
@@ -623,7 +634,7 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
                             <button
                               onClick={() => handleConfirmTransfer(inv, rec.id)}
                               disabled={isGenerating}
-                              className="flex items-center gap-1 px-2 py-1 rounded bg-green-500/15 text-green-300 hover:bg-green-500/25 transition-colors"
+                              className="flex items-center gap-1 px-3 min-h-11 rounded bg-green-500/15 text-green-300 hover:bg-green-500/25 transition-colors"
                               title="I've seen this money in my bank account"
                               aria-label={`Mark ${formatMoney(rec.amount, inv.currency)} transfer as received`}
                             >
@@ -631,7 +642,7 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
                             </button>
                             <button
                               onClick={() => handleRemoveTransfer(inv, rec.id, rec.amount)}
-                              className="p-1 rounded text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                              className="inline-flex items-center justify-center min-h-11 min-w-11 rounded text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                               title="The money never arrived: remove"
                               aria-label={`Remove unconfirmed transfer of ${formatMoney(rec.amount, inv.currency)}`}
                             >
@@ -644,7 +655,7 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
                           <button
                             onClick={() => handleReceipt(inv, rec.id)}
                             disabled={isGenerating}
-                            className="p-1 rounded text-slate-500 hover:text-indigo-300 hover:bg-white/10 transition-colors"
+                            className="inline-flex items-center justify-center min-h-11 min-w-11 rounded text-slate-500 hover:text-indigo-300 hover:bg-white/10 transition-colors"
                             title="Receipt for this payment"
                             aria-label={`Receipt for payment of ${formatMoney(rec.amount, inv.currency)}`}
                           >

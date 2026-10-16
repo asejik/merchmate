@@ -33,3 +33,13 @@ body {
   /* Subtle Animated Background Base */
   background: radial-gradient(circle at 50% 50%, #1e293b 0%, #0f172a 100%);
 }
+
+/* Respect the phone's "reduce motion" setting: no looping or sliding animation */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

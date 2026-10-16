@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { DATE_FORMATS, DEFAULT_DATE_FORMAT } from '../../lib/dates';
+import { failed } from '../../lib/messages';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { db } from '../../db';
@@ -15,6 +16,7 @@ import { AppLockCard } from './AppLockCard';
 import { DataSafetyCard } from './DataSafetyCard';
 import { ProblemReportCard } from './ProblemReportCard';
 import { AboutCard } from './AboutCard';
+import { EraseDataCard } from './EraseDataCard';
 import { CatalogCard } from './CatalogCard';
 import { DEFAULT_BRAND_COLOR } from '../../lib/color';
 
@@ -98,7 +100,7 @@ export function BusinessProfileForm({ onLock }: { onLock?: () => void }) {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 2 * 1024 * 1024) {
-        alert("Logo must be under 2MB");
+        alert("That logo is larger than 2 MB. Please choose a smaller image.");
         return;
       }
       setLogoFile(file);
@@ -139,7 +141,7 @@ export function BusinessProfileForm({ onLock }: { onLock?: () => void }) {
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (error) {
       console.error(error);
-      alert('Failed to save profile');
+      alert(failed('save your settings'));
     } finally {
       setLoading(false);
     }
@@ -183,37 +185,37 @@ export function BusinessProfileForm({ onLock }: { onLock?: () => void }) {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-                <label className={labelClass}>Business Name</label>
-                <input {...register('businessName')} className={inputClass} placeholder="e.g. Acme Supplies Ltd" />
+                <label className={labelClass} htmlFor="biz-businessName">Business Name</label>
+                <input id="biz-businessName" {...register('businessName')} className={inputClass} placeholder="e.g. Acme Supplies Ltd" />
                 {errors.businessName && <span className="text-red-400 text-xs">{errors.businessName.message}</span>}
             </div>
             <div>
-                <label className={labelClass}>Owner Name</label>
-                <input {...register('ownerName')} className={inputClass} placeholder="e.g. Ronke" />
+                <label className={labelClass} htmlFor="biz-ownerName">Owner Name</label>
+                <input id="biz-ownerName" {...register('ownerName')} className={inputClass} placeholder="e.g. Ronke" />
             </div>
             <div>
-                <label className={labelClass}>Phone</label>
-                <input {...register('phone')} className={inputClass} placeholder="+234..." />
+                <label className={labelClass} htmlFor="biz-phone">Phone</label>
+                <input id="biz-phone" {...register('phone')} className={inputClass} placeholder="+234..." />
                 {errors.phone && <span className="text-red-400 text-xs">{errors.phone.message}</span>}
             </div>
              <div>
-                <label className={labelClass}>Email (Optional)</label>
-                <input {...register('email')} className={inputClass} placeholder="hello@example.com" />
+                <label className={labelClass} htmlFor="biz-email">Email (Optional)</label>
+                <input id="biz-email" {...register('email')} className={inputClass} placeholder="hello@example.com" />
             </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
               <div>
-                <label className={labelClass}>Brand Colour</label>
+                <label className={labelClass} htmlFor="biz-brandColor">Brand Colour</label>
                 <div className="flex items-center gap-3">
-                  <input type="color" {...register('brandColor')} className="h-11 w-14 rounded-lg bg-transparent border border-white/10 cursor-pointer" aria-label="Brand colour" />
+                  <input id="biz-brandColor" type="color" {...register('brandColor')} className="h-11 w-14 rounded-lg bg-transparent border border-white/10 cursor-pointer" />
                   <span className="text-xs text-slate-500">Used for your name, table headers and highlights on PDFs.</span>
                 </div>
                 {errors.brandColor && <span className="text-red-400 text-xs">{errors.brandColor.message}</span>}
               </div>
               <div>
-                <label className={labelClass}>PDF Template</label>
-                <select {...register('invoiceTemplate')} className={clsx(inputClass, "[&>option]:bg-slate-900")}>
+                <label className={labelClass} htmlFor="biz-invoiceTemplate">PDF Template</label>
+                <select id="biz-invoiceTemplate" {...register('invoiceTemplate')} className={clsx(inputClass, "[&>option]:bg-slate-900")}>
                   <option value="classic">Classic (white header)</option>
                   <option value="modern">Modern (colour header band)</option>
                 </select>
@@ -221,8 +223,8 @@ export function BusinessProfileForm({ onLock }: { onLock?: () => void }) {
             </div>
 
             <div className="mt-4">
-            <label className={labelClass}>Office Address</label>
-            <textarea {...register('address')} rows={2} className={inputClass} placeholder="Full street address..." />
+            <label className={labelClass} htmlFor="biz-address">Office Address</label>
+            <textarea id="biz-address" {...register('address')} rows={2} className={inputClass} placeholder="Full street address..." />
             {errors.address && <span className="text-red-400 text-xs">{errors.address.message}</span>}
             </div>
         </GlassCard>
@@ -234,18 +236,18 @@ export function BusinessProfileForm({ onLock }: { onLock?: () => void }) {
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className={labelClass}>Bank Name</label>
-              <input {...register('bankName')} className={inputClass} placeholder="e.g. GTBank" />
+              <label className={labelClass} htmlFor="biz-bankName">Bank Name</label>
+              <input id="biz-bankName" {...register('bankName')} className={inputClass} placeholder="e.g. GTBank" />
               {errors.bankName && <span className="text-red-400 text-xs">{errors.bankName.message}</span>}
             </div>
             <div>
-              <label className={labelClass}>Account Number</label>
-              <input {...register('accountNumber')} className={inputClass} placeholder="0123456789" />
+              <label className={labelClass} htmlFor="biz-accountNumber">Account Number</label>
+              <input id="biz-accountNumber" {...register('accountNumber')} className={inputClass} placeholder="0123456789" />
               {errors.accountNumber && <span className="text-red-400 text-xs">{errors.accountNumber.message}</span>}
             </div>
             <div className="md:col-span-2">
-              <label className={labelClass}>Account Name</label>
-              <input {...register('accountName')} className={inputClass} placeholder="Account Holder Name" />
+              <label className={labelClass} htmlFor="biz-accountName">Account Name</label>
+              <input id="biz-accountName" {...register('accountName')} className={inputClass} placeholder="Account Holder Name" />
               {errors.accountName && <span className="text-red-400 text-xs">{errors.accountName.message}</span>}
             </div>
           </div>
@@ -259,17 +261,17 @@ export function BusinessProfileForm({ onLock }: { onLock?: () => void }) {
           <p className="text-xs text-slate-500 mb-6">Pre-filled on every new invoice. You can still change them per invoice.</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className={labelClass}>Tax Name</label>
-              <input {...register('taxLabel')} className={inputClass} placeholder="VAT" />
+              <label className={labelClass} htmlFor="biz-taxLabel">Tax Name</label>
+              <input id="biz-taxLabel" {...register('taxLabel')} className={inputClass} placeholder="VAT" />
             </div>
             <div>
-              <label className={labelClass}>Tax Rate (%)</label>
-              <input type="number" step="any" min="0" max="100" {...register('defaultTaxRate')} className={inputClass} placeholder="e.g. 7.5" />
+              <label className={labelClass} htmlFor="biz-defaultTaxRate">Tax Rate (%)</label>
+              <input id="biz-defaultTaxRate" type="number" step="any" min="0" max="100" {...register('defaultTaxRate')} className={inputClass} placeholder="e.g. 7.5" />
               {errors.defaultTaxRate && <span className="text-red-400 text-xs">{errors.defaultTaxRate.message}</span>}
             </div>
             <div>
-              <label className={labelClass}>Payment Terms</label>
-              <select {...register('defaultDueDays')} className={clsx(inputClass, "[&>option]:bg-slate-900")}>
+              <label className={labelClass} htmlFor="biz-defaultDueDays">Payment Terms</label>
+              <select id="biz-defaultDueDays" {...register('defaultDueDays')} className={clsx(inputClass, "[&>option]:bg-slate-900")}>
                 <option value="">No due date</option>
                 <option value="0">Due on receipt</option>
                 <option value="7">Net 7 days</option>
@@ -278,14 +280,14 @@ export function BusinessProfileForm({ onLock }: { onLock?: () => void }) {
               </select>
             </div>
             <div>
-              <label className={labelClass}>Phone Country Code</label>
-              <input {...register('defaultCountryCode')} className={inputClass} placeholder="234" inputMode="numeric" />
+              <label className={labelClass} htmlFor="biz-defaultCountryCode">Phone Country Code</label>
+              <input id="biz-defaultCountryCode" {...register('defaultCountryCode')} className={inputClass} placeholder="234" inputMode="numeric" />
               {errors.defaultCountryCode && <span className="text-red-400 text-xs">{errors.defaultCountryCode.message}</span>}
               <p className="text-[11px] text-slate-500 mt-1">Used for WhatsApp reminders to local numbers like 0803…</p>
             </div>
             <div>
-              <label className={labelClass}>Date Format</label>
-              <select {...register('dateFormat')} className={clsx(inputClass, "[&>option]:bg-slate-900")}>
+              <label className={labelClass} htmlFor="biz-dateFormat">Date Format</label>
+              <select id="biz-dateFormat" {...register('dateFormat')} className={clsx(inputClass, "[&>option]:bg-slate-900")}>
                 {DATE_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
               </select>
               <p className="text-[11px] text-slate-500 mt-1">Used in the app, PDFs and receipts on every device.</p>
@@ -301,10 +303,10 @@ export function BusinessProfileForm({ onLock }: { onLock?: () => void }) {
             </h3>
 
             <div>
-                <label className={labelClass}>
+                <label className={labelClass} htmlFor="biz-invoiceFooterText">
                     Footer Message
                 </label>
-                <textarea
+                <textarea id="biz-invoiceFooterText"
                     {...register('invoiceFooterText')}
                     rows={4}
                     className={inputClass}
@@ -338,6 +340,7 @@ export function BusinessProfileForm({ onLock }: { onLock?: () => void }) {
       <DataSafetyCard />
       <ProblemReportCard />
       <AboutCard />
+      <EraseDataCard />
     </div>
   );
 }

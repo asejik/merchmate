@@ -3,6 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { db } from '../../db';
 import { deleteCustomer } from '../../db/mutations';
+import { failed } from '../../lib/messages';
 import { GlassCard } from '../ui/GlassCard';
 import { Save, X, Globe, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -58,7 +59,7 @@ export function CustomerForm({ onComplete, onCancel, initialData }: Props) {
       onComplete();
     } catch (err) {
       console.error(err);
-      alert("Failed to save customer");
+      alert(failed('save this client'));
     }
   };
 
@@ -79,7 +80,7 @@ export function CustomerForm({ onComplete, onCancel, initialData }: Props) {
       onComplete();
     } catch (err) {
       console.error(err);
-      alert("Failed to delete customer");
+      alert(failed('delete this client'));
     }
   };
 
@@ -102,20 +103,20 @@ export function CustomerForm({ onComplete, onCancel, initialData }: Props) {
         {/* Core Info */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className={labelClass}>Customer Name</label>
-            <input {...register('name')} className={inputClass} placeholder="e.g. Mrs. Adebayo" />
+            <label className={labelClass} htmlFor="cust-name">Customer Name</label>
+            <input id="cust-name" {...register('name')} className={inputClass} placeholder="e.g. Mrs. Adebayo" />
             {errors.name && <span className="text-red-400 text-xs">{errors.name.message}</span>}
           </div>
           <div>
-            <label className={labelClass}>Phone</label>
-            <input {...register('phone')} className={inputClass} placeholder="080..." />
+            <label className={labelClass} htmlFor="cust-phone">Phone</label>
+            <input id="cust-phone" {...register('phone')} className={inputClass} placeholder="080..." />
             {errors.phone && <span className="text-red-400 text-xs">{errors.phone.message}</span>}
           </div>
         </div>
 
         <div>
-          <label className={labelClass}>Email (Optional)</label>
-          <input {...register('email')} className={inputClass} placeholder="client@example.com" />
+          <label className={labelClass} htmlFor="cust-email">Email (Optional)</label>
+          <input id="cust-email" {...register('email')} className={inputClass} placeholder="client@example.com" />
           {errors.email && <span className="text-red-400 text-xs">{errors.email.message}</span>}
         </div>
 
@@ -140,18 +141,18 @@ export function CustomerForm({ onComplete, onCancel, initialData }: Props) {
               className="overflow-hidden space-y-4 border-l-2 border-indigo-500/30 pl-4"
             >
               <div>
-                <label className={labelClass}>Full Shipping Address</label>
-                <textarea {...register('address')} rows={2} className={inputClass} placeholder="Street address..." />
+                <label className={labelClass} htmlFor="cust-address">Full Shipping Address</label>
+                <textarea id="cust-address" {...register('address')} rows={2} className={inputClass} placeholder="Street address..." />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className={labelClass}>City</label>
-                  <input {...register('city')} className={inputClass} placeholder="London" />
+                  <label className={labelClass} htmlFor="cust-city">City</label>
+                  <input id="cust-city" {...register('city')} className={inputClass} placeholder="London" />
                 </div>
                 <div>
-                  <label className={labelClass}>Country</label>
-                  <input {...register('country')} className={inputClass} placeholder="UK" />
+                  <label className={labelClass} htmlFor="cust-country">Country</label>
+                  <input id="cust-country" {...register('country')} className={inputClass} placeholder="UK" />
                 </div>
               </div>
             </motion.div>
