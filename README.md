@@ -60,7 +60,7 @@ An offline-first invoicing app for small businesses. Create invoices, quotes and
 **Your data and safety**
 - Everything works offline and is stored on your device.
 - **App Lock** (optional): protect the app with a PIN. If you forget it, a recovery code gets you back in; if you lose both, you can erase the device and restore a backup. It keeps casual snoopers out; it is not encryption.
-- Backup and restore to a file (save it to Google Drive, email or WhatsApp), with reminders when a backup is due.
+- Backup and restore to a file (save it to Google Drive, email or WhatsApp), with a daily reminder ("Back up now" or "Not today") until you have saved one that day, and a prompt to back up right after you turn on App Lock.
 - A data-protection status screen, and an install prompt for iPhone/iPad where Safari can erase data of websites that are not installed.
 - An opt-in "Report a problem" that creates a text file (no client or money details) you can send for support.
 - Update prompt: new versions wait until you tap *Update*, so a half-written invoice is never lost.

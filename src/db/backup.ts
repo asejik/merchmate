@@ -1,9 +1,11 @@
 import { db } from './index';
-import type { BackupData } from '../lib/backup';
+import { backupFileName, serializeBackup, type BackupData } from '../lib/backup';
+import { isBackupDue as isDueOn, nextLocalMidnight, shouldRemindBackup } from '../lib/backupReminder';
+import { shareOrDownload } from '../lib/share';
 import { clearLock } from '../lib/appLock';
 
 const LAST_BACKUP_KEY = 'lastBackupAt';
-export const BACKUP_REMINDER_DAYS = 14;
+const SNOOZE_KEY = 'backupSnoozedUntil';
 
 export async function exportAllData(): Promise<BackupData> {
   const [businessProfile, customers, invoices, catalog] = await Promise.all([
@@ -42,25 +44,56 @@ export async function eraseAllData(): Promise<void> {
   }
 }
 
-// Per-device reminder only, so localStorage is fine; it is not part of the data.
-export function getLastBackupAt(): Date | null {
+// Per-device reminder state only, so localStorage is fine; it is not part of the data.
+function readDate(key: string): Date | null {
   try {
-    const value = localStorage.getItem(LAST_BACKUP_KEY);
+    const value = localStorage.getItem(key);
     return value ? new Date(value) : null;
   } catch {
     return null;
   }
 }
 
-export function markBackedUp(now: Date = new Date()): void {
+function writeDate(key: string, date: Date): void {
   try {
-    localStorage.setItem(LAST_BACKUP_KEY, now.toISOString());
+    localStorage.setItem(key, date.toISOString());
   } catch {
     // Storage unavailable: the reminder will just show again
   }
 }
 
+export function getLastBackupAt(): Date | null {
+  return readDate(LAST_BACKUP_KEY);
+}
+
+export function markBackedUp(now: Date = new Date()): void {
+  writeDate(LAST_BACKUP_KEY, now);
+}
+
+/** No backup yet today. */
 export function isBackupDue(now: Date = new Date()): boolean {
-  const last = getLastBackupAt();
-  return !last || now.getTime() - last.getTime() > BACKUP_REMINDER_DAYS * 86_400_000;
+  return isDueOn(getLastBackupAt(), now);
+}
+
+/** Whether the dashboard should nag: due today and not snoozed with "Not today". */
+export function isBackupReminderVisible(hasData: boolean, now: Date = new Date()): boolean {
+  return shouldRemindBackup({ hasData, lastBackupAt: getLastBackupAt(), snoozedUntil: readDate(SNOOZE_KEY), now });
+}
+
+/** "Not today": hides the reminder until tomorrow. */
+export function snoozeBackupReminder(now: Date = new Date()): void {
+  writeDate(SNOOZE_KEY, nextLocalMidnight(now));
+}
+
+/**
+ * Builds the backup file and hands it to the share sheet (or downloads it), then records the time.
+ * Needs a recent tap to open the share sheet. Throws AbortError if the user cancels the sheet.
+ */
+export async function saveBackup(): Promise<{ invoices: number; customers: number }> {
+  const data = await exportAllData();
+  const now = new Date();
+  const file = new File([serializeBackup(data, now)], backupFileName(now), { type: 'application/json' });
+  await shareOrDownload(file, 'MerchMate backup', 'MerchMate backup file. Keep it somewhere safe.');
+  markBackedUp(now);
+  return { invoices: data.invoices.length, customers: data.customers.length };
 }

@@ -3,7 +3,8 @@ import { Lock } from 'lucide-react';
 import { PinField } from './PinField';
 import { RecoveryCodePanel } from './RecoveryCodePanel';
 import { failureMessage, formatWait, lockoutRemainingMs, resetPinWithRecovery, verifyPin } from '../../lib/appLock';
-import { eraseAllData } from '../../db/backup';
+import { eraseAllData, getLastBackupAt } from '../../db/backup';
+import { formatDate } from '../../lib/dates';
 
 interface LockScreenProps {
   /** `erased` is true when the device was wiped, so the app can point the user at Restore. */
@@ -28,6 +29,7 @@ export function LockScreen({ onUnlock }: LockScreenProps) {
   const [retryAt, setRetryAt] = useState(() => Date.now() + lockoutRemainingMs());
   const [now, setNow] = useState(() => Date.now());
   const waitMs = Math.max(0, retryAt - now);
+  const lastBackup = getLastBackupAt();
 
   // Ticks the "try again in" countdown while a wait is running
   useEffect(() => {
@@ -141,6 +143,7 @@ export function LockScreen({ onUnlock }: LockScreenProps) {
             </p>
             <p className="rounded-lg border border-red-400/30 bg-red-500/10 p-3 text-sm text-red-200">
               This deletes all clients, invoices and settings on this device. It cannot be undone. Anything not in a backup is lost.
+              {' '}{lastBackup ? `The last backup saved from this device was on ${formatDate(lastBackup, 'long', { moment: true })}. Anything newer will be lost.` : 'No backup has been saved from this device, so nothing can be restored afterwards.'}
             </p>
             <div>
               <label htmlFor="erase-confirm" className="block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider">Type ERASE to confirm</label>

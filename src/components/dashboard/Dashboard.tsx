@@ -2,8 +2,8 @@ import { useState, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
 import { GlassCard } from '../ui/GlassCard';
-import { TrendingUp, Clock, FileText, Wallet, AlertCircle, DatabaseBackup, ShieldAlert } from 'lucide-react';
-import { isBackupDue } from '../../db/backup';
+import { TrendingUp, Clock, FileText, Wallet, AlertCircle, ShieldAlert } from 'lucide-react';
+import { BackupReminder } from '../ui/BackupReminder';
 import { Reports } from './Reports';
 import { InstallHint } from '../ui/InstallHint';
 import { FollowUps } from './FollowUps';
@@ -80,17 +80,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (tab: AppTab) => void })
         </div>
       </div>
 
-      {(data?.invoices.length ?? 0) > 0 && isBackupDue() && (
-        <button
-          onClick={() => onNavigate('settings')}
-          className="w-full flex items-center gap-3 p-4 rounded-2xl border border-orange-500/20 bg-orange-500/10 text-left hover:bg-orange-500/15 transition-colors"
-        >
-          <DatabaseBackup size={20} className="text-orange-300 shrink-0" />
-          <span className="text-sm text-orange-100">
-            <strong>Back up your data.</strong> Everything is stored only on this device. Save a backup in Settings &rarr;
-          </span>
-        </button>
-      )}
+      <BackupReminder hasData={(data?.invoices.length ?? 0) > 0} />
 
       {data && data.invoices.length > 0 && (
         <FollowUps invoices={data.invoices} customers={data.customers} business={data.profile} onNavigate={onNavigate} />

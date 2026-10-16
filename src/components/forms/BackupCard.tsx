@@ -2,9 +2,8 @@ import { useRef, useState } from 'react';
 import { formatDate } from '../../lib/dates';
 import { DatabaseBackup, Download, Upload, Loader2, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { GlassCard } from '../ui/GlassCard';
-import { exportAllData, getLastBackupAt, isBackupDue, markBackedUp, restoreAllData } from '../../db/backup';
-import { backupFileName, MAX_BACKUP_BYTES, parseBackup, serializeBackup } from '../../lib/backup';
-import { shareOrDownload } from '../../lib/share';
+import { exportAllData, getLastBackupAt, isBackupDue, restoreAllData, saveBackup } from '../../db/backup';
+import { MAX_BACKUP_BYTES, parseBackup } from '../../lib/backup';
 
 export function BackupCard() {
   const fileInput = useRef<HTMLInputElement>(null);
@@ -17,13 +16,9 @@ export function BackupCard() {
     setBusy('export');
     setMessage(null);
     try {
-      const data = await exportAllData();
-      const now = new Date();
-      const file = new File([serializeBackup(data, now)], backupFileName(now), { type: 'application/json' });
-      await shareOrDownload(file, 'MerchMate backup', 'MerchMate backup file. Keep it somewhere safe.');
-      markBackedUp(now);
-      setLastBackup(now);
-      setMessage({ kind: 'ok', text: `Backup saved: ${data.invoices.length} invoices, ${data.customers.length} clients.` });
+      const saved = await saveBackup();
+      setLastBackup(getLastBackupAt());
+      setMessage({ kind: 'ok', text: `Backup saved: ${saved.invoices} invoices, ${saved.customers} clients.` });
     } catch (error) {
       if ((error as Error).name !== 'AbortError') {
         console.error(error);
@@ -81,7 +76,7 @@ export function BackupCard() {
       </h3>
       <p className="text-xs text-slate-500 mb-4">
         Your data is stored only on this device. Clearing browser data or losing your phone deletes it.
-        Save a backup to Google Drive, email or WhatsApp regularly. You can also use it to move to a new phone.
+        Save a backup to Google Drive, email or WhatsApp every day you use the app. You can also use it to move to a new phone.
       </p>
 
       <div className={`mb-4 flex items-center gap-2 text-xs ${due ? 'text-orange-300' : 'text-green-400'}`}>
