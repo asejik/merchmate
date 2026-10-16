@@ -30,6 +30,7 @@ for (const [label, viewport] of [['phone 360px', { width: 360, height: 740 }], [
     test.use({ viewport, isMobile: viewport.width < 700, hasTouch: viewport.width < 700 });
 
     test('screens with data', async ({ app, page }) => {
+      test.setTimeout(240_000); // about eleven strict scans in one test: slow runners need the room
       await page.emulateMedia({ reducedMotion: 'reduce' });
       await app.open();
       await expect(page.getByRole('region', { name: 'Get started' })).toBeVisible();
@@ -65,6 +66,7 @@ for (const [label, viewport] of [['phone 360px', { width: 360, height: 740 }], [
     });
 
     test('lock, recovery and erase screens', async ({ app, page }) => {
+      test.setTimeout(180_000);
       await page.emulateMedia({ reducedMotion: 'reduce' });
       await app.open();
       await app.seed({});

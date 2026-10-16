@@ -8,7 +8,8 @@ export default defineConfig({
   fullyParallel: true,
   workers: process.env.CI ? 2 : 3,
   retries: process.env.CI ? 1 : 0, // a retry on CI shows up as "flaky" in the report rather than hiding
-  reporter: [['list']],
+  // On GitHub, also annotate failures so the reason shows up on the run page
+  reporter: process.env.CI ? [['list'], ['github']] : [['list']],
   use: {
     baseURL: 'http://localhost:4173',
     viewport: { width: 360, height: 740 },
