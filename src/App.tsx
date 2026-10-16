@@ -7,6 +7,7 @@ import { InvoiceForm, type InvoiceEditorMode } from './components/invoices/Invoi
 import { InvoiceList } from './components/invoices/InvoiceList';
 import { Dashboard } from './components/dashboard/Dashboard';
 import { FatalError } from './components/ui/FatalError';
+import { UpdateBanner } from './components/ui/UpdateBanner';
 import type { AppTab, ListView } from './types';
 
 const TABS: AppTab[] = ['dashboard', 'invoices', 'create', 'customers', 'settings'];
@@ -131,6 +132,7 @@ function App() {
       </div>
 
       {renderContent()}
+      <UpdateBanner />
     </AppShell>
   );
 }

@@ -20,7 +20,8 @@ export default defineConfig({
     }),
     // 2. PWA Configuration
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'prompt': the new version waits until the user taps Update (see UpdateBanner)
+      registerType: 'prompt',
       workbox: {
         // The lazily loaded PDF engine (~1.3 MB) must be precached or PDFs fail offline.
         // Workbox silently skips files above its 2 MB default.
@@ -30,6 +31,7 @@ export default defineConfig({
         enabled: false // Disable PWA logic in local dev to prevent caching issues
       },
       manifest: {
+        id: '/',
         name: 'MerchMate - Smart Invoicing',
         short_name: 'MerchMate',
         description: 'Offline-first invoicing for small businesses. Create, share and track invoices from your phone.',
