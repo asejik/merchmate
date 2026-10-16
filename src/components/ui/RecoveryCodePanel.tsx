@@ -42,7 +42,7 @@ export function RecoveryCodePanel({ code, onDone, headingLevel = 3 }: RecoveryCo
         type="button"
         onClick={onDone}
         disabled={!saved}
-        className="w-full bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-3 rounded-xl font-medium transition-all disabled:opacity-40"
+        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-xl font-medium transition-all disabled:opacity-40"
       >
         Continue
       </button>

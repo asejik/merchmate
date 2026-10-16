@@ -329,7 +329,7 @@ export function BusinessProfileForm({ onLock }: { onLock?: () => void }) {
             <button
                 type="submit"
                 disabled={loading}
-                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-indigo-500/20 transition-all disabled:opacity-50"
+                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-indigo-500/20 transition-all disabled:opacity-50"
             >
                 {loading ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
                 Save Settings

@@ -199,7 +199,7 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
 
         <div className="flex flex-col items-end gap-3 pt-4">
           {error && <p className="text-sm text-red-400" role="alert">{error}</p>}
-          <button type="submit" disabled={saving} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-4 rounded-xl font-bold shadow-lg shadow-indigo-500/20 transition-all transform hover:-translate-y-1 disabled:opacity-50">
+          <button type="submit" disabled={saving} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-xl font-bold shadow-lg shadow-indigo-500/20 transition-all transform hover:-translate-y-1 disabled:opacity-50">
             {saving ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />}
             {text.submit}
           </button>

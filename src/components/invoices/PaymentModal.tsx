@@ -181,7 +181,7 @@ export function PaymentModal({ invoice, dateFormat, onClose, onSave }: Props) {
                 type="submit"
                 className={clsx(
                   "w-full text-white py-3 rounded-xl font-bold shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2",
-                  unconfirmed ? "bg-amber-700 hover:bg-amber-600 shadow-amber-500/20" : "bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/20"
+                  unconfirmed ? "bg-amber-700 hover:bg-amber-600 shadow-amber-500/20" : "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/20"
                 )}
               >
                 <Save size={18} />

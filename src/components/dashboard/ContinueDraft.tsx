@@ -28,7 +28,7 @@ export function ContinueDraft({ dateFormat, onContinue }: { dateFormat?: DateFor
         </div>
       </div>
       <div className="mt-3 flex gap-3">
-        <button onClick={onContinue} className="flex-1 min-h-11 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium">Continue</button>
+        <button onClick={onContinue} className="flex-1 min-h-11 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium">Continue</button>
         <button onClick={() => { clearDraft('invoice'); refresh(); }} className="min-h-11 px-4 rounded-xl text-sm text-slate-300 hover:bg-white/10">Discard</button>
       </div>
     </GlassCard>

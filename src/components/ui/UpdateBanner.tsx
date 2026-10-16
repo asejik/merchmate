@@ -20,7 +20,7 @@ export function UpdateBanner() {
       <span className="text-sm text-slate-200">A new version of MerchMate is ready.</span>
       <button
         onClick={() => updateServiceWorker(true)}
-        className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500"
+        className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
       >
         <RefreshCw size={14} /> Update
       </button>

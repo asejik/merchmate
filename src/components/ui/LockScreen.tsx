@@ -13,7 +13,7 @@ interface LockScreenProps {
 
 type Mode = 'pin' | 'recover' | 'new-code' | 'erase';
 
-const buttonClass = 'w-full bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-3 rounded-xl font-medium transition-all disabled:opacity-40';
+const buttonClass = 'w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-xl font-medium transition-all disabled:opacity-40';
 const linkClass = 'text-sm text-indigo-300 hover:text-indigo-200 underline underline-offset-2';
 
 /** Shown instead of the app while it is locked. It deliberately shows nothing about the business. */

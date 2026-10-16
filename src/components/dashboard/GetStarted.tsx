@@ -53,7 +53,7 @@ export function GetStarted({ state, onNavigate }: { state: SetupState; onNavigat
               {!step.done && <p className="text-xs text-slate-500">{step.hint}</p>}
             </div>
             {step.id === next.id && (
-              <button onClick={() => onNavigate(DESTINATION[step.id])} className="shrink-0 min-h-11 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium">
+              <button onClick={() => onNavigate(DESTINATION[step.id])} className="shrink-0 min-h-11 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium">
                 Start
               </button>
             )}

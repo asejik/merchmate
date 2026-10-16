@@ -8,7 +8,7 @@ import { changePin, disableLock, enableLock, failureMessage, isLockEnabled, isVa
 
 type Mode = 'idle' | 'enable' | 'show-code' | 'backup-nudge' | 'change' | 'disable';
 
-const primary = 'flex-1 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-3 rounded-xl font-medium transition-all disabled:opacity-40';
+const primary = 'flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-xl font-medium transition-all disabled:opacity-40';
 const secondary = 'flex-1 bg-white/10 hover:bg-white/20 text-white px-4 py-3 rounded-xl font-medium transition-all disabled:opacity-40';
 
 export function AppLockCard({ onLockNow }: { onLockNow?: () => void }) {

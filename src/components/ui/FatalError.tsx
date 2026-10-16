@@ -15,7 +15,7 @@ export function FatalError({ title, children }: FatalErrorProps) {
         <div className="text-sm text-slate-300 space-y-2">{children}</div>
         <button
           onClick={() => window.location.reload()}
-          className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium"
+          className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium"
         >
           <RefreshCw size={16} /> Try again
         </button>

@@ -176,7 +176,7 @@ export function CustomerForm({ onComplete, onCancel, initialData }: Props) {
             </button>
           )}
           <button type="button" onClick={onCancel} className="px-4 py-2 text-slate-400 hover:text-white">Cancel</button>
-          <button type="submit" className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded-xl font-medium shadow-lg shadow-indigo-500/20">
+          <button type="submit" className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-xl font-medium shadow-lg shadow-indigo-500/20">
             <Save size={18} />
             Save Customer
           </button>

@@ -97,7 +97,7 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
             {visible.length === viewTotal ? `Total: ${viewTotal}` : `${visible.length} of ${viewTotal}`}
           </span>
           {view === 'quotes' && (
-            <button onClick={onCreateQuote} className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-xl text-sm font-medium transition-all">
+            <button onClick={onCreateQuote} className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-xl text-sm font-medium transition-all">
               <Plus size={16} /> New Quote
             </button>
           )}

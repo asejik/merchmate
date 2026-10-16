@@ -40,7 +40,7 @@ function DialogWindow({ pending, onClose }: { pending: Pending; onClose: (confir
           <button
             type="button"
             onClick={() => onClose(true)}
-            className={`flex-1 min-h-11 rounded-xl text-white font-medium ${pending.danger ? 'bg-red-700 hover:bg-red-600' : 'bg-indigo-600 hover:bg-indigo-500'}`}
+            className={`flex-1 min-h-11 rounded-xl text-white font-medium ${pending.danger ? 'bg-red-700 hover:bg-red-600' : 'bg-indigo-600 hover:bg-indigo-700'}`}
           >
             {pending.confirmLabel}
           </button>

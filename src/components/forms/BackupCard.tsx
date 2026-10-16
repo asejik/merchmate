@@ -95,7 +95,7 @@ export function BackupCard() {
           type="button"
           onClick={handleExport}
           disabled={busy !== null}
-          className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-3 rounded-xl font-medium transition-all disabled:opacity-50"
+          className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-xl font-medium transition-all disabled:opacity-50"
         >
           {busy === 'export' ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
           Save Backup

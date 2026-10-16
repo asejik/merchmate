@@ -89,7 +89,7 @@ export function CustomerList() {
         </div>
         <button
           onClick={() => setIsCreating(true)}
-          className="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl font-medium transition-all shadow-lg shadow-indigo-500/20"
+          className="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl font-medium transition-all shadow-lg shadow-indigo-500/20"
         >
           <Plus size={20} />
           Add Client
