@@ -87,7 +87,7 @@ Launch it from your home screen. After the first load it works with no connectio
 
 ## Getting started (development)
 
-**Requirements:** Node.js 20 or newer and npm.
+**Requirements:** Node.js 22.12 or newer (Vite 8 and Vitest 5 need it) and npm.
 
 ```bash
 git clone git@github.com:asejik/merchmate.git
@@ -145,7 +145,7 @@ src/
 
 ## How it works
 
-**Stack:** React 18, Vite, TypeScript (strict), Tailwind CSS v4, Dexie (IndexedDB), Framer Motion, React Hook Form with Zod, `@react-pdf/renderer`, and `vite-plugin-pwa` (Workbox).
+**Stack:** React 18, Vite 8, TypeScript (strict), Tailwind CSS v4, Dexie (IndexedDB), Framer Motion, React Hook Form with Zod, `@react-pdf/renderer`, and `vite-plugin-pwa` (Workbox).
 
 - **No router.** `App.tsx` keeps the active tab in state (saved in `localStorage`) and switches between Home, Invoices, New, Clients and Settings.
 - **Data layer.** The Dexie database is named `AsoOkeInvoiceDB` for historical reasons. **Never rename it**: that would orphan every existing user's data. Tables are `businessProfile`, `customers`, `invoices` (which also holds quotes) and `catalog`. Schema changes always go in a *new* `version(n)` block; existing ones are never edited. Anything that reads and then writes goes through `src/db/mutations.ts`, which re-reads inside a transaction so a second tab or window can never be overwritten by a stale copy.
