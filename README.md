@@ -132,7 +132,7 @@ src/
     customers/          Client list and form, statement PDF
     dashboard/          Dashboard, Today list, reports
     forms/              Settings: business profile, backup, data protection, problem report, help
-    invoices/           Invoice form and list, payment modal, invoice and receipt PDFs
+    invoices/           Invoice form (form/ sections) and list (list/ card and actions), payment modal, PDFs
     layout/             App shell and navigation
     ui/                 Shared pieces: glass card, share modal, update banner, error screens
   db/
