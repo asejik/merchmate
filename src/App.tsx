@@ -6,6 +6,7 @@ import { CustomerList } from './components/customers/CustomerList';
 import { InvoiceForm, type InvoiceEditorMode } from './components/invoices/InvoiceForm';
 import { InvoiceList } from './components/invoices/InvoiceList';
 import { Dashboard } from './components/dashboard/Dashboard';
+import { FatalError } from './components/ui/FatalError';
 import type { AppTab, ListView } from './types';
 
 const TABS: AppTab[] = ['dashboard', 'invoices', 'create', 'customers', 'settings'];
@@ -109,6 +110,16 @@ function App() {
         );
     }
   };
+
+  // Without storage nothing can be saved: say so, instead of showing screens that silently fail
+  if (status === 'Error') {
+    return (
+      <FatalError title="Can't open your data">
+        <p>MerchMate could not open its storage on this device. Nothing you entered would be saved.</p>
+        <p>This happens in private/incognito windows, when the phone is almost out of space, or when the app is open in an older tab. Close other MerchMate tabs, leave private mode, free up some space and try again.</p>
+      </FatalError>
+    );
+  }
 
   return (
     <AppShell activeTab={activeTab} onTabChange={handleTabChange}>
