@@ -8,6 +8,8 @@ import { InvoiceList } from './components/invoices/InvoiceList';
 import { Dashboard } from './components/dashboard/Dashboard';
 import { FatalError } from './components/ui/FatalError';
 import { UpdateBanner } from './components/ui/UpdateBanner';
+import { LockScreen } from './components/ui/LockScreen';
+import { AUTO_LOCK_MS, isLockEnabled } from './lib/appLock';
 import type { AppTab, ListView } from './types';
 
 const TABS: AppTab[] = ['dashboard', 'invoices', 'create', 'customers', 'settings'];
@@ -44,6 +46,23 @@ function App() {
   };
 
   const [status, setStatus] = useState('Checking DB...');
+  // Read synchronously so a locked app never flashes its contents before the lock appears
+  const [locked, setLocked] = useState(isLockEnabled);
+
+  // Lock again after the app has been in the background for a minute
+  useEffect(() => {
+    let hiddenAt: number | null = null;
+    const onVisibility = () => {
+      if (document.hidden) {
+        hiddenAt = Date.now();
+      } else {
+        if (hiddenAt !== null && Date.now() - hiddenAt >= AUTO_LOCK_MS && isLockEnabled()) setLocked(true);
+        hiddenAt = null;
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, []);
 
   useEffect(() => {
     async function initDB() {
@@ -71,7 +90,7 @@ function App() {
   const renderContent = () => {
     switch (activeTab) {
       case 'settings':
-        return <BusinessProfileForm />;
+        return <BusinessProfileForm onLock={() => setLocked(true)} />;
 
       case 'customers':
         return <CustomerList />;
@@ -119,6 +138,18 @@ function App() {
         <p>MerchMate could not open its storage on this device. Nothing you entered would be saved.</p>
         <p>This happens in private/incognito windows, when the phone is almost out of space, or when the app is open in an older tab. Close other MerchMate tabs, leave private mode, free up some space and try again.</p>
       </FatalError>
+    );
+  }
+
+  if (locked) {
+    return (
+      <LockScreen
+        onUnlock={erased => {
+          setLocked(false);
+          // After "erase this device" the way forward is Restore, which lives in Settings
+          if (erased) setActiveTab('settings');
+        }}
+      />
     );
   }
 

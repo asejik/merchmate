@@ -11,6 +11,7 @@ import type { BusinessProfile } from '../../types';
 import { DEFAULT_INVOICE_TERMS } from '../../lib/invoice';
 import { DEFAULT_COUNTRY_CODE } from '../../lib/whatsapp';
 import { BackupCard } from './BackupCard';
+import { AppLockCard } from './AppLockCard';
 import { DataSafetyCard } from './DataSafetyCard';
 import { ProblemReportCard } from './ProblemReportCard';
 import { AboutCard } from './AboutCard';
@@ -41,7 +42,7 @@ const profileSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
 
-export function BusinessProfileForm() {
+export function BusinessProfileForm({ onLock }: { onLock?: () => void }) {
   const [loading, setLoading] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -333,6 +334,7 @@ export function BusinessProfileForm() {
 
       <CatalogCard />
       <BackupCard />
+      <AppLockCard onLockNow={onLock} />
       <DataSafetyCard />
       <ProblemReportCard />
       <AboutCard />

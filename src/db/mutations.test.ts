@@ -1,8 +1,8 @@
 import 'fake-indexeddb/auto';
 import Dexie from 'dexie';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from './index';
-import { exportAllData, restoreAllData } from './backup';
+import { eraseAllData, exportAllData, restoreAllData } from './backup';
 import {
   confirmTransfer, deleteCustomer, deleteInvoice, discardTransfer, DocumentGoneError, NumberInUseError, recordPayment, reinstateInvoice, saveDocument, voidInvoice,
 } from './mutations';
@@ -178,6 +178,26 @@ describe('backup and restore', () => {
     const restored = await db.invoices.get(invoice.id!);
     expect(restored?.depositAmount).toBe(1000);
     expect(restored?.dateIssued).toBeInstanceOf(Date);
+  });
+});
+
+describe('erase this device', () => {
+  it('deletes every table and the app lock, then lets a backup be restored', async () => {
+    await db.customers.put(customer());
+    const invoice = await seedInvoice();
+    await db.businessProfile.put({ id: 1, businessName: 'Demo', address: '', phone: '', bankName: '', accountNumber: '', accountName: '' });
+    const backup = serializeBackup(await exportAllData());
+    const store = new Map<string, string>([['appLock', '{"v":1}'], ['lastBackupAt', '2026-10-01']]);
+    vi.stubGlobal('localStorage', { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v), removeItem: (k: string) => void store.delete(k) });
+
+    await eraseAllData();
+    expect(await db.invoices.count() + await db.customers.count() + await db.businessProfile.count() + await db.catalog.count()).toBe(0);
+    expect(store.has('appLock')).toBe(false);
+    expect(store.has('lastBackupAt')).toBe(false);
+
+    await restoreAllData(parseBackup(backup).data);
+    expect((await db.invoices.get(invoice.id!))?.invoiceNumber).toBe('INV-001');
+    vi.unstubAllGlobals();
   });
 });
 

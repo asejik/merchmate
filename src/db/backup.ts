@@ -1,5 +1,6 @@
 import { db } from './index';
 import type { BackupData } from '../lib/backup';
+import { clearLock } from '../lib/appLock';
 
 const LAST_BACKUP_KEY = 'lastBackupAt';
 export const BACKUP_REMINDER_DAYS = 14;
@@ -23,6 +24,22 @@ export async function restoreAllData(data: BackupData): Promise<void> {
     await db.invoices.bulkPut(data.invoices);
     await db.catalog.bulkPut(data.catalog);
   });
+}
+
+/**
+ * Deletes everything on this device, including the app lock. The last resort when the PIN and the
+ * recovery code are both lost: the data is gone, so restore it from a backup file afterwards.
+ */
+export async function eraseAllData(): Promise<void> {
+  await db.transaction('rw', [db.businessProfile, db.customers, db.invoices, db.catalog], async () => {
+    await Promise.all([db.businessProfile.clear(), db.customers.clear(), db.invoices.clear(), db.catalog.clear()]);
+  });
+  clearLock();
+  try {
+    localStorage.removeItem(LAST_BACKUP_KEY);
+  } catch {
+    // storage unavailable: nothing to remove
+  }
 }
 
 // Per-device reminder only, so localStorage is fine; it is not part of the data.
