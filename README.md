@@ -119,6 +119,7 @@ Before pushing a change, run `npm run typecheck && npm run lint && npm test && n
 
 ```
 public/                 Static files: icons, privacy.html, terms.html
+vercel.json             Vercel build settings
 docs/
   audits/               Audit reports (production readiness, and others as they are run)
   screenshots/          Images used in this README
@@ -158,7 +159,7 @@ The app is a static site hosted on [Vercel](https://vercel.com).
 
 - **Live URL:** <https://invoice-aso-oke.vercel.app/>
 - **Releases:** pushing to `main` deploys automatically.
-- **Build settings:** Vercel's defaults for a Vite project are right: build command `npm run build`, output directory `dist`. No environment variables are needed.
+- **Build settings:** recorded in [`vercel.json`](vercel.json) (framework Vite, build command `npm run build`, output directory `dist`), so they do not depend on the dashboard. No environment variables are needed.
 - **Roll back a bad release:** in the Vercel dashboard open *Deployments*, pick the last good one, and choose *Promote to Production* (or revert the commit and push). People using the installed app receive the older version through the normal *Update* prompt.
 - **Schema caution:** a release that raises the Dexie schema version cannot be undone by rolling back, because older code cannot open a newer database. The app shows a clear "Can't open your data" screen in that case, but treat schema bumps as one-way.
 - **Custom domain:** add it in Vercel under *Settings → Domains* and follow the DNS instructions. HTTPS certificates are issued automatically.
@@ -206,4 +207,4 @@ Audit reports are kept in [`docs/audits/`](docs/audits/). The first is the [prod
 
 ## License
 
-No open-source license has been added yet, so all rights are reserved by the author. Contact <info@asejik.com> if you would like to use or contribute to the code.
+Copyright (c) 2026 asejik. All rights reserved. The code is proprietary: see [`LICENSE`](LICENSE). Contact <info@asejik.com> to ask for permission to use it.
