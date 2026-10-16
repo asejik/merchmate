@@ -7,6 +7,7 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   fullyParallel: true,
   workers: process.env.CI ? 2 : 3,
+  retries: process.env.CI ? 1 : 0, // a retry on CI shows up as "flaky" in the report rather than hiding
   reporter: [['list']],
   use: {
     baseURL: 'http://localhost:4173',
