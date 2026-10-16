@@ -20,11 +20,11 @@ export interface StatementGroup {
   overdue: number;
 }
 
-/** A client's invoices (quotes excluded), oldest first, grouped per currency: amounts in different currencies are never added together. */
+/** A client's invoices (quotes and voided invoices excluded), oldest first, grouped per currency: amounts in different currencies are never added together. */
 export function buildStatement(invoices: Invoice[], today: string = todayInputValue()): StatementGroup[] {
   const groups = new Map<CurrencyCode, StatementGroup>();
   const sorted = invoices
-    .filter(inv => !isQuote(inv))
+    .filter(inv => !isQuote(inv) && !inv.voidedAt)
     .sort((a, b) => new Date(a.dateIssued).getTime() - new Date(b.dateIssued).getTime());
 
   for (const inv of sorted) {

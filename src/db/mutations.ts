@@ -1,6 +1,6 @@
 import { db } from './index';
 import type { DocumentKind, Invoice } from '../types';
-import { applyPayment, composeInvoice, confirmPayment, removeUnconfirmedPayment, type InvoiceDraft } from '../lib/invoice';
+import { applyPayment, composeInvoice, confirmPayment, getConfirmedPayments, getUnconfirmedAmount, isQuote, removeUnconfirmedPayment, type InvoiceDraft } from '../lib/invoice';
 import { learnFromItems } from '../lib/catalog';
 
 type PaymentChanges = Pick<Invoice, 'depositAmount' | 'payments' | 'status' | 'updatedAt'>;
@@ -33,13 +33,38 @@ export const discardTransfer = (invoiceId: string, paymentId: string) =>
 /**
  * Deletes an invoice or quote. A quote that was converted into it becomes open again,
  * instead of pointing at an invoice that no longer exists.
+ * An invoice with confirmed payments is never deleted (receipts were issued against it): void it.
+ * Returns false when it was kept for that reason.
  */
-export async function deleteInvoice(invoiceId: string): Promise<void> {
-  await db.transaction('rw', db.invoices, async () => {
+export async function deleteInvoice(invoiceId: string): Promise<boolean> {
+  return db.transaction('rw', db.invoices, async () => {
+    const doc = await db.invoices.get(invoiceId);
+    if (doc && getConfirmedPayments(doc).length > 0) return false;
     await db.invoices.delete(invoiceId);
-    await db.invoices.filter(doc => doc.convertedInvoiceId === invoiceId)
-      .modify(doc => { delete doc.convertedInvoiceId; doc.updatedAt = new Date(); });
+    await db.invoices.filter(other => other.convertedInvoiceId === invoiceId)
+      .modify(other => { delete other.convertedInvoiceId; other.updatedAt = new Date(); });
+    return true;
   });
+}
+
+export type VoidResult = 'voided' | 'unconfirmed-transfers' | 'not-an-invoice';
+
+/**
+ * Cancels an invoice but keeps it, its payments and its receipts on record. Transfers still
+ * awaiting confirmation must be confirmed or removed first, so no unresolved money is left behind.
+ */
+export async function voidInvoice(invoiceId: string): Promise<VoidResult> {
+  return db.transaction('rw', db.invoices, async () => {
+    const doc = await db.invoices.get(invoiceId);
+    if (!doc || isQuote(doc)) return 'not-an-invoice';
+    if (getUnconfirmedAmount(doc) > 0) return 'unconfirmed-transfers';
+    await db.invoices.update(invoiceId, { voidedAt: new Date(), updatedAt: new Date() });
+    return 'voided';
+  });
+}
+
+export async function reinstateInvoice(invoiceId: string): Promise<void> {
+  await db.invoices.update(invoiceId, { voidedAt: undefined, updatedAt: new Date() });
 }
 
 /**

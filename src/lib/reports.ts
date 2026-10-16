@@ -41,7 +41,7 @@ export function topClients(invoices: Invoice[], customers: Customer[], currency:
   const names = new Map(customers.map(c => [c.id, c.name]));
   const byClient = new Map<string, ClientRank>();
   for (const inv of invoices) {
-    if (isQuote(inv) || inv.currency !== currency) continue;
+    if (isQuote(inv) || inv.voidedAt || inv.currency !== currency) continue;
     const rank = byClient.get(inv.customerId) ?? {
       customerId: inv.customerId, name: names.get(inv.customerId) ?? 'Unknown', invoiced: 0, outstanding: 0, count: 0,
     };

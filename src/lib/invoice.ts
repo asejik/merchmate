@@ -58,7 +58,13 @@ export function deriveStatus(grandTotal: number, amountPaid: number): InvoiceSta
   return 'pending';
 }
 
-export function getBalance(invoice: Pick<Invoice, 'grandTotal' | 'depositAmount'>): number {
+export function isVoid(invoice: Pick<Invoice, 'voidedAt'>): boolean {
+  return !!invoice.voidedAt;
+}
+
+/** What the client still owes. A voided invoice owes nothing. */
+export function getBalance(invoice: Pick<Invoice, 'grandTotal' | 'depositAmount'> & Partial<Pick<Invoice, 'voidedAt'>>): number {
+  if (invoice.voidedAt) return 0;
   return Math.max(0, round2(invoice.grandTotal - invoice.depositAmount));
 }
 
@@ -198,7 +204,7 @@ export function daysBetween(fromInput: string, toInput: string): number {
   return Math.round((new Date(toInput).getTime() - new Date(fromInput).getTime()) / 86_400_000);
 }
 
-export type DisplayStatus = InvoiceStatus | 'overdue' | 'open' | 'expired' | 'converted';
+export type DisplayStatus = InvoiceStatus | 'overdue' | 'open' | 'expired' | 'converted' | 'void';
 
 export const QUOTE_PREFIX = 'QUO-';
 
@@ -210,11 +216,11 @@ export function kindOf(invoice: Pick<Invoice, 'kind'>): DocumentKind {
   return invoice.kind ?? 'invoice';
 }
 
-type OverdueInput = Pick<Invoice, 'status' | 'dueDate' | 'kind'> & Partial<Pick<Invoice, 'paymentPlan' | 'grandTotal' | 'depositAmount'>>;
+type OverdueInput = Pick<Invoice, 'status' | 'dueDate' | 'kind'> & Partial<Pick<Invoice, 'paymentPlan' | 'grandTotal' | 'depositAmount' | 'voidedAt'>>;
 
 /** Past the due date, or an instalment of its payment plan was missed. */
 export function isOverdue(invoice: OverdueInput, today: string = todayInputValue()): boolean {
-  if (isQuote(invoice) || invoice.status === 'paid') return false;
+  if (isQuote(invoice) || invoice.status === 'paid' || invoice.voidedAt) return false;
   if (invoice.dueDate && toDateInputValue(invoice.dueDate) < today) return true;
   return getPlanOverdueAmount(invoice, today) > 0;
 }
@@ -225,6 +231,7 @@ export function getDisplayStatus(invoice: OverdueInput & Pick<Invoice, 'converte
     if (invoice.convertedInvoiceId) return 'converted';
     return invoice.dueDate && toDateInputValue(invoice.dueDate) < today ? 'expired' : 'open';
   }
+  if (invoice.voidedAt) return 'void';
   return isOverdue(invoice, today) ? 'overdue' : invoice.status;
 }
 
@@ -296,6 +303,7 @@ export function nextInstallment(invoice: Partial<Pick<Invoice, 'paymentPlan' | '
  * (or else the next one); without a plan, the whole balance.
  */
 export function getAmountToRequest(invoice: Invoice, today: string = todayInputValue()): number {
+  if (invoice.voidedAt) return 0;
   if (!invoice.paymentPlan?.length) return getBalance(invoice);
   const statuses = getPlanStatus(invoice, today);
   const dueNow = round2(statuses.filter(s => s.state === 'overdue' || s.state === 'due-today').reduce((sum, s) => sum + s.remaining, 0));

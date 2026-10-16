@@ -20,7 +20,7 @@ export interface FollowUp {
 const MESSAGE_REASONS: FollowUpReason[] = ['ready', 'overdue'];
 
 export function followUpReasons(invoice: Invoice, today: string = todayInputValue()): FollowUpReason[] {
-  if (isQuote(invoice)) return [];
+  if (isQuote(invoice) || invoice.voidedAt) return [];
   const reasons: FollowUpReason[] = [];
   if (getUnconfirmedAmount(invoice) > 0) reasons.push('unconfirmed');
   // A paid order that is ready still needs the client told

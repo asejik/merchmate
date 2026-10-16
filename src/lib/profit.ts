@@ -30,7 +30,7 @@ export interface PeriodProfit extends JobProfit {
 /** Profit on invoices issued in the current calendar month, in one currency. */
 export function monthProfit(invoices: Invoice[], currency: CurrencyCode, today: string = todayInputValue()): PeriodProfit {
   const month = today.slice(0, 7);
-  const inMonth = invoices.filter(inv => !isQuote(inv) && inv.currency === currency && toDateInputValue(inv.dateIssued).slice(0, 7) === month);
+  const inMonth = invoices.filter(inv => !isQuote(inv) && !inv.voidedAt && inv.currency === currency && toDateInputValue(inv.dateIssued).slice(0, 7) === month);
   const known = inMonth.map(getJobProfit).filter((p): p is JobProfit => p !== null);
   const revenue = round2(known.reduce((sum, p) => sum + p.revenue, 0));
   const cost = round2(known.reduce((sum, p) => sum + p.cost, 0));

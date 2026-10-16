@@ -18,11 +18,11 @@ export function nextStage(stage: OrderStage): OrderStage | null {
 }
 
 /** A tracked invoice whose goods have not been handed over yet. */
-export function isOpenOrder(invoice: Pick<Invoice, 'kind' | 'orderStage'>): boolean {
-  return !isQuote(invoice) && (invoice.orderStage === 'in_progress' || invoice.orderStage === 'ready');
+export function isOpenOrder(invoice: Pick<Invoice, 'kind' | 'orderStage' | 'voidedAt'>): boolean {
+  return !isQuote(invoice) && !invoice.voidedAt && (invoice.orderStage === 'in_progress' || invoice.orderStage === 'ready');
 }
 
 /** Delivery date has passed but the order is not delivered. */
-export function isDeliveryLate(invoice: Pick<Invoice, 'kind' | 'orderStage' | 'deliveryDate'>, today: string = todayInputValue()): boolean {
+export function isDeliveryLate(invoice: Pick<Invoice, 'kind' | 'orderStage' | 'deliveryDate' | 'voidedAt'>, today: string = todayInputValue()): boolean {
   return isOpenOrder(invoice) && !!invoice.deliveryDate && toDateInputValue(invoice.deliveryDate) < today;
 }

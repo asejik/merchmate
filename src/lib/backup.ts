@@ -44,6 +44,7 @@ const invoiceSchema = z.object({
   createdAt: isoDate.optional(),
   updatedAt: isoDate,
   lastReminderAt: isoDate.optional(),
+  voidedAt: isoDate.optional(),
   deliveryDate: isoDate.optional(),
   paymentPlan: z.array(z.object({ dueDate: isoDate.optional() }).passthrough()).optional(),
 }).passthrough();

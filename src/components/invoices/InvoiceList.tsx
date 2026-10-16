@@ -1,14 +1,14 @@
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
-import { confirmTransfer, deleteInvoice, discardTransfer, recordPayment } from '../../db/mutations';
+import { confirmTransfer, deleteInvoice, discardTransfer, recordPayment, reinstateInvoice, voidInvoice } from '../../db/mutations';
 import { GlassCard } from '../ui/GlassCard';
-import { FileText, Download, Share2, CreditCard, History, Search, MoreVertical, Pencil, Copy, Trash2, MessageCircle, Receipt, FileCheck2, Plus, Check, ChevronRight, X, ShieldAlert } from 'lucide-react';
+import { FileText, Download, Share2, CreditCard, History, Search, MoreVertical, Pencil, Copy, Trash2, MessageCircle, Receipt, FileCheck2, Plus, Check, ChevronRight, X, ShieldAlert, Ban, Undo2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { PaymentModal } from './PaymentModal';
 import type { BusinessProfile, Customer, Invoice, ListView, OrderStage } from '../../types';
 import { formatMoney } from '../../lib/currency';
-import { getBalance, nextInstallment, getDisplayStatus, getPaymentHistory, getReceiptInfo, getUnconfirmedAmount, isQuote, todayInputValue, type DisplayStatus } from '../../lib/invoice';
+import { getBalance, getConfirmedPayments, nextInstallment, getDisplayStatus, getPaymentHistory, getReceiptInfo, getUnconfirmedAmount, isQuote, todayInputValue, type DisplayStatus } from '../../lib/invoice';
 import { renderInvoicePdf, renderReceiptPdf } from '../../lib/pdf';
 import { downloadBlob, type ShareFile } from '../../lib/share';
 import { ShareModal, type ShareState } from '../ui/ShareModal';
@@ -56,7 +56,7 @@ const STATUS_STYLES: Record<DisplayStatus, string> = {
   partial: 'text-orange-400 bg-orange-400/10 border-orange-400/20',
   overdue: 'text-red-400 bg-red-400/10 border-red-400/20',
   pending: 'text-slate-400 bg-slate-400/10 border-slate-400/20',
-  draft: 'text-slate-400 bg-slate-400/10 border-slate-400/20',
+  void: 'text-slate-500 bg-slate-500/10 border-slate-500/20 line-through',
   open: 'text-sky-400 bg-sky-400/10 border-sky-400/20',
   expired: 'text-slate-500 bg-slate-500/10 border-slate-500/20',
   converted: 'text-green-400 bg-green-400/10 border-green-400/20',
@@ -65,7 +65,7 @@ const STATUS_STYLES: Record<DisplayStatus, string> = {
 function matchesFilter(row: InvoiceRow, filter: Filter): boolean {
   switch (filter) {
     case 'to-deliver': return isOpenOrder(row);
-    case 'unpaid': return row.status !== 'paid';
+    case 'unpaid': return row.status !== 'paid' && !row.voidedAt;
     case 'overdue': return row.displayStatus === 'overdue';
     case 'paid': return row.status === 'paid';
     default: return true;
@@ -294,14 +294,44 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
   const handleDelete = async (invoice: InvoiceRow) => {
     setMenuId(null);
     if (!invoice.id) return;
-    const paidNote = invoice.depositAmount > 0 ? `\n\nIts ${formatMoney(invoice.depositAmount, invoice.currency)} payment history will also be deleted.` : '';
     const docNoun = isQuote(invoice) ? 'quote' : 'invoice';
-    if (!confirm(`Delete ${docNoun} #${invoice.invoiceNumber} for ${invoice.customerName}? This cannot be undone.${paidNote}`)) return;
+    if (!confirm(`Delete ${docNoun} #${invoice.invoiceNumber} for ${invoice.customerName}? This cannot be undone.`)) return;
     try {
-      await deleteInvoice(invoice.id);
+      if (!await deleteInvoice(invoice.id)) {
+        alert(`${docNoun} #${invoice.invoiceNumber} has payments on record, so it can't be deleted. Use Void instead.`);
+      }
     } catch (err) {
       console.error(err);
       alert("Failed to delete invoice");
+    }
+  };
+
+  const handleVoid = async (invoice: InvoiceRow) => {
+    setMenuId(null);
+    if (!invoice.id) return;
+    if (!confirm(
+      `Void invoice #${invoice.invoiceNumber} for ${invoice.customerName}?\n\n` +
+      `It stays on record with its ${formatMoney(invoice.depositAmount, invoice.currency)} of payments and receipts, ` +
+      `but it no longer counts as money owed, and can't be edited or sent. You can reinstate it later.\n\n` +
+      `Money you already received is not refunded by this: handle any refund yourself.`
+    )) return;
+    try {
+      const result = await voidInvoice(invoice.id);
+      if (result === 'unconfirmed-transfers') alert("This invoice has transfers you haven't confirmed yet. Confirm them, or remove the ones that never arrived, then void it.");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to void invoice");
+    }
+  };
+
+  const handleReinstate = async (invoice: InvoiceRow) => {
+    setMenuId(null);
+    if (!invoice.id) return;
+    try {
+      await reinstateInvoice(invoice.id);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to reinstate invoice");
     }
   };
 
@@ -387,8 +417,10 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
           const isGenerating = generatingId === inv.id;
           const statusStyle = STATUS_STYLES[inv.displayStatus];
           const quote = isQuote(inv);
-          const unpaidInvoice = !quote && inv.status !== 'paid';
-          const orderReady = !quote && inv.orderStage === 'ready';
+          const voided = !!inv.voidedAt;
+          const unpaidInvoice = !quote && !voided && inv.status !== 'paid';
+          const hasConfirmedPayments = getConfirmedPayments(inv).length > 0;
+          const orderReady = !quote && !voided && inv.orderStage === 'ready';
           const showWhatsApp = unpaidInvoice || orderReady;
           const reminderUrl = showWhatsApp ? reminderLink(inv) : null;
           const upcomingStage = inv.orderStage ? nextStage(inv.orderStage) : null;
@@ -422,7 +454,7 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
                       <span className={`text-[10px] uppercase px-2 py-0.5 rounded border ${statusStyle}`}>
                         {inv.displayStatus}
                       </span>
-                      {inv.orderStage && !quote && (
+                      {inv.orderStage && !quote && !voided && (
                         <button
                           onClick={() => upcomingStage && setStage(inv, upcomingStage)}
                           disabled={!upcomingStage}
@@ -439,7 +471,7 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
                         </button>
                       )}
                       <span className="text-xs font-mono text-slate-300">
-                        {quote || inv.status === 'paid'
+                        {quote || voided || inv.status === 'paid'
                           ? formatMoney(inv.grandTotal, inv.currency)
                           : `Due: ${formatMoney(getBalance(inv), inv.currency)}`}
                       </span>
@@ -490,6 +522,7 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
                       <MessageCircle size={20} />
                     </span>
                   ))}
+                  {!voided && (<>
                   <button
                     onClick={() => handlePrepareShare(inv)}
                     disabled={isGenerating}
@@ -506,6 +539,7 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
                   <button onClick={() => handleDownload(inv)} disabled={isGenerating} className="p-2 hover:bg-white/10 rounded-lg text-indigo-400 transition-colors" title="Download PDF" aria-label="Download PDF">
                     <Download size={20} />
                   </button>
+                  </>)}
                   <div className="relative">
                     <button
                       onClick={(e) => {
@@ -527,13 +561,15 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
                               <FileCheck2 size={14} /> Convert to Invoice
                             </button>
                           )}
-                          <button role="menuitem" onClick={() => { setMenuId(null); onEdit(inv.id!); }} className="w-full flex items-center gap-2 px-3 py-2 text-slate-200 hover:bg-white/10">
-                            <Pencil size={14} /> Edit
-                          </button>
+                          {!voided && (
+                            <button role="menuitem" onClick={() => { setMenuId(null); onEdit(inv.id!); }} className="w-full flex items-center gap-2 px-3 py-2 text-slate-200 hover:bg-white/10">
+                              <Pencil size={14} /> Edit
+                            </button>
+                          )}
                           <button role="menuitem" onClick={() => { setMenuId(null); onDuplicate(inv.id!); }} className="w-full flex items-center gap-2 px-3 py-2 text-slate-200 hover:bg-white/10">
                             <Copy size={14} /> Duplicate
                           </button>
-                          {!quote && (
+                          {!quote && !voided && (
                             <div className="border-y border-white/10 my-1 py-1" role="group" aria-label="Order stage">
                               <p className="px-3 pt-1 pb-0.5 text-[10px] uppercase text-slate-500">Order</p>
                               {ORDER_STAGES.map(stage => (
@@ -549,9 +585,19 @@ export function InvoiceList({ view, onViewChange, onEdit, onDuplicate, onConvert
                               ))}
                             </div>
                           )}
-                          <button role="menuitem" onClick={() => handleDelete(inv)} className="w-full flex items-center gap-2 px-3 py-2 text-red-400 hover:bg-red-500/10">
-                            <Trash2 size={14} /> Delete
-                          </button>
+                          {voided ? (
+                            <button role="menuitem" onClick={() => handleReinstate(inv)} className="w-full flex items-center gap-2 px-3 py-2 text-green-300 hover:bg-white/10">
+                              <Undo2 size={14} /> Reinstate
+                            </button>
+                          ) : hasConfirmedPayments ? (
+                            <button role="menuitem" onClick={() => handleVoid(inv)} className="w-full flex items-center gap-2 px-3 py-2 text-red-400 hover:bg-red-500/10">
+                              <Ban size={14} /> Void
+                            </button>
+                          ) : (
+                            <button role="menuitem" onClick={() => handleDelete(inv)} className="w-full flex items-center gap-2 px-3 py-2 text-red-400 hover:bg-red-500/10">
+                              <Trash2 size={14} /> Delete
+                            </button>
+                          )}
                         </div>
                       </>
                     )}

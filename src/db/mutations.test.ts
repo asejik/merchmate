@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { db } from './index';
 import { exportAllData, restoreAllData } from './backup';
 import {
-  confirmTransfer, deleteCustomer, deleteInvoice, discardTransfer, DocumentGoneError, NumberInUseError, recordPayment, saveDocument,
+  confirmTransfer, deleteCustomer, deleteInvoice, discardTransfer, DocumentGoneError, NumberInUseError, recordPayment, reinstateInvoice, saveDocument, voidInvoice,
 } from './mutations';
 import { parseBackup, serializeBackup } from '../lib/backup';
 import { composeInvoice, getBalance, type InvoiceDraft } from '../lib/invoice';
@@ -127,6 +127,39 @@ describe('deletes keep records consistent', () => {
     await db.invoices.clear();
     expect(await deleteCustomer('c-1')).toBe(0);
     expect(await db.customers.get('c-1')).toBeUndefined();
+  });
+});
+
+describe('invoices with payments are voided, not deleted', () => {
+  it('refuses to delete an invoice with confirmed payments, but deletes one without', async () => {
+    const paid = await seedInvoice({ depositAmount: 2000 });
+    expect(await deleteInvoice(paid.id!)).toBe(false);
+    expect(await db.invoices.get(paid.id!)).toBeDefined();
+
+    const unpaid = await seedInvoice({ invoiceNumber: 'INV-002' });
+    expect(await deleteInvoice(unpaid.id!)).toBe(true);
+    expect(await db.invoices.get(unpaid.id!)).toBeUndefined();
+  });
+
+  it('voids and reinstates while keeping the payment history', async () => {
+    const invoice = await seedInvoice({ depositAmount: 2000 });
+    expect(await voidInvoice(invoice.id!)).toBe('voided');
+    const stored = (await db.invoices.get(invoice.id!))!;
+    expect(stored.voidedAt).toBeInstanceOf(Date);
+    expect(stored.payments).toHaveLength(1);
+
+    await reinstateInvoice(invoice.id!);
+    expect('voidedAt' in (await db.invoices.get(invoice.id!))!).toBe(false);
+  });
+
+  it('will not void while a transfer is unconfirmed, or void a quote', async () => {
+    const invoice = await seedInvoice();
+    await recordPayment(invoice.id!, 500, 'Transfer', true);
+    expect(await voidInvoice(invoice.id!)).toBe('unconfirmed-transfers');
+
+    const quote = composeInvoice(draft({ invoiceNumber: 'QUO-001' }), undefined, new Date(), 'quote');
+    await db.invoices.put(quote);
+    expect(await voidInvoice(quote.id!)).toBe('not-an-invoice');
   });
 });
 

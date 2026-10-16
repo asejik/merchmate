@@ -30,15 +30,17 @@ export function Dashboard({ onNavigate }: { onNavigate: (tab: AppTab) => void })
     // Quotes are estimates, not money owed
     const filtered = data.invoices.filter(inv => !isQuote(inv) && inv.currency === currency);
 
+    // Cash already received stays counted even if the invoice was later voided; nothing else does
     const collected = filtered.reduce((sum, inv) => sum + getAmountCollected(inv), 0);
-    const unconfirmed = filtered.reduce((sum, inv) => sum + getUnconfirmedAmount(inv), 0);
-    const pending = filtered.reduce((sum, inv) => sum + getBalance(inv), 0);
+    const live = filtered.filter(inv => !inv.voidedAt);
+    const unconfirmed = live.reduce((sum, inv) => sum + getUnconfirmedAmount(inv), 0);
+    const pending = live.reduce((sum, inv) => sum + getBalance(inv), 0);
     const today = todayInputValue();
-    const overdueInvoices = filtered.filter(inv => getDisplayStatus(inv, today) === 'overdue');
+    const overdueInvoices = live.filter(inv => getDisplayStatus(inv, today) === 'overdue');
     const overdue = overdueInvoices.reduce((sum, inv) => sum + getOverdueAmount(inv, today), 0);
 
     // Get 3 most recent invoices with customer names
-    const recent = [...filtered]
+    const recent = [...live]
       .sort((a, b) => new Date(b.dateIssued).getTime() - new Date(a.dateIssued).getTime())
       .slice(0, 3)
       .map(inv => {
@@ -46,7 +48,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (tab: AppTab) => void })
         return { ...inv, customerName: customer?.name || 'Unknown', displayStatus: getDisplayStatus(inv, today) };
       });
 
-    return { collected, unconfirmed, pending, overdue, overdueCount: overdueInvoices.length, count: filtered.length, recent };
+    return { collected, unconfirmed, pending, overdue, overdueCount: overdueInvoices.length, count: live.length, recent };
   }, [data, currency]);
 
   return (

@@ -1,6 +1,6 @@
 export type CurrencyCode = 'NGN' | 'USD' | 'GBP' | 'EUR';
 export type DiscountType = 'percentage' | 'fixed';
-export type InvoiceStatus = 'draft' | 'pending' | 'paid' | 'partial';
+export type InvoiceStatus = 'pending' | 'paid' | 'partial';
 export type DocumentKind = 'invoice' | 'quote';
 export type InvoiceTemplate = 'classic' | 'modern';
 export type DateFormat = 'dmy' | 'mdy' | 'ymd' | 'long';
@@ -12,7 +12,7 @@ export interface BusinessProfile {
   address: string;
   phone: string;
   email?: string;
-  logoUrl?: string; // We will store the Blob URL here temporarily
+  logoUrl?: string; // Data URL, so it works offline and inside PDFs
   ownerName?: string;
   bankName: string;
   accountNumber: string;
@@ -76,6 +76,9 @@ export interface Invoice {
   dueDate?: Date; // for quotes: valid until
   notes?: string;
   lastReminderAt?: Date;
+  // Invoices only. A cancelled invoice that has payments cannot be deleted (receipts were issued
+  // against it), so it is voided: kept on record, never counted as money owed.
+  voidedAt?: Date;
 
   // Private job costs (materials, labour, transport). Never shown to the client.
   costs?: JobCost[];
