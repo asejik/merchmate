@@ -5,6 +5,7 @@ import { GlassCard } from '../ui/GlassCard';
 import { TrendingUp, Clock, FileText, Wallet, AlertCircle, DatabaseBackup, ShieldAlert } from 'lucide-react';
 import { isBackupDue } from '../../db/backup';
 import { Reports } from './Reports';
+import { InstallHint } from '../ui/InstallHint';
 import { FollowUps } from './FollowUps';
 import type { AppTab, CurrencyCode } from '../../types';
 import { CURRENCY_CODES, formatMoney } from '../../lib/currency';
@@ -53,6 +54,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (tab: AppTab) => void })
 
   return (
     <div className="space-y-8 pb-28">
+      <InstallHint />
       {/* Header & Currency Toggle */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>

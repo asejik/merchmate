@@ -50,5 +50,7 @@ export default defineConfig({
   ],
   define: {
     global: 'window',
+    // Shown in the problem report so a bug can be matched to a release
+    __BUILD__: JSON.stringify(new Date().toISOString()),
   },
 });

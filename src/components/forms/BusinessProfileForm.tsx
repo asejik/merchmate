@@ -11,6 +11,8 @@ import type { BusinessProfile } from '../../types';
 import { DEFAULT_INVOICE_TERMS } from '../../lib/invoice';
 import { DEFAULT_COUNTRY_CODE } from '../../lib/whatsapp';
 import { BackupCard } from './BackupCard';
+import { DataSafetyCard } from './DataSafetyCard';
+import { ProblemReportCard } from './ProblemReportCard';
 import { CatalogCard } from './CatalogCard';
 import { DEFAULT_BRAND_COLOR } from '../../lib/color';
 
@@ -330,6 +332,8 @@ export function BusinessProfileForm() {
 
       <CatalogCard />
       <BackupCard />
+      <DataSafetyCard />
+      <ProblemReportCard />
     </div>
   );
 }
