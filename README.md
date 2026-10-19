@@ -179,7 +179,7 @@ rm -rf node_modules package-lock.json
 npm install
 ```
 
-**`typescript-eslint` will not install.** It is pinned to `~8.70` because the 8.71.0 tarballs were missing from npm.
+**`typescript-eslint` will not install.** Version 8.71.0 was briefly uninstallable (missing tarballs on npm). The project is on 8.71.2, which installs; if it ever fails again, pin `typescript-eslint` back to `~8.70` in `package.json` and reinstall.
 
 **The installed app shows old content.** New versions wait for you: tap *Update* when the banner appears, or close and reopen the app.
 

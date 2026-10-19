@@ -17,7 +17,7 @@ npm run test:e2e  # Playwright smoke tests of the built app in Chromium at 360px
 
 - `e2e/` holds 39 Playwright smoke tests in 8 files (first run, payments, sharing/PDF, backup/lock/erase, guard rails + axe accessibility, documents: edit/duplicate/convert, plans, costs, orders, filters; drafts; accessibility on every screen and keyboard behaviour). They run the real build with the production headers from `vercel.json` applied and fail on any console error, page error or CSP violation (`e2e/fixtures.ts`), so run them after any change to UI, PDF, headers, dependencies or the build tooling. Vitest ignores `e2e/`. First time: `npx playwright install chromium`.
 - Tests cover pure logic in `src/lib/` and the Dexie layer in `src/db/` (via `fake-indexeddb`, imported at the top of the test file; there is no DOM environment).
-- `typescript-eslint` is pinned to `~8.70` because 8.71.0's dependency tarballs were missing from npm.
+- `typescript-eslint` is on `~8.71.2`. 8.71.0 was briefly uninstallable (its dependency tarballs were missing from npm); 8.71.2 installs fine, so if it fails again, pin back to `~8.70`.
 - Toolchain (upgraded 2026-10-16): Vite 8 (Rolldown/Oxc: build options live under `rolldownOptions`, not `rollupOptions`), Vitest 5, `@vitejs/plugin-react` 6, `vite-plugin-pwa` 2. They need **Node >= 22.12** (`engines` in `package.json`; check Vercel's Node.js Version setting if a deploy fails on that). If `npm install` reports ERESOLVE after a version bump, delete `node_modules` and `package-lock.json` and reinstall. `npm audit` should show only the 6 low items from `vite-plugin-node-polyfills` (not shipped to users).
 - WSL: if `npm` resolves to `/mnt/c/...` (Windows) it fails on WSL paths; put the nvm Node first in `PATH`.
 
