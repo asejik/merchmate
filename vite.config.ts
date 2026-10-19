@@ -3,6 +3,21 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { nodePolyfills } from 'vite-plugin-node-polyfills'; // Import 1
 import { VitePWA } from 'vite-plugin-pwa';                 // Import 2
+import { execSync } from 'node:child_process';
+
+/**
+ * Names this version of the code for problem reports. It comes from the source files, not the clock:
+ * a build time would change the main bundle on every deploy, so every installed app would download
+ * it again (and offer an update) even for a docs-only commit.
+ */
+function sourceId(): string {
+  try {
+    const git = (command: string) => execSync(command, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+    return git('git status --porcelain -- src') === '' ? git('git rev-parse --short=8 HEAD:src') : 'local';
+  } catch {
+    return 'unknown'; // no git here (a source download): the report still works
+  }
+}
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -55,6 +70,6 @@ export default defineConfig({
   define: {
     global: 'window',
     // Shown in the problem report so a bug can be matched to a release
-    __BUILD__: JSON.stringify(new Date().toISOString()),
+    __BUILD__: JSON.stringify(sourceId()),
   },
 });

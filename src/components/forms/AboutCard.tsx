@@ -1,6 +1,5 @@
 import { LifeBuoy, Mail, FileText, ShieldCheck } from 'lucide-react';
 import { GlassCard } from '../ui/GlassCard';
-import { formatDate } from '../../lib/dates';
 
 const SUPPORT_EMAIL = 'info@asejik.com';
 const SUPPORT_LINK = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('MerchMate support')}`;
@@ -21,7 +20,7 @@ export function AboutCard() {
         <a href="/privacy.html" className={linkClass}><ShieldCheck size={16} /> Privacy Policy</a>
         <a href="/terms.html" className={linkClass}><FileText size={16} /> Terms of Use</a>
       </nav>
-      <p className="mt-3 text-[11px] text-slate-600">MerchMate · build {formatDate(__BUILD__, 'long', { moment: true })}</p>
+      <p className="mt-3 text-[11px] text-slate-600">MerchMate · version {__BUILD__}</p>
     </GlassCard>
   );
 }

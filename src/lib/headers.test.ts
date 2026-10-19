@@ -40,3 +40,18 @@ describe('security headers (vercel.json)', () => {
     }
   });
 });
+
+describe('cache headers (vercel.json)', () => {
+  const rule = (source: string) => config.headers.find(h => h.source === source)?.headers.find(h => h.key === 'Cache-Control')?.value;
+
+  it('lets the browser keep the hashed build files for a year, without asking again', () => {
+    // Every file in /assets has its content hash in its name, so a changed file is a new address
+    expect(rule('/assets/(.*)')).toBe('public, max-age=31536000, immutable');
+  });
+
+  it('never caches the pages or the service worker that decide which build to load', () => {
+    for (const source of ['/(.*)', '/sw.js', '/index.html']) {
+      expect(rule(source) ?? '', source).not.toMatch(/immutable|max-age=[1-9]/);
+    }
+  });
+});
