@@ -98,7 +98,7 @@ npm run dev
 
 The dev server runs at <http://localhost:5173>. The PWA service worker is disabled in dev to avoid caching surprises; use `npm run build && npm run preview` to test installing and offline behaviour.
 
-There are no environment variables to set: the app has no backend. (`.env.example` lists the Supabase variables reserved for the planned sync feature; nothing reads them yet.)
+There are no environment variables to set: the app has no backend. (A local, untracked `.env.example` lists the Supabase variables reserved for the planned sync feature; nothing reads them yet.)
 
 > **WSL users:** if `npm` resolves to a Windows install under `/mnt/c/...` it fails on WSL paths. Put the Node installed in WSL (for example via nvm) first in your `PATH`.
 

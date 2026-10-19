@@ -26,7 +26,6 @@ dist-ssr
 # Security - CRITICAL
 .env
 .env.*
-!.env.example
 
 # Playwright
 test-results

@@ -58,7 +58,7 @@ MerchMate: offline-first invoicing PWA for small businesses (originally built fo
 - **Reports / statements / CSV**: pure builders in `src/lib/reports.ts` (monthly cash by *payment* date, top clients), `src/lib/statement.ts` (per-currency groups: never add amounts across currencies) and `src/lib/csv.ts` (formula-injection escaping, UTF-8 BOM). The dashboard chart is plain divs (no chart lib) using `bg-indigo-500`, which passed the dataviz palette validator on the dark surface; `indigo-400` fails its lightness band.
 - **PDF theming**: `pdfTheme(business)` in `src/lib/color.ts` gives accent / on-accent text / tint from `brandColor`; `invoiceTemplate: 'modern'` draws a brand-colour header band. Bold text must use `fontFamily: 'Helvetica-Bold'`: react-pdf's built-in Helvetica ignores `fontWeight`.
 - **Previewing PDFs without a browser**: a throwaway Vitest file can call `renderToFile` from `@react-pdf/renderer` (the Node build resolves under Vitest) and the resulting PDF can be inspected directly.
-- **isSynced**: invoices carry an `isSynced` flag for a planned remote sync (Supabase env vars in `.env.example`), but no sync code exists yet.
+- **isSynced**: invoices carry an `isSynced` flag for a planned remote sync (Supabase env vars: the user keeps a local, git-ignored `.env.example`), but no sync code exists yet.
 
 ## Constraints
 
