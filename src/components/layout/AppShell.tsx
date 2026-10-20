@@ -21,7 +21,7 @@ const SCREEN_TITLES: Record<AppTab, string> = {
 };
 
 /** Screens already in the new design. The others are still written for a dark surface (see index.css). */
-const REDESIGNED: AppTab[] = ['dashboard'];
+const REDESIGNED: AppTab[] = ['dashboard', 'invoices'];
 
 const NAV_ITEMS: { id: AppTab; label: string; icon: LucideIcon; isPrimary?: boolean }[] = [
   { id: 'dashboard', label: 'Home', icon: Home },

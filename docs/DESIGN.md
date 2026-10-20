@@ -63,6 +63,7 @@ Cards `rounded-2xl` (16px) with `border-line` and `shadow-card`. Controls and bu
 - `Card`: the flat surface. `Chip` (`neutral | primary | success | warning | danger`): small status label. `Logo`: mark (and optional wordmark) from tokens.
 - `BUTTON_PRIMARY | BUTTON_SECONDARY | BUTTON_GHOST` in `styles.ts`: 44px, 12px radius.
 - Notices (`InstallHint`, `ContinueDraft`, `GetStarted`, `BackupReminder`): `primary-tint` for information, `warning-tint` for "do this today".
+- `FIELD_CLASS`, `FIELD_LABEL`, `OVERLAY_CLASS` (`styles.ts`): fields and window backdrop. `INPUT_CLASS`/`LABEL_CLASS` are the old dark pair for the screens not yet moved. Status words and tones for invoices: `STATUS_LABELS`/`STATUS_TONES` in `invoices/list/invoiceRow.ts`; tone colours in `ui/chipTones.ts`.
 - Navigation: phone bottom bar (surface, hairline top, saffron marker slides to the active tab, "New" is the primary pill); desktop 256px sidebar with logo and labelled items.
 - Legacy: `GlassCard` and the dark classes still exist for screens not yet moved. They sit inside `data-surface="dark"` (see below).
 
@@ -81,8 +82,8 @@ Planned with the invoice screens: a PAID stamp that presses onto an invoice once
 Plain, sentence case, verbs first, no "please", no exclamation marks. "Owed to you", not "Pending / Outstanding". Errors say what happened and what to do (`failed()` in `lib/messages.ts`).
 
 ## Migration status (as of 2026-10-20)
-Moved to the new design: app shell (nav, header, logo), Dashboard (hero, Today list, tiles, recent activity, reports, notices), icons and favicon.
-Not yet moved: Invoices list, New invoice form, Clients, Settings, dialogs (`ui/Dialog*`, `PaymentModal`, `ShareModal`), lock screen, fatal error screen, update banner. They keep their dark styling inside `data-surface="dark"`, so the app works while the move happens one screen at a time. When the last one moves, delete the `[data-surface='dark']` block in `index.css`, the attribute in `AppShell`, `LockScreen`, `FatalError`, and `GlassCard`.
+Moved to the new design: app shell (nav, header, logo), Dashboard (hero, Today list, tiles, recent activity, reports, notices), Invoices list (cards, status chips, actions menu), the payment window and share window, icons and favicon.
+Not yet moved: New invoice form, Clients, Settings, the confirm/alert dialogs (`DialogProvider`), lock screen, fatal error screen, update banner. They keep their dark styling inside `data-surface="dark"`, so the app works while the move happens one screen at a time. When the last one moves, delete the `[data-surface='dark']` block in `index.css`, the attribute in `AppShell`, `LockScreen`, `FatalError`, and `GlassCard`.
 
 ## Known gaps
 - Hausa hooked letters have no glyph in the font (fallback only).

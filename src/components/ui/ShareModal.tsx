@@ -1,6 +1,7 @@
 import { MessageCircle, Send, Share2 } from 'lucide-react';
 import { clsx } from 'clsx';
-import { GlassCard } from './GlassCard';
+import { Card } from './Card';
+import { BUTTON_PRIMARY, BUTTON_SECONDARY, BUTTON_GHOST, OVERLAY_CLASS } from './styles';
 import { useDialog } from './useDialog';
 import { shareOrDownload, type ShareFile } from '../../lib/share';
 
@@ -33,26 +34,21 @@ export function ShareModal({ state, onClose }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="share-heading" ref={dialogRef}>
-      <GlassCard className="w-full max-w-sm p-6 text-center">
-        <div className="mx-auto w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center mb-4 text-green-400">
-          <Share2 size={24} />
+    <div className={OVERLAY_CLASS} role="dialog" aria-modal="true" aria-labelledby="share-heading" ref={dialogRef}>
+      <Card className="w-full max-w-sm p-6 text-center shadow-raised">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary-tint text-primary">
+          <Share2 size={24} aria-hidden="true" />
         </div>
-        <h2 id="share-heading" className="text-xl font-bold text-white mb-2">{state.heading}</h2>
-        <p className="text-slate-400 text-sm mb-6">{state.description}</p>
+        <h2 id="share-heading" className="mb-2 text-xl font-bold text-ink">{state.heading}</h2>
+        <p className="mb-6 text-sm text-muted">{state.description}</p>
         <div className="space-y-3">
           {state.files.map((item, i) => (
             <button
               key={item.file.name}
               onClick={() => share(item)}
-              className={clsx(
-                "w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold active:scale-95 transition-all",
-                i === 0
-                  ? "bg-green-700 hover:bg-green-600 text-white shadow-lg shadow-green-500/20"
-                  : "bg-white/10 hover:bg-white/20 text-white"
-              )}
+              className={clsx(i === 0 ? BUTTON_PRIMARY : BUTTON_SECONDARY, 'w-full')}
             >
-              <Send size={18} />
+              <Send size={18} aria-hidden="true" />
               Share {item.label}
             </button>
           ))}
@@ -63,17 +59,17 @@ export function ShareModal({ state, onClose }: Props) {
               target="_blank"
               rel="noopener noreferrer"
               onClick={onClose}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold bg-white/10 hover:bg-white/20 text-white active:scale-95 transition-all"
+              className={clsx(BUTTON_SECONDARY, 'w-full')}
             >
-              <MessageCircle size={18} />
+              <MessageCircle size={18} aria-hidden="true" />
               {link.label}
             </a>
           ))}
-          <button onClick={onClose} className="text-slate-500 hover:text-white text-sm py-2">
+          <button onClick={onClose} className={clsx(BUTTON_GHOST, 'w-full')}>
             Done
           </button>
         </div>
-      </GlassCard>
+      </Card>
     </div>
   );
 }

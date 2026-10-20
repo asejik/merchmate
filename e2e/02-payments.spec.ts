@@ -22,7 +22,7 @@ test.describe('payments', () => {
 
     await expect(page.getByText('Due: ₦30,000.00')).toBeVisible();
     await expect(page.getByText('+₦20,000.00')).toBeVisible();
-    await expect(page.getByText('partial', { exact: true })).toBeVisible();
+    await expect(page.getByText('Partly paid', { exact: true })).toBeVisible();
   });
 
   test('a transfer you have not checked is held aside until you confirm it', async ({ page }) => {
@@ -39,7 +39,7 @@ test.describe('payments', () => {
     await page.getByRole('button', { name: /Mark ₦50,000.00 transfer as received/ }).click();
     await expect(page.getByRole('dialog', { name: 'Payment Recorded' })).toBeVisible({ timeout: 30_000 });
     await page.keyboard.press('Escape');
-    await expect(page.getByText('paid', { exact: true })).toBeVisible();
+    await expect(page.locator('span').getByText('Paid', { exact: true })).toBeVisible();
     await expect(page.getByText('unconfirmed')).toHaveCount(0);
   });
 
@@ -58,7 +58,7 @@ test.describe('payments', () => {
     const confirmVoid = page.getByRole('alertdialog', { name: 'Void this invoice?' });
     await expect(confirmVoid).toContainText('handle any refund yourself');
     await confirmVoid.getByRole('button', { name: 'Void invoice' }).click();
-    await expect(page.getByText('void', { exact: true })).toBeVisible();
+    await expect(page.getByText('Void', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Record payment' })).toHaveCount(0);
 
     await page.getByRole('button', { name: 'More actions' }).click();

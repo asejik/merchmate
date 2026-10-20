@@ -94,7 +94,7 @@ test.describe('documents', () => {
     await expect(page.getByText('#INV-001')).toBeVisible();
     await expect(page.getByText('Due: ₦80,000.00')).toBeVisible();
     await page.getByRole('tab', { name: 'quotes' }).click();
-    await expect(page.getByText('converted', { exact: true })).toBeVisible();
+    await expect(page.getByText('Converted', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'More actions' }).click();
     await expect(page.getByRole('menuitem', { name: 'Convert to Invoice' })).toHaveCount(0);
   });
