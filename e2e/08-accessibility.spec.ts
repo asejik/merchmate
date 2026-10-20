@@ -88,7 +88,7 @@ for (const [label, viewport] of [['phone 360px', { width: 360, height: 740 }], [
   });
 }
 
-test('the redesigned dashboard passes the scan in dark mode too', async ({ app, page }) => {
+test('every screen passes the scan in dark mode too', async ({ app, page }) => {
   test.setTimeout(120_000);
   await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: 'dark' });
   await app.open();
@@ -101,6 +101,11 @@ test('the redesigned dashboard passes the scan in dark mode too', async ({ app, 
   await expect(page.getByText('Recent activity')).toBeVisible();
   await expect(page.getByRole('region', { name: 'Backup reminder' })).toBeVisible();
   expect(await app.accessibilityViolations()).toEqual([]);
+  for (const [tab, ready] of [['Invoices', '#INV-002'], ['New', 'Invoice #'], ['Clients', 'Add Client'], ['Settings', 'Settings']] as const) {
+    await app.go(tab);
+    await expect(page.getByText(ready).first()).toBeVisible();
+    expect(await app.accessibilityViolations(), tab).toEqual([]);
+  }
 });
 
 test('the page can be zoomed and reflowed to 320px without sideways scrolling', async ({ app, page }) => {

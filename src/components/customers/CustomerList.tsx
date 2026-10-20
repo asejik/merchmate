@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
-import { GlassCard } from '../ui/GlassCard';
+import { Card } from '../ui/Card';
 import { useDialogs } from '../ui/dialogContext';
 import { CustomerForm } from './CustomerForm';
 import { Search, Plus, User, MapPin, Globe, ScrollText, Loader2 } from 'lucide-react';
@@ -84,12 +84,12 @@ export function CustomerList() {
       {/* Header & Actions */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white">Clients</h1>
-          <p className="text-slate-400 text-sm">Manage your customer database.</p>
+          <h1 className="text-2xl font-extrabold tracking-tight text-ink">Clients</h1>
+          <p className="text-muted text-sm">Manage your customer database.</p>
         </div>
         <button
           onClick={() => setIsCreating(true)}
-          className="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl font-medium transition-all shadow-lg shadow-indigo-500/20"
+          className="flex items-center justify-center gap-2 bg-primary hover:bg-primary-hover text-on-primary px-4 py-2 rounded-xl font-medium transition-all"
         >
           <Plus size={20} />
           Add Client
@@ -98,13 +98,13 @@ export function CustomerList() {
 
       {/* Search Bar */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={20} />
         <input
           type="text"
           placeholder="Search by name, phone or email..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none focus:border-indigo-500 transition-all"
+          className="w-full min-h-11 rounded-xl border border-line-strong bg-surface pl-10 pr-4 py-3 text-base text-ink focus:outline-none focus:border-primary transition-all"
         />
       </div>
 
@@ -119,7 +119,7 @@ export function CustomerList() {
               exit={{ opacity: 0, scale: 0.95 }}
               layout
             >
-              <GlassCard className="relative p-4 hover:bg-white/10 transition-colors cursor-pointer group">
+              <Card className="relative p-4 hover:bg-primary-tint transition-colors cursor-pointer group">
                 <div className="flex items-start justify-between">
                   {/* The button's invisible overlay makes the whole card open the editor, while the
                       statement button below stays a separate, sibling control (no nesting) */}
@@ -128,24 +128,24 @@ export function CustomerList() {
                     onClick={() => setEditing(customer)}
                     className="flex items-center gap-3 text-left after:absolute after:inset-0 after:content-['']"
                   >
-                    <span className="h-10 w-10 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-lg" aria-hidden="true">
+                    <span className="h-10 w-10 rounded-full bg-primary-tint flex items-center justify-center text-primary font-bold text-lg" aria-hidden="true">
                       {customer.name.charAt(0)}
                     </span>
                     <span>
-                      <span className="block text-white font-medium group-hover:text-indigo-400 transition-colors">{customer.name}</span>
-                      <span className="block text-slate-500 text-xs">{customer.phone}</span>
+                      <span className="block text-ink font-medium group-hover:text-primary-hover transition-colors">{customer.name}</span>
+                      <span className="block text-muted text-xs">{customer.phone}</span>
                     </span>
                   </button>
                   <div className="relative z-10 flex items-center gap-1">
                     {customer.country && (
-                      <div className="bg-blue-500/10 text-blue-400 p-1.5 rounded-lg" title="International">
+                      <div className="bg-primary-tint text-primary p-1.5 rounded-lg" title="International">
                         <Globe size={16} />
                       </div>
                     )}
                     <button
                       onClick={() => handleStatement(customer)}
                       disabled={generatingId === customer.id}
-                      className="inline-flex items-center justify-center min-h-11 min-w-11 rounded-lg text-slate-400 hover:text-indigo-300 hover:bg-white/10 transition-colors"
+                      className="inline-flex items-center justify-center min-h-11 min-w-11 rounded-lg text-muted hover:text-primary-hover hover:bg-primary-tint transition-colors"
                       title="Account statement"
                       aria-label={`Account statement for ${customer.name}`}
                     >
@@ -155,22 +155,22 @@ export function CustomerList() {
                 </div>
 
                 {customer.id && owed.has(customer.id) && (
-                  <p className="mt-2 text-xs text-orange-300">Owes {owed.get(customer.id)}</p>
+                  <p className="mt-2 text-xs text-warning">Owes {owed.get(customer.id)}</p>
                 )}
 
                 {customer.address && (
-                  <div className="mt-3 pt-3 border-t border-white/5 flex items-start gap-2 text-xs text-slate-400">
+                  <div className="mt-3 pt-3 border-t border-line flex items-start gap-2 text-xs text-muted">
                     <MapPin size={14} className="mt-0.5 shrink-0" />
                     <span className="line-clamp-1">{[customer.address, customer.city, customer.country].filter(Boolean).join(', ')}</span>
                   </div>
                 )}
-              </GlassCard>
+              </Card>
             </motion.div>
           ))}
         </AnimatePresence>
 
         {customers?.length === 0 && (
-          <div className="col-span-full text-center py-12 text-slate-500">
+          <div className="col-span-full text-center py-12 text-muted">
             <User size={48} className="mx-auto mb-4 opacity-20" />
             <p>No customers found.</p>
           </div>

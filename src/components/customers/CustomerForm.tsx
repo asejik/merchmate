@@ -5,8 +5,8 @@ import { z } from 'zod';
 import { db } from '../../db';
 import { deleteCustomer } from '../../db/mutations';
 import { failed } from '../../lib/messages';
-import { GlassCard } from '../ui/GlassCard';
-import { INPUT_CLASS } from '../ui/styles';
+import { Card } from '../ui/Card';
+import { FIELD_CLASS } from '../ui/styles';
 import { useDialogs } from '../ui/dialogContext';
 import { Save, X, Globe, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -94,16 +94,16 @@ export function CustomerForm({ onComplete, onCancel, initialData }: Props) {
     }
   };
 
-  const inputClass = INPUT_CLASS;
-  const labelClass = "block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider";
+  const inputClass = FIELD_CLASS;
+  const labelClass = "block text-xs font-medium text-muted mb-1 tracking-wider";
 
   return (
-    <GlassCard className="max-w-xl mx-auto p-6">
+    <Card className="max-w-xl mx-auto p-6">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-bold text-white">
+        <h1 className="text-xl font-bold text-ink">
           {initialData ? 'Edit Customer' : 'New Customer'}
         </h1>
-        <button onClick={onCancel} className="text-slate-400 hover:text-white" aria-label="Close">
+        <button onClick={onCancel} className="text-muted hover:text-ink" aria-label="Close">
           <X size={24} />
         </button>
       </div>
@@ -133,8 +133,8 @@ export function CustomerForm({ onComplete, onCancel, initialData }: Props) {
         {/* International Toggle */}
         <div className="py-2">
           <label className="flex items-center gap-3 cursor-pointer group">
-            <input type="checkbox" {...register('isInternational')} className="w-5 h-5 rounded border-slate-600 bg-white/5 text-indigo-500 focus:ring-indigo-500" />
-            <div className="flex items-center gap-2 text-slate-300 group-hover:text-white transition-colors">
+            <input type="checkbox" {...register('isInternational')} className="w-5 h-5 rounded border-line-strong bg-sunken text-primary focus:ring-primary" />
+            <div className="flex items-center gap-2 text-muted group-hover:text-ink transition-colors">
               <Globe size={18} />
               <span className="font-medium">International / Shipping Required</span>
             </div>
@@ -148,7 +148,7 @@ export function CustomerForm({ onComplete, onCancel, initialData }: Props) {
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden space-y-4 border-l-2 border-indigo-500/30 pl-4"
+              className="overflow-hidden space-y-4 border-l-2 border-line pl-4"
             >
               <div>
                 <label className={labelClass} htmlFor="cust-address">Full Shipping Address</label>
@@ -171,18 +171,18 @@ export function CustomerForm({ onComplete, onCancel, initialData }: Props) {
 
         <div className="pt-4 flex justify-end gap-3">
           {initialData?.id && (
-            <button type="button" onClick={handleDelete} className="mr-auto flex items-center gap-1.5 px-3 py-2 text-red-400 hover:text-red-300 text-sm">
+            <button type="button" onClick={handleDelete} className="mr-auto flex items-center gap-1.5 px-3 py-2 text-danger hover:text-danger text-sm">
               <Trash2 size={16} /> Delete
             </button>
           )}
-          <button type="button" onClick={onCancel} className="px-4 py-2 text-slate-400 hover:text-white">Cancel</button>
-          <button type="submit" className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-xl font-medium shadow-lg shadow-indigo-500/20">
+          <button type="button" onClick={onCancel} className="px-4 py-2 text-muted hover:text-ink">Cancel</button>
+          <button type="submit" className="flex items-center gap-2 bg-primary hover:bg-primary-hover text-on-primary px-6 py-2 rounded-xl font-medium">
             <Save size={18} />
             Save Customer
           </button>
         </div>
 
       </form>
-    </GlassCard>
+    </Card>
   );
 }

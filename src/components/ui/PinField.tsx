@@ -13,7 +13,7 @@ export function PinField({ label, value, onChange, autoFocus, autoComplete = 'of
   const id = useId();
   return (
     <div>
-      <label htmlFor={id} className="block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider">{label}</label>
+      <label htmlFor={id} className="block text-xs font-medium text-muted mb-1 tracking-wider">{label}</label>
       <input
         id={id}
         type="password"
@@ -24,7 +24,7 @@ export function PinField({ label, value, onChange, autoFocus, autoComplete = 'of
         onChange={e => onChange(e.target.value.replace(/\D/g, ''))}
         autoFocus={autoFocus}
         autoComplete={autoComplete}
-        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white text-center text-xl tracking-[0.4em] focus:outline-none focus:border-indigo-500"
+        className="w-full min-h-11 rounded-xl border border-line-strong bg-surface px-4 py-3 text-base text-ink text-center text-xl tracking-[0.4em] focus:outline-none focus:border-primary"
       />
     </div>
   );

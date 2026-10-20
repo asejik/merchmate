@@ -5,8 +5,8 @@ import { failed } from '../../lib/messages';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { db } from '../../db';
-import { GlassCard } from '../ui/GlassCard';
-import { INPUT_CLASS } from '../ui/styles';
+import { Card } from '../ui/Card';
+import { FIELD_CLASS } from '../ui/styles';
 import { useDialogs } from '../ui/dialogContext';
 import { Save, Upload, Loader2, FileText, Receipt } from 'lucide-react';
 import { clsx } from 'clsx';
@@ -151,39 +151,39 @@ export function BusinessProfileForm({ onLock }: { onLock?: () => void }) {
     }
   };
 
-  const inputClass = INPUT_CLASS;
-  const labelClass = "block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider";
+  const inputClass = FIELD_CLASS;
+  const labelClass = "block text-xs font-medium text-muted mb-1 tracking-wider";
 
   return (
     <div className="max-w-2xl mx-auto pb-20">
-      <h1 className="text-2xl font-bold text-white mb-6">Business Settings</h1>
+      <h1 className="text-2xl font-bold text-ink mb-6">Business Settings</h1>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
 
         {/* Card 1: Brand & Contact */}
-        <GlassCard className="p-6 md:p-8">
-            <h2 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
-                <Upload size={20} className="text-indigo-400"/> Brand Identity
+        <Card className="p-6 md:p-8">
+            <h2 className="text-lg font-semibold text-ink mb-6 flex items-center gap-2">
+                <Upload size={20} className="text-primary"/> Brand Identity
             </h2>
 
             <div className="flex items-center gap-6 mb-6">
                 <div className={clsx(
-                    "h-24 w-24 rounded-full border-2 border-dashed border-slate-600 flex items-center justify-center overflow-hidden bg-white/5",
-                    logoPreview ? "border-solid border-indigo-500" : ""
+                    "h-24 w-24 rounded-full border-2 border-dashed border-line-strong flex items-center justify-center overflow-hidden bg-sunken",
+                    logoPreview ? "border-solid border-primary" : ""
                 )}>
                     {logoPreview ? (
                     <img src={logoPreview} alt="Logo" className="h-full w-full object-cover" />
                     ) : (
-                    <span className="text-xs text-slate-500 text-center px-2">No Logo</span>
+                    <span className="text-xs text-muted text-center px-2">No Logo</span>
                     )}
                 </div>
                 <div>
-                    <label htmlFor="logo-upload" className="cursor-pointer inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium">
+                    <label htmlFor="logo-upload" className="cursor-pointer inline-flex items-center gap-2 bg-sunken hover:bg-primary-tint text-ink px-4 py-2 rounded-lg transition-colors text-sm font-medium">
                     <Upload size={16} />
                     Upload Logo
                     </label>
                     <input id="logo-upload" type="file" accept="image/*" className="hidden" onChange={handleLogoChange} />
-                    <p className="text-xs text-slate-500 mt-2">Recommended: Square PNG, max 2MB.</p>
+                    <p className="text-xs text-muted mt-2">Recommended: Square PNG, max 2MB.</p>
                 </div>
             </div>
 
@@ -212,14 +212,14 @@ export function BusinessProfileForm({ onLock }: { onLock?: () => void }) {
               <div>
                 <label className={labelClass} htmlFor="biz-brandColor">Brand Colour</label>
                 <div className="flex items-center gap-3">
-                  <input id="biz-brandColor" aria-invalid={!!errors.brandColor} aria-describedby={errors.brandColor ? 'biz-brandColor-error' : undefined} type="color" {...register('brandColor')} className="h-11 w-14 rounded-lg bg-transparent border border-white/10 cursor-pointer" />
-                  <span className="text-xs text-slate-500">Used for your name, table headers and highlights on PDFs.</span>
+                  <input id="biz-brandColor" aria-invalid={!!errors.brandColor} aria-describedby={errors.brandColor ? 'biz-brandColor-error' : undefined} type="color" {...register('brandColor')} className="h-11 w-14 rounded-lg bg-transparent border border-line cursor-pointer" />
+                  <span className="text-xs text-muted">Used for your name, table headers and highlights on PDFs.</span>
                 </div>
                 <FieldError id="biz-brandColor-error" message={errors.brandColor?.message} />
               </div>
               <div>
                 <label className={labelClass} htmlFor="biz-invoiceTemplate">PDF Template</label>
-                <select id="biz-invoiceTemplate" {...register('invoiceTemplate')} className={clsx(inputClass, "[&>option]:bg-slate-900")}>
+                <select id="biz-invoiceTemplate" {...register('invoiceTemplate')} className={clsx(inputClass, "[&>option]:bg-surface")}>
                   <option value="classic">Classic (white header)</option>
                   <option value="modern">Modern (colour header band)</option>
                 </select>
@@ -231,12 +231,12 @@ export function BusinessProfileForm({ onLock }: { onLock?: () => void }) {
             <textarea id="biz-address" aria-invalid={!!errors.address} aria-describedby={errors.address ? 'biz-address-error' : undefined} {...register('address')} rows={2} className={inputClass} placeholder="Full street address..." />
             <FieldError id="biz-address-error" message={errors.address?.message} />
             </div>
-        </GlassCard>
+        </Card>
 
         {/* Card 2: Bank Details */}
-        <GlassCard className="p-6 md:p-8">
-          <h2 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
-            <Save size={20} className="text-indigo-400"/> Payment Details
+        <Card className="p-6 md:p-8">
+          <h2 className="text-lg font-semibold text-ink mb-6 flex items-center gap-2">
+            <Save size={20} className="text-primary"/> Payment Details
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -255,14 +255,14 @@ export function BusinessProfileForm({ onLock }: { onLock?: () => void }) {
               <FieldError id="biz-accountName-error" message={errors.accountName?.message} />
             </div>
           </div>
-        </GlassCard>
+        </Card>
 
         {/* Card 3: Invoice Defaults */}
-        <GlassCard className="p-6 md:p-8">
-          <h2 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
-            <Receipt size={20} className="text-indigo-400"/> Invoice Defaults
+        <Card className="p-6 md:p-8">
+          <h2 className="text-lg font-semibold text-ink mb-1 flex items-center gap-2">
+            <Receipt size={20} className="text-primary"/> Invoice Defaults
           </h2>
-          <p className="text-xs text-slate-500 mb-6">Pre-filled on every new invoice. You can still change them per invoice.</p>
+          <p className="text-xs text-muted mb-6">Pre-filled on every new invoice. You can still change them per invoice.</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className={labelClass} htmlFor="biz-taxLabel">Tax Name</label>
@@ -275,7 +275,7 @@ export function BusinessProfileForm({ onLock }: { onLock?: () => void }) {
             </div>
             <div>
               <label className={labelClass} htmlFor="biz-defaultDueDays">Payment Terms</label>
-              <select id="biz-defaultDueDays" {...register('defaultDueDays')} className={clsx(inputClass, "[&>option]:bg-slate-900")}>
+              <select id="biz-defaultDueDays" {...register('defaultDueDays')} className={clsx(inputClass, "[&>option]:bg-surface")}>
                 <option value="">No due date</option>
                 <option value="0">Due on receipt</option>
                 <option value="7">Net 7 days</option>
@@ -287,22 +287,22 @@ export function BusinessProfileForm({ onLock }: { onLock?: () => void }) {
               <label className={labelClass} htmlFor="biz-defaultCountryCode">Phone Country Code</label>
               <input id="biz-defaultCountryCode" aria-invalid={!!errors.defaultCountryCode} aria-describedby={errors.defaultCountryCode ? 'biz-defaultCountryCode-error' : undefined} {...register('defaultCountryCode')} className={inputClass} placeholder="234" inputMode="numeric" />
               <FieldError id="biz-defaultCountryCode-error" message={errors.defaultCountryCode?.message} />
-              <p className="text-[11px] text-slate-500 mt-1">Used for WhatsApp reminders to local numbers like 0803…</p>
+              <p className="text-xs text-muted mt-1">Used for WhatsApp reminders to local numbers like 0803…</p>
             </div>
             <div>
               <label className={labelClass} htmlFor="biz-dateFormat">Date Format</label>
-              <select id="biz-dateFormat" {...register('dateFormat')} className={clsx(inputClass, "[&>option]:bg-slate-900")}>
+              <select id="biz-dateFormat" {...register('dateFormat')} className={clsx(inputClass, "[&>option]:bg-surface")}>
                 {DATE_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
               </select>
-              <p className="text-[11px] text-slate-500 mt-1">Used in the app, PDFs and receipts on every device.</p>
+              <p className="text-xs text-muted mt-1">Used in the app, PDFs and receipts on every device.</p>
             </div>
           </div>
-        </GlassCard>
+        </Card>
 
         {/* Card 4: Invoice Terms */}
-        <GlassCard className="p-6 md:p-8">
-            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                <FileText size={20} className="text-indigo-400"/>
+        <Card className="p-6 md:p-8">
+            <h2 className="text-lg font-semibold text-ink mb-4 flex items-center gap-2">
+                <FileText size={20} className="text-primary"/>
                 Invoice Footer / Terms
             </h2>
 
@@ -316,20 +316,20 @@ export function BusinessProfileForm({ onLock }: { onLock?: () => void }) {
                     className={inputClass}
                     placeholder="e.g. Payment due within 14 days. No refunds on custom orders."
                 />
-                <p className="text-xs text-slate-500 mt-2">
+                <p className="text-xs text-muted mt-2">
                     This text will appear at the bottom of every PDF invoice.
                 </p>
             </div>
-        </GlassCard>
+        </Card>
 
         {/* Floating Save Button */}
         <div className="flex justify-end pt-4">
-            {successMsg && <span role="status" className="text-green-400 text-sm font-medium animate-pulse mr-4 self-center">{successMsg}</span>}
+            {successMsg && <span role="status" className="text-success text-sm font-medium animate-pulse mr-4 self-center">{successMsg}</span>}
 
             <button
                 type="submit"
                 disabled={loading}
-                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-indigo-500/20 transition-all disabled:opacity-50"
+                className="flex items-center gap-2 bg-primary hover:bg-primary-hover text-on-primary px-8 py-3 rounded-xl font-bold   transition-all disabled:opacity-50"
             >
                 {loading ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
                 Save Settings

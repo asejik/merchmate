@@ -85,44 +85,6 @@
   --shadow-raised: var(--elev-raised);
 }
 
-/* Legacy glass tokens, used by screens that have not moved to the new design yet */
-@theme {
-  --color-glass-border: rgba(255, 255, 255, 0.1);
-  --color-glass-bg: rgba(255, 255, 255, 0.05);
-  --color-glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
-}
-
-/*
- * Screens not yet moved to the new design are written for a dark surface. Wrapping them in
- * data-surface="dark" gives them that surface, and makes the new shell (nav, header) use the dark
- * tokens next to them. Remove this block, and the attribute, when the last screen has moved.
- */
-[data-surface='dark'] {
-  --paper: #0e1226;
-  --surface: #171c38;
-  --sunken: #1f2547;
-  --line: #2a3157;
-  --line-strong: #5a6498;
-  --ink: #eef0fa;
-  --muted: #a3aac8;
-  --primary: #8c9bff;
-  --primary-hover: #a6b2ff;
-  --on-primary: #0e1226;
-  --primary-tint: #232b57;
-  --accent: #f2b63d;
-  --success: #5fd59b;
-  --success-tint: #12352a;
-  --warning: #f2b63d;
-  --warning-tint: #3a2e10;
-  --danger: #ff8a80;
-  --danger-tint: #3e1b1e;
-  --elev-card: none;
-  --elev-raised: 0 8px 24px rgb(0 0 0 / 0.45);
-  color-scheme: dark;
-  background: radial-gradient(circle at 50% 50%, #1e293b 0%, #0f172a 100%);
-  color: rgba(255, 255, 255, 0.87);
-}
-
 :root {
   font-family: var(--font-sans);
   line-height: 1.5;
@@ -175,10 +137,6 @@ body {
 :focus-visible {
   outline: 2px solid var(--primary) !important;
   outline-offset: 2px;
-}
-/* On a legacy dark surface the ring stays the light indigo it always was */
-[data-surface='dark'] :focus-visible {
-  outline-color: #a5b4fc !important;
 }
 /* The main area is focused by the app after a screen change; it needs no ring of its own */
 main:focus-visible {

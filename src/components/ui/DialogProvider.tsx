@@ -20,27 +20,27 @@ function DialogWindow({ pending, onClose }: { pending: Pending; onClose: (confir
   const titleId = `dialog-title-${pending.id}`;
   const messageId = `dialog-message-${pending.id}`;
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-ink/60 backdrop-blur-sm">
       <div
         ref={ref}
         role="alertdialog"
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={messageId}
-        className="w-full max-w-sm rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl"
+        className="w-full max-w-sm rounded-2xl border border-line bg-surface p-6 shadow-2xl"
       >
-        <h2 id={titleId} className="text-lg font-bold text-white">{pending.title}</h2>
-        <p id={messageId} className="mt-2 whitespace-pre-line text-sm text-slate-300">{pending.message}</p>
+        <h2 id={titleId} className="text-lg font-bold text-ink">{pending.title}</h2>
+        <p id={messageId} className="mt-2 whitespace-pre-line text-sm text-muted">{pending.message}</p>
         <div className="mt-6 flex gap-3">
           {pending.cancelLabel && (
-            <button type="button" onClick={() => onClose(false)} className="flex-1 min-h-11 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium">
+            <button type="button" onClick={() => onClose(false)} className="flex-1 min-h-11 rounded-xl bg-sunken hover:bg-primary-tint text-ink font-medium">
               {pending.cancelLabel}
             </button>
           )}
           <button
             type="button"
             onClick={() => onClose(true)}
-            className={`flex-1 min-h-11 rounded-xl text-white font-medium ${pending.danger ? 'bg-red-700 hover:bg-red-600' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+            className={`flex-1 min-h-11 rounded-xl text-on-primary font-medium ${pending.danger ? 'bg-danger hover:opacity-90' : 'bg-primary hover:bg-primary-hover'}`}
           >
             {pending.confirmLabel}
           </button>

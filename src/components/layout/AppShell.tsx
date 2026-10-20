@@ -20,9 +20,6 @@ const SCREEN_TITLES: Record<AppTab, string> = {
   settings: 'Settings',
 };
 
-/** Screens already in the new design. The others are still written for a dark surface (see index.css). */
-const REDESIGNED: AppTab[] = ['dashboard', 'invoices', 'create'];
-
 const NAV_ITEMS: { id: AppTab; label: string; icon: LucideIcon; isPrimary?: boolean }[] = [
   { id: 'dashboard', label: 'Home', icon: Home },
   { id: 'invoices', label: 'Invoices', icon: FileText },
@@ -46,7 +43,7 @@ export function AppShell({ children, activeTab, onTabChange }: AppShellProps) {
   }, [activeTab]);
 
   return (
-    <div data-surface={REDESIGNED.includes(activeTab) ? undefined : 'dark'} className="min-h-screen bg-paper text-ink selection:bg-primary-tint">
+    <div className="min-h-screen bg-paper text-ink selection:bg-primary-tint">
       <a
         href="#main"
         onClick={(e) => { e.preventDefault(); mainRef.current?.focus(); }}

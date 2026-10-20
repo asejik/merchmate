@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { formatDate } from '../../lib/dates';
 import { DatabaseBackup, Download, Upload, Loader2, ShieldCheck, AlertTriangle } from 'lucide-react';
-import { GlassCard } from '../ui/GlassCard';
+import { Card } from '../ui/Card';
 import { useDialogs } from '../ui/dialogContext';
 import { exportAllData, getLastBackupAt, isBackupDue, restoreAllData, saveBackup } from '../../db/backup';
 import { MAX_BACKUP_BYTES, parseBackup } from '../../lib/backup';
@@ -76,16 +76,16 @@ export function BackupCard() {
   };
 
   return (
-    <GlassCard className="p-6 md:p-8 mt-6">
-      <h2 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
-        <DatabaseBackup size={20} className="text-indigo-400" /> Backup & Restore
+    <Card className="p-6 md:p-8 mt-6">
+      <h2 className="text-lg font-semibold text-ink mb-1 flex items-center gap-2">
+        <DatabaseBackup size={20} className="text-primary" /> Backup & Restore
       </h2>
-      <p className="text-xs text-slate-500 mb-4">
+      <p className="text-xs text-muted mb-4">
         Your data is stored only on this device. Clearing browser data or losing your phone deletes it.
         Save a backup to Google Drive, email or WhatsApp every day you use the app. You can also use it to move to a new phone.
       </p>
 
-      <div className={`mb-4 flex items-center gap-2 text-xs ${due ? 'text-orange-300' : 'text-green-400'}`}>
+      <div className={`mb-4 flex items-center gap-2 text-xs ${due ? 'text-warning' : 'text-success'}`}>
         {due ? <AlertTriangle size={14} /> : <ShieldCheck size={14} />}
         {lastBackup ? `Last backup on this device: ${formatDate(lastBackup, 'long', { moment: true })}` : 'No backup made on this device yet'}
       </div>
@@ -95,7 +95,7 @@ export function BackupCard() {
           type="button"
           onClick={handleExport}
           disabled={busy !== null}
-          className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-xl font-medium transition-all disabled:opacity-50"
+          className="flex-1 flex items-center justify-center gap-2 bg-primary hover:bg-primary-hover text-on-primary px-4 py-3 rounded-xl font-medium transition-all disabled:opacity-50"
         >
           {busy === 'export' ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
           Save Backup
@@ -104,7 +104,7 @@ export function BackupCard() {
           type="button"
           onClick={() => fileInput.current?.click()}
           disabled={busy !== null}
-          className="flex-1 flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-3 rounded-xl font-medium transition-all disabled:opacity-50"
+          className="flex-1 flex items-center justify-center gap-2 bg-sunken hover:bg-primary-tint text-ink px-4 py-3 rounded-xl font-medium transition-all disabled:opacity-50"
         >
           {busy === 'import' ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
           Restore from File
@@ -113,8 +113,8 @@ export function BackupCard() {
       </div>
 
       {message && (
-        <p role="status" className={`mt-3 text-sm ${message.kind === 'ok' ? 'text-green-400' : 'text-red-400'}`}>{message.text}</p>
+        <p role="status" className={`mt-3 text-sm ${message.kind === 'ok' ? 'text-success' : 'text-danger'}`}>{message.text}</p>
       )}
-    </GlassCard>
+    </Card>
   );
 }
