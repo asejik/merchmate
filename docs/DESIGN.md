@@ -74,8 +74,7 @@ Cards `rounded-2xl` (16px) with `border-line` and `shadow-card`. Controls and bu
 **Colours**: `theme-color` is paper (light) and `#0E1226` (dark); the manifest's theme is primary and its splash is paper.
 
 ## Signature moments
-Built: the saffron marker that slides between tabs (250ms); the "paid of invoiced" bar filling once (400ms).
-Planned with the invoice screens: a PAID stamp that presses onto an invoice once when it is settled.
+Built: the saffron marker that slides between tabs (250ms); the "paid of invoiced" bar filling once (400ms); the PAID stamp (`ui/PaidStamp.tsx`) that presses on once, in the window shown when a payment settles an invoice (400ms).
 
 ## Wording
 Plain, sentence case, verbs first, no "please", no exclamation marks. "Owed to you", not "Pending / Outstanding". Errors say what happened and what to do (`failed()` in `lib/messages.ts`).
@@ -87,5 +86,5 @@ Every screen is on the new design: shell, Dashboard, Invoices, the invoice/quote
 - Hausa hooked letters have no glyph in the font (fallback only).
 - The font and wordmark have not been checked on a real low-end Android phone.
 - Desktop is a single centred column (max 896px); a two-column dashboard is a later option.
-- Settings shows several filled buttons (Save settings, Save backup, Turn on App Lock): rule 3 (one primary per screen) is bent there until Settings is split into sections.
+- Settings is split in two tabs ("Your business": Save Settings is the one primary; "Data and security": Save Backup is the one primary, App Lock's setup steps show their own primary while open).
 - The invoice PDF, receipt, statement and shared image keep their own look (client-facing documents, not app chrome).

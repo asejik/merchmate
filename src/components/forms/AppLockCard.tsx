@@ -93,14 +93,14 @@ export function AppLockCard({ onLockNow }: { onLockNow?: () => void }) {
       </p>
 
       {mode === 'idle' && !enabled && (
-        <button type="button" onClick={() => reset('enable')} className={`${primary} w-full`}>Turn on App Lock</button>
+        <button type="button" onClick={() => reset('enable')} className={`${secondary} w-full`}>Turn on App Lock</button>
       )}
 
       {mode === 'idle' && enabled && (
         <div className="space-y-3">
           <p className="flex items-center gap-2 text-sm text-success"><ShieldCheck size={16} /> App Lock is on</p>
           <div className="flex flex-col sm:flex-row gap-3">
-            {onLockNow && <button type="button" onClick={onLockNow} className={primary}>Lock now</button>}
+            {onLockNow && <button type="button" onClick={onLockNow} className={secondary}>Lock now</button>}
             <button type="button" onClick={() => reset('change')} className={secondary}>Change PIN</button>
             <button type="button" onClick={() => reset('disable')} className={secondary}>Turn off</button>
           </div>

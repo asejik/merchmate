@@ -107,6 +107,12 @@ export class App {
     await this.nav(name).click();
   }
 
+  /** Settings has two tabs: the business form, and backup / lock / erase. */
+  async goSettings(section: 'Your business' | 'Data and security') {
+    await this.go('Settings');
+    await this.page.getByRole('tab', { name: section }).click();
+  }
+
   /** Writes records straight into the app's database, as if the user had created them earlier. */
   async seed(data: { business?: boolean; logo?: boolean; customers?: { id: string; name: string; phone: string }[]; invoices?: SeedInvoice[] }) {
     const rows = {

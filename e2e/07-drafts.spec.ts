@@ -121,7 +121,7 @@ test.describe('drafts', () => {
     await app.seed({});
     await app.go('New');
     await page.getByPlaceholder(/^Item description/).fill('Secret order');
-    await app.go('Settings');
+    await app.goSettings('Data and security');
     await page.getByRole('button', { name: /Erase everything on this device/ }).click();
     await page.getByLabel('Type ERASE to confirm').fill('ERASE');
     await Promise.all([page.waitForEvent('load'), page.getByRole('button', { name: 'Erase everything', exact: true }).click()]);

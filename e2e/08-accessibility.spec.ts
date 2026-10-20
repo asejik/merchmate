@@ -17,7 +17,7 @@ async function scanAll(app: App, screens: [string, () => Promise<void>][]) {
 }
 
 async function enableLock(page: Page, app: App) {
-  await app.go('Settings');
+  await app.goSettings('Data and security');
   await page.getByRole('button', { name: 'Turn on App Lock' }).click();
   await page.getByLabel('Choose a PIN (4 to 8 digits)').fill('4821');
   await page.getByLabel('Repeat the PIN').fill('4821');
@@ -61,7 +61,8 @@ for (const [label, viewport] of [['phone 360px', { width: 360, height: 740 }], [
         ['new invoice with errors', async () => { await page.getByLabel('Customer').selectOption(''); await page.getByLabel(/^Invoice #/).fill(''); await page.getByRole('button', { name: /Generate Invoice/ }).click(); await expect(page.getByText('Required')).toBeVisible(); }],
         ['clients', async () => { await page.getByRole('button', { name: 'Start over' }).click(); await app.go('Clients'); await expect(page.getByText('Mrs. Adebayo')).toBeVisible(); }],
         ['client form with errors', async () => { await page.getByRole('button', { name: 'Add Client' }).click(); await page.getByRole('button', { name: /save/i }).click(); await expect(page.getByText('Name is required')).toBeVisible(); }],
-        ['settings', async () => { await app.go('Settings'); await expect(page.getByText('Erase All Data')).toBeVisible(); }],
+        ['settings: your business', async () => { await app.goSettings('Your business'); await expect(page.getByText('Brand identity')).toBeVisible(); }],
+        ['settings: data and security', async () => { await app.goSettings('Data and security'); await expect(page.getByText('Erase All Data')).toBeVisible(); }],
       ]);
     });
 
@@ -101,11 +102,14 @@ test('every screen passes the scan in dark mode too', async ({ app, page }) => {
   await expect(page.getByText('Recent activity')).toBeVisible();
   await expect(page.getByRole('region', { name: 'Backup reminder' })).toBeVisible();
   expect(await app.accessibilityViolations()).toEqual([]);
-  for (const [tab, ready] of [['Invoices', '#INV-002'], ['New', 'Invoice #'], ['Clients', 'Add Client'], ['Settings', 'Settings']] as const) {
+  for (const [tab, ready] of [['Invoices', '#INV-002'], ['New', 'Invoice #'], ['Clients', 'Add Client'], ['Settings', 'Brand identity']] as const) {
     await app.go(tab);
     await expect(page.getByText(ready).first()).toBeVisible();
     expect(await app.accessibilityViolations(), tab).toEqual([]);
   }
+  await page.getByRole('tab', { name: 'Data and security' }).click();
+  await expect(page.getByText('Erase All Data')).toBeVisible();
+  expect(await app.accessibilityViolations(), 'data and security').toEqual([]);
 });
 
 test('the page can be zoomed and reflowed to 320px without sideways scrolling', async ({ app, page }) => {

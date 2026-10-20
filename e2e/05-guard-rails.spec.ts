@@ -80,7 +80,8 @@ test.describe('guard rails', () => {
       ['invoice list', async () => { await app.go('Invoices'); await expect(page.getByText('#INV-002')).toBeVisible(); }],
       ['new invoice', async () => { await app.go('New'); await expect(page.getByRole('heading', { name: 'New Invoice' })).toBeVisible(); }],
       ['clients', async () => { await app.go('Clients'); await expect(page.getByText('Mrs. Adebayo')).toBeVisible(); }],
-      ['settings', async () => { await app.go('Settings'); await expect(page.getByText('Erase All Data')).toBeVisible(); }],
+      ['settings: your business', async () => { await app.goSettings('Your business'); await expect(page.getByText('Brand identity')).toBeVisible(); }],
+      ['settings: data and security', async () => { await app.goSettings('Data and security'); await expect(page.getByText('Erase All Data')).toBeVisible(); }],
     ];
     for (const [name, show] of screens) {
       await show();

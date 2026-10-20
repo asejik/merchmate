@@ -47,8 +47,15 @@ const profileSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
 
+type SettingsSection = 'business' | 'data';
+const SECTIONS: { id: SettingsSection; label: string }[] = [
+  { id: 'business', label: 'Your business' },
+  { id: 'data', label: 'Data and security' },
+];
+
 export function BusinessProfileForm({ onLock }: { onLock?: () => void }) {
   const { alert } = useDialogs();
+  const [tab, setTab] = useState<SettingsSection>('business');
   const [loading, setLoading] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -156,8 +163,29 @@ export function BusinessProfileForm({ onLock }: { onLock?: () => void }) {
 
   return (
     <div className="max-w-2xl mx-auto pb-20">
-      <h1 className="text-2xl font-bold text-ink mb-6">Business Settings</h1>
+      <h1 className="mb-4 text-2xl font-extrabold tracking-tight text-ink">Settings</h1>
 
+      <div className="mb-6 flex rounded-xl border border-line bg-surface p-1" role="tablist" aria-label="Settings sections">
+        {SECTIONS.map(section => (
+          <button
+            key={section.id}
+            id={`settings-tab-${section.id}`}
+            role="tab"
+            aria-selected={tab === section.id}
+            aria-controls={`settings-panel-${section.id}`}
+            onClick={() => setTab(section.id)}
+            className={clsx(
+              'min-h-11 flex-1 rounded-lg px-3 text-sm font-semibold transition-colors duration-150',
+              tab === section.id ? 'bg-primary text-on-primary' : 'text-muted hover:text-ink'
+            )}
+          >
+            {section.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Both panels stay mounted, so edits in the business form survive a visit to the other tab */}
+      <div id="settings-panel-business" role="tabpanel" aria-labelledby="settings-tab-business" hidden={tab !== 'business'}>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
 
         {/* Card 1: Brand & Contact */}
@@ -337,14 +365,17 @@ export function BusinessProfileForm({ onLock }: { onLock?: () => void }) {
         </div>
 
       </form>
-
       <CatalogCard />
-      <BackupCard />
-      <AppLockCard onLockNow={onLock} />
-      <DataSafetyCard />
-      <ProblemReportCard />
-      <AboutCard />
-      <EraseDataCard />
+      </div>
+
+      <div id="settings-panel-data" role="tabpanel" aria-labelledby="settings-tab-data" hidden={tab !== 'data'}>
+        <BackupCard />
+        <AppLockCard onLockNow={onLock} />
+        <DataSafetyCard />
+        <ProblemReportCard />
+        <AboutCard />
+        <EraseDataCard />
+      </div>
     </div>
   );
 }

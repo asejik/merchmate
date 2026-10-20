@@ -1,6 +1,7 @@
 import { MessageCircle, Send, Share2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { Card } from './Card';
+import { PaidStamp } from './PaidStamp';
 import { BUTTON_PRIMARY, BUTTON_SECONDARY, BUTTON_GHOST, OVERLAY_CLASS } from './styles';
 import { useDialog } from './useDialog';
 import { shareOrDownload, type ShareFile } from '../../lib/share';
@@ -11,6 +12,8 @@ export interface ShareState {
   heading: string;
   description: string;
   files: ShareFile[];
+  /** The invoice is now fully paid: show the PAID stamp. */
+  settled?: boolean;
   /** Extra actions that are plain links, e.g. the invoice as WhatsApp text. */
   links?: { label: string; href: string }[];
 }
@@ -36,9 +39,11 @@ export function ShareModal({ state, onClose }: Props) {
   return (
     <div className={OVERLAY_CLASS} role="dialog" aria-modal="true" aria-labelledby="share-heading" ref={dialogRef}>
       <Card className="w-full max-w-sm p-6 text-center shadow-raised">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary-tint text-primary">
-          <Share2 size={24} aria-hidden="true" />
-        </div>
+        {state.settled ? <PaidStamp /> : (
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary-tint text-primary">
+            <Share2 size={24} aria-hidden="true" />
+          </div>
+        )}
         <h2 id="share-heading" className="mb-2 text-xl font-bold text-ink">{state.heading}</h2>
         <p className="mb-6 text-sm text-muted">{state.description}</p>
         <div className="space-y-3">

@@ -8,7 +8,7 @@ test.describe('protect and recover', () => {
   test('backup, erase everything, restore: nothing is lost', async ({ app, page }) => {
     await app.open();
     await app.seed({ invoices: [{ id: 'i1', number: 'INV-001', total: 50000, paid: 20000 }] });
-    await app.go('Settings');
+    await app.goSettings('Data and security');
 
     // Back up
     const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Save Backup' }).click()]);
@@ -29,7 +29,7 @@ test.describe('protect and recover', () => {
     expect(await app.recordCount()).toBe(0);
 
     // Restore
-    await app.go('Settings');
+    await app.goSettings('Data and security');
     await page.locator('input[type=file][accept*="json"]').setInputFiles(backupPath);
     const confirmRestore = page.getByRole('alertdialog', { name: 'Restore this backup?' });
     await expect(confirmRestore).toContainText('REPLACES everything');
@@ -43,7 +43,7 @@ test.describe('protect and recover', () => {
   test('a hostile backup is refused and nothing changes', async ({ app, page }) => {
     await app.open();
     await app.seed({ invoices: [{ id: 'i1', number: 'INV-001', total: 1000 }] });
-    await app.go('Settings');
+    await app.goSettings('Data and security');
     await page.locator('input[type=file][accept*="json"]').setInputFiles({
       name: 'evil.json',
       mimeType: 'application/json',
@@ -60,7 +60,7 @@ test.describe('protect and recover', () => {
   test('App Lock: set up, lock on open, wrong PIN, recovery code, new PIN', async ({ app, page }) => {
     await app.open();
     await app.seed({ invoices: [{ id: 'i1', number: 'INV-001', total: 1000 }] });
-    await app.go('Settings');
+    await app.goSettings('Data and security');
 
     // Turn on (mismatched PINs are refused)
     await page.getByRole('button', { name: 'Turn on App Lock' }).click();
@@ -116,7 +116,7 @@ test.describe('protect and recover', () => {
   test('App Lock: five wrong guesses force a wait; losing the PIN and code ends in erase', async ({ app, page }) => {
     await app.open();
     await app.seed({ invoices: [{ id: 'i1', number: 'INV-001', total: 1000 }] });
-    await app.go('Settings');
+    await app.goSettings('Data and security');
     await page.getByRole('button', { name: 'Turn on App Lock' }).click();
     await page.getByLabel('Choose a PIN (4 to 8 digits)').fill('2468');
     await page.getByLabel('Repeat the PIN').fill('2468');

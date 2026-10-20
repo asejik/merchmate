@@ -108,6 +108,7 @@ export function useInvoiceActions(closeMenu: () => void) {
           ? `New balance: ${formatMoney(balance, updated.currency)}. Send the client a receipt${withInvoice ? ' and the updated invoice' : ''}.`
           : 'This invoice is now fully paid. Send the client a receipt.',
         files,
+        settled: balance <= 0,
       });
     });
   };
