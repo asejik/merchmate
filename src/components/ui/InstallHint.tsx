@@ -27,13 +27,13 @@ export function InstallHint() {
   };
 
   return (
-    <div role="note" className="rounded-2xl border border-indigo-400/20 bg-indigo-500/10 p-4 flex items-start gap-3">
-      <Smartphone size={20} className="text-indigo-300 shrink-0 mt-0.5" />
+    <div role="note" className="rounded-2xl border border-line bg-primary-tint p-4 flex items-start gap-3">
+      <Smartphone size={20} className="text-primary shrink-0 mt-0.5" aria-hidden="true" />
       <div className="flex-1 text-sm">
-        <p className="font-medium text-white">Add MerchMate to your Home Screen to keep your data safe</p>
-        <p className="mt-1 text-xs text-slate-300">On iPhone, Safari can erase the data of websites you have not installed. {IOS_INSTALL_STEPS.map((step, i) => `${i + 1}. ${step}.`).join(' ')}</p>
+        <p className="font-semibold text-ink">Add MerchMate to your Home Screen to keep your data safe</p>
+        <p className="mt-1 text-xs text-muted">On iPhone, Safari can erase the data of websites you have not installed. {IOS_INSTALL_STEPS.map((step, i) => `${i + 1}. ${step}.`).join(' ')}</p>
       </div>
-      <button onClick={dismiss} className="p-1 text-slate-400 hover:text-white" aria-label="Dismiss">
+      <button onClick={dismiss} className="inline-flex items-center justify-center min-h-11 min-w-11 -mt-2 -mr-2 rounded-xl text-muted hover:bg-sunken hover:text-ink" aria-label="Dismiss">
         <X size={16} />
       </button>
     </div>

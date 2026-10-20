@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { MessageCircle, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { db } from '../../db';
-import { GlassCard } from '../ui/GlassCard';
+import { Card } from '../ui/Card';
+import { Chip, type ChipTone } from '../ui/Chip';
 import type { AppTab, BusinessProfile, Customer, Invoice } from '../../types';
 import { formatMoney } from '../../lib/currency';
 import { getBalance, getOverdueAmount, getUnconfirmedAmount } from '../../lib/invoice';
@@ -18,16 +19,16 @@ interface Props {
 
 const COLLAPSED_COUNT = 5;
 
-const REASON_STYLES: Record<FollowUpReason, string> = {
-  unconfirmed: 'text-amber-300 bg-amber-400/10 border-amber-400/20',
-  ready: 'text-sky-300 bg-sky-400/10 border-sky-400/20',
-  overdue: 'text-red-400 bg-red-400/10 border-red-400/20',
-  'delivery-late': 'text-red-400 bg-red-400/10 border-red-400/20',
-  'delivery-today': 'text-amber-300 bg-amber-400/10 border-amber-400/20',
+const REASON_TONES: Record<FollowUpReason, ChipTone> = {
+  unconfirmed: 'warning',
+  ready: 'primary',
+  overdue: 'danger',
+  'delivery-late': 'danger',
+  'delivery-today': 'warning',
 };
 
 function reasonLabel(reason: FollowUpReason, invoice: Invoice): string {
-  const money = (value: number) => formatMoney(value, invoice.currency);
+  const money = (value: number) => formatMoney(value, invoice.currency, { trimZeros: true });
   switch (reason) {
     case 'unconfirmed': return `Check bank for ${money(getUnconfirmedAmount(invoice))}`;
     case 'ready': return getBalance(invoice) > 0 ? `Ready · collect ${money(getBalance(invoice))}` : 'Ready · tell client';
@@ -50,35 +51,33 @@ export function FollowUps({ invoices, customers, business, onNavigate }: Props) 
   return (
     <section aria-labelledby="today-heading">
       <div className="flex items-baseline justify-between mb-3">
-        <h2 id="today-heading" className="text-lg font-semibold text-white">Today</h2>
+        <h2 id="today-heading" className="text-base font-bold text-ink">Today</h2>
         {followUps.length > 0 && (
-          <span className="text-xs text-slate-400">{pending === 0 ? 'All done' : `${pending} to do`}</span>
+          <span className="text-xs text-muted">{pending === 0 ? 'All done' : `${pending} to do`}</span>
         )}
       </div>
 
       {followUps.length === 0 ? (
-        <GlassCard className="p-4 flex items-center gap-3 text-sm text-slate-400">
-          <CheckCircle2 size={18} className="text-green-400 shrink-0" />
+        <Card className="p-4 flex items-center gap-3 text-sm text-muted">
+          <CheckCircle2 size={18} className="text-success shrink-0" aria-hidden="true" />
           Nothing to chase. No overdue balances, ready orders or unchecked transfers.
-        </GlassCard>
+        </Card>
       ) : (
-        <GlassCard className="divide-y divide-white/5">
+        <Card className="divide-y divide-line">
           {visible.map(({ invoice, customer, reasons, needsMessage, done }) => {
             // Rendered as a plain link (not window.open after an await) so popup blockers never interfere
             const link = needsMessage && business && customer ? clientWhatsAppLink(invoice, customer, business) : null;
             return (
-              <div key={invoice.id} className={clsx("flex items-center gap-3 p-3", done && "opacity-50")}>
-                <button onClick={() => onNavigate('invoices')} className="flex-1 min-w-0 text-left">
-                  <p className="text-sm text-white font-medium truncate">
-                    {customer?.name ?? 'Unknown'} <span className="text-xs text-slate-500 font-normal">#{invoice.invoiceNumber}</span>
+              <div key={invoice.id} className="flex items-center gap-3 p-3">
+                <button onClick={() => onNavigate('invoices')} className="flex-1 min-w-0 min-h-11 text-left">
+                  <p className={clsx("text-sm font-semibold truncate", done ? "text-muted" : "text-ink")}>
+                    {customer?.name ?? 'Unknown'} <span className="text-xs text-muted font-normal">#{invoice.invoiceNumber}</span>
                   </p>
-                  <div className="mt-1 flex flex-wrap gap-1">
+                  <div className="mt-1 flex flex-wrap gap-1.5">
                     {reasons.map(reason => (
-                      <span key={reason} className={clsx("text-[10px] px-1.5 py-0.5 rounded border", REASON_STYLES[reason])}>
-                        {reasonLabel(reason, invoice)}
-                      </span>
+                      <Chip key={reason} tone={REASON_TONES[reason]}>{reasonLabel(reason, invoice)}</Chip>
                     ))}
-                    {done && <span className="text-[10px] px-1.5 py-0.5 text-slate-400">Messaged today</span>}
+                    {done && <span className="text-xs text-muted self-center">Messaged today</span>}
                   </div>
                 </button>
                 {link ? (
@@ -87,25 +86,25 @@ export function FollowUps({ invoices, customers, business, onNavigate }: Props) 
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={() => markMessaged(invoice)}
-                    className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 text-xs font-medium transition-colors"
+                    className="shrink-0 inline-flex items-center justify-center gap-1.5 min-h-11 min-w-11 px-3 rounded-xl border border-line-strong text-primary hover:bg-primary-tint text-sm font-semibold transition-colors duration-150"
                     aria-label={`Message ${customer?.name ?? 'client'} on WhatsApp`}
                   >
-                    <MessageCircle size={16} /> <span className="hidden sm:inline">Message</span>
+                    <MessageCircle size={18} aria-hidden="true" /> <span className="hidden sm:inline">Message</span>
                   </a>
                 ) : (
-                  <button onClick={() => onNavigate('invoices')} className="shrink-0 p-2 text-slate-500 hover:text-white" aria-label="Open invoices">
-                    <ChevronRight size={18} />
+                  <button onClick={() => onNavigate('invoices')} className="shrink-0 inline-flex items-center justify-center min-h-11 min-w-11 rounded-xl text-muted hover:bg-sunken hover:text-ink" aria-label="Open invoices">
+                    <ChevronRight size={18} aria-hidden="true" />
                   </button>
                 )}
               </div>
             );
           })}
           {followUps.length > COLLAPSED_COUNT && (
-            <button onClick={() => setExpanded(!expanded)} className="w-full p-3 text-xs text-indigo-400 hover:text-indigo-300">
+            <button onClick={() => setExpanded(!expanded)} className="w-full min-h-11 p-3 text-sm font-semibold text-primary hover:bg-primary-tint">
               {expanded ? 'Show less' : `Show all ${followUps.length}`}
             </button>
           )}
-        </GlassCard>
+        </Card>
       )}
     </section>
   );

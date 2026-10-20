@@ -91,7 +91,7 @@ export function LockScreen({ onUnlock }: LockScreenProps) {
   const waiting = waitMs > 0 ? `Too many wrong tries. Try again in ${formatWait(waitMs)}.` : message;
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-6">
+    <main data-surface="dark" className="min-h-screen flex items-center justify-center p-6">
       <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-white/5 p-6 space-y-5">
         {mode === 'pin' && (
           <form onSubmit={unlock} className="space-y-4">

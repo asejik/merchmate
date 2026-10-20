@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
-import { GlassCard } from '../ui/GlassCard';
-import { TrendingUp, Clock, FileText, Wallet, AlertCircle, ShieldAlert } from 'lucide-react';
+import { Card } from '../ui/Card';
+import { Chip, type ChipTone } from '../ui/Chip';
+import { ShieldAlert } from 'lucide-react';
 import { BackupReminder } from '../ui/BackupReminder';
 import { Reports } from './Reports';
 import { InstallHint } from '../ui/InstallHint';
@@ -11,14 +12,20 @@ import { ContinueDraft } from './ContinueDraft';
 import { FollowUps } from './FollowUps';
 import type { AppTab, CurrencyCode } from '../../types';
 import { CURRENCY_CODES, formatMoney } from '../../lib/currency';
-import { getAmountCollected, getBalance, getDisplayStatus, getOverdueAmount, getUnconfirmedAmount, isQuote, todayInputValue } from '../../lib/invoice';
+import { todayInputValue } from '../../lib/invoice';
+import { dashboardStats, greetingFor } from '../../lib/dashboardStats';
 import { clsx } from 'clsx';
-import { HIT_AREA } from '../ui/styles';
+
+const STATUS: Record<string, { label: string; tone: ChipTone; text: string }> = {
+  paid: { label: 'Paid', tone: 'success', text: 'text-success' },
+  overdue: { label: 'Overdue', tone: 'danger', text: 'text-danger' },
+  partial: { label: 'Partly paid', tone: 'warning', text: 'text-warning' },
+  pending: { label: 'Unpaid', tone: 'warning', text: 'text-warning' },
+};
 
 export function Dashboard({ onNavigate }: { onNavigate: (tab: AppTab) => void }) {
   const [currency, setCurrency] = useState<CurrencyCode>('NGN');
 
-  // 1. Fetch Invoices & Profile
   const data = useLiveQuery(async () => {
     const invoices = await db.invoices.toArray();
     const profile = await db.businessProfile.orderBy('id').first();
@@ -26,55 +33,31 @@ export function Dashboard({ onNavigate }: { onNavigate: (tab: AppTab) => void })
     return { invoices, profile, customers };
   });
 
-  // 2. Calculate Stats based on selected Currency
-  const stats = useMemo(() => {
-    if (!data?.invoices) return { collected: 0, unconfirmed: 0, pending: 0, overdue: 0, overdueCount: 0, count: 0, recent: [] };
-
-    // Filter by currency
-    // Quotes are estimates, not money owed
-    const filtered = data.invoices.filter(inv => !isQuote(inv) && inv.currency === currency);
-
-    // Cash already received stays counted even if the invoice was later voided; nothing else does
-    const collected = filtered.reduce((sum, inv) => sum + getAmountCollected(inv), 0);
-    const live = filtered.filter(inv => !inv.voidedAt);
-    const unconfirmed = live.reduce((sum, inv) => sum + getUnconfirmedAmount(inv), 0);
-    const pending = live.reduce((sum, inv) => sum + getBalance(inv), 0);
-    const today = todayInputValue();
-    const overdueInvoices = live.filter(inv => getDisplayStatus(inv, today) === 'overdue');
-    const overdue = overdueInvoices.reduce((sum, inv) => sum + getOverdueAmount(inv, today), 0);
-
-    // Get 3 most recent invoices with customer names
-    const recent = [...live]
-      .sort((a, b) => new Date(b.dateIssued).getTime() - new Date(a.dateIssued).getTime())
-      .slice(0, 3)
-      .map(inv => {
-        const customer = data.customers.find(c => c.id === inv.customerId);
-        return { ...inv, customerName: customer?.name || 'Unknown', displayStatus: getDisplayStatus(inv, today) };
-      });
-
-    return { collected, unconfirmed, pending, overdue, overdueCount: overdueInvoices.length, count: live.length, recent };
-  }, [data, currency]);
+  const stats = useMemo(
+    () => dashboardStats(data?.invoices ?? [], data?.customers ?? [], currency, todayInputValue()),
+    [data, currency],
+  );
+  const money = (value: number) => formatMoney(value, currency, { trimZeros: true });
+  const owner = data?.profile?.ownerName;
+  const greeting = data?.profile ? `${greetingFor(new Date().getHours())}${owner ? `, ${owner}` : ''}` : 'Overview';
 
   return (
-    <div className="space-y-8 pb-28">
+    <div className="space-y-6">
+      <h1 className="sr-only">Dashboard</h1>
       <InstallHint />
-      {/* Header & Currency Toggle */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white">Dashboard</h1>
-          <p className="text-slate-400 mt-1">
-            {data?.profile ? `Welcome back, ${data.profile.ownerName || 'there'}` : 'Overview'}
-          </p>
-        </div>
 
-        <div className="bg-white/5 p-1 rounded-lg inline-flex">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-base font-semibold text-ink">{greeting}</p>
+        <div role="radiogroup" aria-label="Currency" className="inline-flex rounded-xl border border-line bg-surface p-1">
           {CURRENCY_CODES.map(c => (
             <button
               key={c}
+              role="radio"
+              aria-checked={currency === c}
               onClick={() => setCurrency(c)}
               className={clsx(
-                HIT_AREA, "px-3 py-1 text-xs font-medium rounded-md transition-all",
-                currency === c ? "bg-indigo-600 text-white shadow-lg" : "text-slate-400 hover:text-white"
+                'min-h-9 min-w-11 px-3 rounded-lg text-xs font-semibold transition-colors duration-150',
+                currency === c ? 'bg-primary text-on-primary' : 'text-muted hover:text-ink',
               )}
             >
               {c}
@@ -82,7 +65,6 @@ export function Dashboard({ onNavigate }: { onNavigate: (tab: AppTab) => void })
           ))}
         </div>
       </div>
-
 
       {data && (
         <GetStarted
@@ -95,104 +77,87 @@ export function Dashboard({ onNavigate }: { onNavigate: (tab: AppTab) => void })
 
       <BackupReminder hasData={(data?.invoices.length ?? 0) > 0} />
 
+      {/* The one number a seller opens the app for: what is still owed, and what is late */}
+      <Card className="p-5" role="region" aria-labelledby="owed-heading">
+        <h2 id="owed-heading" className="text-sm font-medium text-muted">Owed to you</h2>
+        <p className="money mt-1 text-4xl font-extrabold tracking-tight text-ink">{money(stats.pending)}</p>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {stats.overdueCount > 0 ? (
+            <>
+              <Chip tone="danger">{money(stats.overdue)} overdue</Chip>
+              <span className="text-xs text-muted">on {stats.overdueCount} invoice{stats.overdueCount === 1 ? '' : 's'}</span>
+            </>
+          ) : stats.count > 0 ? (
+            <Chip tone="success">{stats.pending > 0 ? 'Nothing overdue' : 'All paid up'}</Chip>
+          ) : (
+            <span className="text-xs text-muted">No invoices in {currency} yet.</span>
+          )}
+        </div>
+        {stats.invoiced > 0 && (
+          <div className="mt-5">
+            <div className="h-2 rounded-full bg-sunken overflow-hidden" aria-hidden="true">
+              <div className="grow-width h-full rounded-full bg-primary" style={{ width: `${Math.round(stats.paidShare * 100)}%` }} />
+            </div>
+            <p className="mt-2 text-xs text-muted">
+              <span className="money">{money(stats.paid)}</span> paid of <span className="money">{money(stats.invoiced)}</span> invoiced
+            </p>
+          </div>
+        )}
+      </Card>
+
       {data && data.invoices.length > 0 && (
         <FollowUps invoices={data.invoices} customers={data.customers} business={data.profile} onNavigate={onNavigate} />
       )}
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <GlassCard className="p-6 relative overflow-hidden group">
-          <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Wallet size={80} />
-          </div>
-          <h2 className="text-slate-400 text-xs font-medium uppercase tracking-wider">Cash Collected</h2>
-          <p className="text-3xl font-bold text-white mt-2">
-            {formatMoney(stats.collected, currency)}
-          </p>
+      <div className="grid grid-cols-2 gap-3">
+        <Card className="p-4" role="region" aria-labelledby="collected-heading">
+          <h2 id="collected-heading" className="text-sm font-medium text-muted">Cash collected</h2>
+          <p className="money mt-1 text-xl font-bold tracking-tight text-ink">{money(stats.collected)}</p>
           {stats.unconfirmed > 0 ? (
-            <button onClick={() => onNavigate('invoices')} className="mt-4 text-xs text-amber-300 flex items-center gap-1 hover:underline text-left">
-              <ShieldAlert size={14} />
-              <span>+ {formatMoney(stats.unconfirmed, currency)} in transfers to check in your bank</span>
+            <button onClick={() => onNavigate('invoices')} className="mt-2 flex min-h-11 items-start gap-1.5 text-left text-xs font-medium text-warning hover:underline">
+              <ShieldAlert size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
+              <span>+ {money(stats.unconfirmed)} in transfers to check in your bank</span>
             </button>
           ) : (
-            <div className="mt-4 text-xs text-green-400 flex items-center gap-1">
-              <TrendingUp size={14} />
-              <span>Actual cash in hand</span>
-            </div>
+            <p className="mt-2 text-xs text-muted">Actual cash in hand</p>
           )}
-        </GlassCard>
-
-        <GlassCard className="p-6 relative overflow-hidden group">
-          <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Clock size={80} />
-          </div>
-          <h2 className="text-slate-400 text-xs font-medium uppercase tracking-wider">Pending / Outstanding</h2>
-          <p className="text-3xl font-bold text-orange-400 mt-2">
-            {formatMoney(stats.pending, currency)}
-          </p>
-          <div className={clsx("mt-4 text-xs flex items-center gap-1", stats.overdueCount > 0 ? "text-red-400" : "text-orange-400/80")}>
-            <AlertCircle size={14} />
-            <span>
-              {stats.overdueCount > 0
-                ? `${formatMoney(stats.overdue, currency)} overdue on ${stats.overdueCount} invoice${stats.overdueCount === 1 ? '' : 's'}`
-                : 'Money owed to you'}
-            </span>
-          </div>
-        </GlassCard>
-
-        <GlassCard className="p-6 relative overflow-hidden group">
-          <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <FileText size={80} />
-          </div>
-          <h2 className="text-slate-400 text-xs font-medium uppercase tracking-wider">Total Invoices</h2>
-          <p className="text-3xl font-bold text-indigo-400 mt-2">
-            {stats.count}
-          </p>
-          <div className="mt-4 text-xs text-slate-500">
-            In selected currency ({currency})
-          </div>
-        </GlassCard>
+        </Card>
+        <Card className="p-4" role="region" aria-labelledby="count-heading">
+          <h2 id="count-heading" className="text-sm font-medium text-muted">Invoices</h2>
+          <p className="money mt-1 text-xl font-bold tracking-tight text-ink">{stats.count}</p>
+          <p className="mt-2 text-xs text-muted">In {currency}, not voided</p>
+        </Card>
       </div>
 
-      {/* Recent Activity */}
-      <div>
-        <h2 className="text-lg font-semibold text-white mb-4">Recent Activity</h2>
-        <div className="grid gap-3">
-          {stats.recent.map(inv => (
-            <GlassCard key={inv.id} className="p-4 flex items-center justify-between hover:bg-white/10 transition-colors">
-              <div className="flex items-center gap-4">
-                <div className="h-10 w-10 rounded-full bg-white/5 flex items-center justify-center text-slate-400">
-                  <FileText size={18} />
+      <section aria-labelledby="recent-heading">
+        <h2 id="recent-heading" className="mb-3 text-base font-bold text-ink">Recent activity</h2>
+        {stats.recent.length > 0 ? (
+          <Card className="divide-y divide-line">
+            {stats.recent.map(inv => {
+              const status = STATUS[inv.displayStatus] ?? STATUS.pending;
+              return (
+                <div key={inv.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-ink">{inv.customerName}</p>
+                    <p className="text-xs text-muted">#{inv.invoiceNumber}</p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="money text-sm font-bold text-ink">{formatMoney(inv.grandTotal, inv.currency)}</p>
+                    <p className={clsx('text-xs font-semibold', status.text)}>{status.label}</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-white font-medium text-sm">{inv.customerName}</h3>
-                  <p className="text-xs text-slate-500">#{inv.invoiceNumber}</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-white font-bold text-sm">
-                  {formatMoney(inv.grandTotal, inv.currency)}
-                </p>
-                <p className={clsx(
-                  "text-[10px] uppercase font-bold",
-                  inv.displayStatus === 'paid' ? "text-green-400" : inv.displayStatus === 'overdue' ? "text-red-400" : "text-orange-400"
-                )}>
-                  {inv.displayStatus}
-                </p>
-              </div>
-            </GlassCard>
-          ))}
-
-          {stats.recent.length === 0 && (
-             <GlassCard className="p-8 text-center border-dashed border-white/10 bg-transparent">
-               <p className="text-slate-500 text-sm">No invoices found for {currency}.</p>
-               <button onClick={() => onNavigate('create')} className="mt-4 text-indigo-400 hover:text-indigo-300 text-sm font-medium">
-                 Create your first invoice &rarr;
-               </button>
-             </GlassCard>
-          )}
-        </div>
-      </div>
+              );
+            })}
+          </Card>
+        ) : (
+          <Card className="border-dashed p-6 text-center bg-transparent shadow-none">
+            <p className="text-sm text-muted">No invoices found for {currency}.</p>
+            <button onClick={() => onNavigate('create')} className="mt-2 min-h-11 px-3 text-sm font-semibold text-primary hover:underline">
+              Create your first invoice &rarr;
+            </button>
+          </Card>
+        )}
+      </section>
 
       {data && data.invoices.length > 0 && (
         <Reports invoices={data.invoices} customers={data.customers} currency={currency} />

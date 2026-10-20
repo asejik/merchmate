@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Check, Circle, X } from 'lucide-react';
-import { GlassCard } from '../ui/GlassCard';
+import { Card } from '../ui/Card';
+import { BUTTON_PRIMARY } from '../ui/styles';
 import { getSetupSteps, nextSetupStep, type SetupState, type SetupStepId } from '../../lib/onboarding';
 import type { AppTab } from '../../types';
 
@@ -32,13 +33,13 @@ export function GetStarted({ state, onNavigate }: { state: SetupState; onNavigat
   };
 
   return (
-    <GlassCard className="p-5" role="region" aria-label="Get started">
+    <Card className="p-5" role="region" aria-label="Get started">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-white">Welcome to MerchMate</h2>
-          <p className="text-sm text-slate-400 mt-1">Three quick steps and you can send your first invoice.</p>
+          <h2 className="text-lg font-bold text-ink">Welcome to MerchMate</h2>
+          <p className="text-sm text-muted mt-1">Three quick steps and you can send your first invoice.</p>
         </div>
-        <button onClick={dismiss} className="inline-flex items-center justify-center min-h-11 min-w-11 -mt-2 -mr-2 rounded-lg text-slate-500 hover:text-white" aria-label="Hide the getting started guide">
+        <button onClick={dismiss} className="inline-flex items-center justify-center min-h-11 min-w-11 -mt-2 -mr-2 rounded-xl text-muted hover:bg-sunken hover:text-ink" aria-label="Hide the getting started guide">
           <X size={16} />
         </button>
       </div>
@@ -46,20 +47,20 @@ export function GetStarted({ state, onNavigate }: { state: SetupState; onNavigat
         {steps.map(step => (
           <li key={step.id} className="flex items-start gap-3">
             {step.done
-              ? <Check size={20} className="text-green-400 mt-0.5 shrink-0" aria-label="Done" />
-              : <Circle size={20} className="text-slate-600 mt-0.5 shrink-0" aria-hidden="true" />}
+              ? <Check size={20} className="text-success mt-0.5 shrink-0" aria-label="Done" />
+              : <Circle size={20} className="text-line-strong mt-0.5 shrink-0" aria-hidden="true" />}
             <div className="flex-1">
-              <p className={step.done ? 'text-sm text-slate-500 line-through' : 'text-sm font-medium text-white'}>{step.title}</p>
-              {!step.done && <p className="text-xs text-slate-500">{step.hint}</p>}
+              <p className={step.done ? 'text-sm text-muted line-through' : 'text-sm font-semibold text-ink'}>{step.title}</p>
+              {!step.done && <p className="text-xs text-muted">{step.hint}</p>}
             </div>
             {step.id === next.id && (
-              <button onClick={() => onNavigate(DESTINATION[step.id])} className="shrink-0 min-h-11 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium">
+              <button onClick={() => onNavigate(DESTINATION[step.id])} className={`shrink-0 ${BUTTON_PRIMARY}`}>
                 Start
               </button>
             )}
           </li>
         ))}
       </ol>
-    </GlassCard>
+    </Card>
   );
 }

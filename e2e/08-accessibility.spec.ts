@@ -88,6 +88,21 @@ for (const [label, viewport] of [['phone 360px', { width: 360, height: 740 }], [
   });
 }
 
+test('the redesigned dashboard passes the scan in dark mode too', async ({ app, page }) => {
+  test.setTimeout(120_000);
+  await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: 'dark' });
+  await app.open();
+  await app.seed({ invoices: [
+    { id: 'i1', number: 'INV-001', total: 50000, paid: 20000, dueInDays: -2, orderStage: 'ready' },
+    { id: 'i2', number: 'INV-002', total: 30000 },
+    { id: 'i3', number: 'INV-003', total: 18000, paid: 18000 },
+  ] });
+  await app.go('Home');
+  await expect(page.getByText('Recent activity')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Backup reminder' })).toBeVisible();
+  expect(await app.accessibilityViolations()).toEqual([]);
+});
+
 test('the page can be zoomed and reflowed to 320px without sideways scrolling', async ({ app, page }) => {
   await page.setViewportSize({ width: 320, height: 640 }); // WCAG 1.4.10: 400% zoom of a 1280px window
   await app.open();

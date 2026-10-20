@@ -3,6 +3,7 @@ import { DatabaseBackup, Loader2 } from 'lucide-react';
 import { getLastBackupAt, isBackupReminderVisible, saveBackup, snoozeBackupReminder } from '../../db/backup';
 import { isLockEnabled } from '../../lib/appLock';
 import { formatDate } from '../../lib/dates';
+import { BUTTON_GHOST, BUTTON_SECONDARY } from './styles';
 
 /** Daily nudge on the dashboard until a backup has been saved today. "Not today" hides it until tomorrow. */
 export function BackupReminder({ hasData }: { hasData: boolean }) {
@@ -37,20 +38,20 @@ export function BackupReminder({ hasData }: { hasData: boolean }) {
 
   const last = getLastBackupAt();
   return (
-    <div role="region" aria-label="Backup reminder" className="rounded-2xl border border-orange-500/20 bg-orange-500/10 p-4 space-y-3">
+    <div role="region" aria-label="Backup reminder" className="rounded-2xl border border-line bg-warning-tint p-4 space-y-3">
       <div className="flex items-start gap-3">
-        <DatabaseBackup size={20} className="text-orange-300 shrink-0 mt-0.5" />
-        <div className="text-sm text-orange-100 space-y-1">
+        <DatabaseBackup size={20} className="text-warning shrink-0 mt-0.5" aria-hidden="true" />
+        <div className="text-sm text-ink space-y-1">
           <p><strong>Back up your data today.</strong> Everything is stored only on this device. {last ? `Your last backup was on ${formatDate(last, 'long', { moment: true })}.` : 'You have not saved a backup yet.'}</p>
-          {isLockEnabled() && <p className="text-orange-200/80">App Lock is on: a recent backup is your safety net if you forget both your PIN and your recovery code.</p>}
+          {isLockEnabled() && <p className="text-muted">App Lock is on: a recent backup is your safety net if you forget both your PIN and your recovery code.</p>}
         </div>
       </div>
-      {error && <p role="alert" className="text-sm text-red-300">{error}</p>}
+      {error && <p role="alert" className="text-sm font-medium text-danger">{error}</p>}
       <div className="flex gap-3">
-        <button onClick={backUp} disabled={busy} className="flex-1 flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-400 text-slate-950 px-4 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-60">
-          {busy && <Loader2 size={16} className="animate-spin" />} Back up now
+        <button onClick={backUp} disabled={busy} className={`flex-1 md:flex-none md:px-8 ${BUTTON_SECONDARY}`}>
+          {busy && <Loader2 size={16} className="animate-spin" aria-hidden="true" />} Back up now
         </button>
-        <button onClick={notToday} disabled={busy} className="px-4 py-2.5 rounded-xl text-sm text-orange-100 hover:bg-white/10">Not today</button>
+        <button onClick={notToday} disabled={busy} className={BUTTON_GHOST}>Not today</button>
       </div>
     </div>
   );

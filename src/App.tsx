@@ -176,13 +176,6 @@ function App() {
 
   return (
     <AppShell activeTab={activeTab} onTabChange={handleTabChange}>
-      <div className="fixed top-4 right-4 z-50 pointer-events-none opacity-0 md:opacity-100">
-         <div className="flex items-center gap-2 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-white/5">
-             <span className={`h-2 w-2 rounded-full ${status === 'Ready' ? 'bg-green-500' : 'bg-red-500'}`} />
-             <span className="text-[10px] font-mono text-slate-400 uppercase">{status}</span>
-         </div>
-      </div>
-
       {renderContent()}
       <UpdateBanner />
     </AppShell>

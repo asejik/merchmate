@@ -1,24 +1,139 @@
 @import "tailwindcss";
+@import "./assets/fonts/fonts.css";
 
+/*
+ * Design tokens ("Adire"): see docs/DESIGN.md for the rules. Raw values live in :root and change
+ * with the phone's light/dark setting; Tailwind utilities (bg-paper, text-ink, ...) read them at
+ * run time through `@theme inline`. Never write a colour value in a component.
+ */
+:root {
+  --paper: #fbf9f5;
+  --surface: #ffffff;
+  --sunken: #eeeae0;
+  --line: #e6e1d8;
+  --line-strong: #b9b1a1;
+  --ink: #151b33;
+  --muted: #5a6275;
+  --primary: #27358f;
+  --primary-hover: #1d2972;
+  --on-primary: #ffffff;
+  --primary-tint: #e8ebfa;
+  /* Saffron is decoration only (a marker, a fold): 2:1 on paper, so never text */
+  --accent: #e8a317;
+  --success: #17724a;
+  --success-tint: #e4f4ea;
+  --warning: #8f5200;
+  --warning-tint: #fcf0d6;
+  --danger: #b3261e;
+  --danger-tint: #fbe9e7;
+  --elev-card: 0 1px 2px rgb(21 27 51 / 0.05);
+  --elev-raised: 0 8px 24px rgb(21 27 51 / 0.12);
+  --dur-fast: 150ms;
+  --dur-base: 250ms;
+  --dur-slow: 400ms;
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #0e1226;
+    --surface: #171c38;
+    --sunken: #1f2547;
+    --line: #2a3157;
+    --line-strong: #5a6498;
+    --ink: #eef0fa;
+    --muted: #a3aac8;
+    --primary: #8c9bff;
+    --primary-hover: #a6b2ff;
+    --on-primary: #0e1226;
+    --primary-tint: #232b57;
+    --accent: #f2b63d;
+    --success: #5fd59b;
+    --success-tint: #12352a;
+    --warning: #f2b63d;
+    --warning-tint: #3a2e10;
+    --danger: #ff8a80;
+    --danger-tint: #3e1b1e;
+    --elev-card: none;
+    --elev-raised: 0 8px 24px rgb(0 0 0 / 0.45);
+  }
+}
+
+@theme inline {
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-sunken: var(--sunken);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-on-primary: var(--on-primary);
+  --color-primary-tint: var(--primary-tint);
+  --color-accent: var(--accent);
+  --color-success: var(--success);
+  --color-success-tint: var(--success-tint);
+  --color-warning: var(--warning);
+  --color-warning-tint: var(--warning-tint);
+  --color-danger: var(--danger);
+  --color-danger-tint: var(--danger-tint);
+
+  --shadow-card: var(--elev-card);
+  --shadow-raised: var(--elev-raised);
+}
+
+/* Legacy glass tokens, used by screens that have not moved to the new design yet */
 @theme {
-  /* Custom Font Family - "Instant Authority" */
-  --font-sans: 'Inter', 'system-ui', 'sans-serif';
-
-  /* Color Palette - Elegant/Calm */
   --color-glass-border: rgba(255, 255, 255, 0.1);
   --color-glass-bg: rgba(255, 255, 255, 0.05);
   --color-glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
 }
 
-/* Base Styles for that "High-end" feel */
+/*
+ * Screens not yet moved to the new design are written for a dark surface. Wrapping them in
+ * data-surface="dark" gives them that surface, and makes the new shell (nav, header) use the dark
+ * tokens next to them. Remove this block, and the attribute, when the last screen has moved.
+ */
+[data-surface='dark'] {
+  --paper: #0e1226;
+  --surface: #171c38;
+  --sunken: #1f2547;
+  --line: #2a3157;
+  --line-strong: #5a6498;
+  --ink: #eef0fa;
+  --muted: #a3aac8;
+  --primary: #8c9bff;
+  --primary-hover: #a6b2ff;
+  --on-primary: #0e1226;
+  --primary-tint: #232b57;
+  --accent: #f2b63d;
+  --success: #5fd59b;
+  --success-tint: #12352a;
+  --warning: #f2b63d;
+  --warning-tint: #3a2e10;
+  --danger: #ff8a80;
+  --danger-tint: #3e1b1e;
+  --elev-card: none;
+  --elev-raised: 0 8px 24px rgb(0 0 0 / 0.45);
+  color-scheme: dark;
+  background: radial-gradient(circle at 50% 50%, #1e293b 0%, #0f172a 100%);
+  color: rgba(255, 255, 255, 0.87);
+}
+
 :root {
   font-family: var(--font-sans);
   line-height: 1.5;
   font-weight: 400;
 
   color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #0f172a; /* Slate 900 - Deep background for glass pop */
+  color: var(--ink);
+  background-color: var(--paper);
+
+  /* Plus Jakarta Sans sets a narrow space between words; a touch more keeps small text easy to read */
+  word-spacing: 0.05em;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -30,8 +145,20 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  /* Subtle Animated Background Base */
-  background: radial-gradient(circle at 50% 50%, #1e293b 0%, #0f172a 100%);
+  background: var(--paper);
+}
+
+/* Money lines up in columns: digits all the same width */
+.money {
+  font-variant-numeric: tabular-nums;
+}
+
+/* A progress bar fills once, when it first appears (the reduced-motion rule below collapses it) */
+@keyframes grow-width {
+  from { width: 0; }
+}
+.grow-width {
+  animation: grow-width var(--dur-slow) var(--ease-out);
 }
 
 /* Respect the phone's "reduce motion" setting: no looping or sliding animation */
@@ -46,8 +173,12 @@ body {
 
 /* A clear focus ring for keyboard users everywhere. !important because many controls set focus:outline-none */
 :focus-visible {
-  outline: 2px solid #a5b4fc !important;
+  outline: 2px solid var(--primary) !important;
   outline-offset: 2px;
+}
+/* On a legacy dark surface the ring stays the light indigo it always was */
+[data-surface='dark'] :focus-visible {
+  outline-color: #a5b4fc !important;
 }
 /* The main area is focused by the app after a screen change; it needs no ring of its own */
 main:focus-visible {

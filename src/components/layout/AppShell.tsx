@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react';
-import { LayoutDashboard, FileText, Settings, PlusCircle, Menu, Users } from 'lucide-react';
+import { Home, FileText, Settings, Plus, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { LucideIcon } from 'lucide-react';
 import type { AppTab } from '../../types';
+import { Logo } from '../ui/Logo';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -19,6 +20,17 @@ const SCREEN_TITLES: Record<AppTab, string> = {
   settings: 'Settings',
 };
 
+/** Screens already in the new design. The others are still written for a dark surface (see index.css). */
+const REDESIGNED: AppTab[] = ['dashboard'];
+
+const NAV_ITEMS: { id: AppTab; label: string; icon: LucideIcon; isPrimary?: boolean }[] = [
+  { id: 'dashboard', label: 'Home', icon: Home },
+  { id: 'invoices', label: 'Invoices', icon: FileText },
+  { id: 'create', label: 'New', icon: Plus, isPrimary: true },
+  { id: 'customers', label: 'Clients', icon: Users },
+  { id: 'settings', label: 'Settings', icon: Settings },
+];
+
 export function AppShell({ children, activeTab, onTabChange }: AppShellProps) {
   const mainRef = useRef<HTMLElement>(null);
   const firstRender = useRef(true);
@@ -33,94 +45,99 @@ export function AppShell({ children, activeTab, onTabChange }: AppShellProps) {
     mainRef.current?.focus({ preventScroll: true });
   }, [activeTab]);
 
-  const navItems: { id: AppTab; label: string; icon: LucideIcon; isPrimary?: boolean }[] = [
-    { id: 'dashboard', label: 'Home', icon: LayoutDashboard },
-    { id: 'invoices', label: 'Invoices', icon: FileText },
-    { id: 'create', label: 'New', icon: PlusCircle, isPrimary: true },
-    { id: 'customers', label: 'Clients', icon: Users },
-    { id: 'settings', label: 'Settings', icon: Settings },
-  ];
-
   return (
-    <div className="min-h-screen text-white/90 selection:bg-indigo-500/30">
+    <div data-surface={REDESIGNED.includes(activeTab) ? undefined : 'dark'} className="min-h-screen bg-paper text-ink selection:bg-primary-tint">
       <a
         href="#main"
         onClick={(e) => { e.preventDefault(); mainRef.current?.focus(); }}
-        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:rounded-lg focus:bg-indigo-600 focus:px-4 focus:py-3 focus:text-white"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:rounded-xl focus:bg-primary focus:px-4 focus:py-3 focus:text-on-primary"
       >
         Skip to main content
       </a>
 
-      {/* Background Ambient Glow */}
-      <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
-         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-500/10 rounded-full blur-[120px] animate-pulse" />
-         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/10 rounded-full blur-[120px] animate-pulse delay-1000" />
+      {/* Phone header: the desktop sidebar carries the logo instead */}
+      <header className="md:hidden px-4 pt-4 pb-2">
+        <Logo wordmark size={28} />
+      </header>
+
+      <div className="md:pl-64">
+        <main id="main" ref={mainRef} tabIndex={-1} className="pb-28 pt-4 px-4 md:px-10 md:pt-10 md:pb-12 max-w-4xl mx-auto focus:outline-none">
+          {children}
+        </main>
       </div>
 
-      {/* Main Content Area */}
-      <main id="main" ref={mainRef} tabIndex={-1} className="pb-24 pt-8 px-4 md:pl-24 md:pt-12 max-w-7xl mx-auto focus:outline-none">
-        {children}
-      </main>
-
-      {/* Mobile Bottom Navigation */}
-      <nav aria-label="Main" className="fixed bottom-0 left-0 right-0 z-50 md:hidden">
-        <div className="mx-4 mb-4 rounded-2xl border border-[var(--color-glass-border)] bg-[#0f172a]/80 backdrop-blur-2xl shadow-2xl">
-          <div className="flex justify-around items-center p-2">
-            {navItems.map((item) => (
+      {/* Phone: bottom navigation */}
+      <nav aria-label="Main" className="fixed bottom-0 left-0 right-0 z-50 md:hidden border-t border-line bg-surface">
+        <div className="flex items-center gap-1 px-1 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+          {NAV_ITEMS.map((item) => {
+            const active = activeTab === item.id;
+            return item.isPrimary ? (
               <button
                 key={item.id}
                 onClick={() => onTabChange(item.id)}
                 aria-label={item.label}
-                aria-current={activeTab === item.id ? 'page' : undefined}
-                className={`relative flex flex-col items-center justify-center p-2 rounded-xl transition-all duration-200 ${
-                  activeTab === item.id ? 'text-indigo-400' : 'text-slate-400 hover:text-slate-200'
-                }`}
+                aria-current={active ? 'page' : undefined}
+                className="shrink-0 flex items-center gap-1 min-h-11 px-3 rounded-xl bg-primary text-on-primary text-sm font-semibold hover:bg-primary-hover transition-colors duration-150"
               >
-                {activeTab === item.id && (
-                  <motion.div
-                    layoutId="nav-pill"
-                    className="absolute inset-0 bg-white/5 rounded-xl"
-                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                <item.icon size={18} aria-hidden="true" />
+                {item.label}
+              </button>
+            ) : (
+              <button
+                key={item.id}
+                onClick={() => onTabChange(item.id)}
+                aria-label={item.label}
+                aria-current={active ? 'page' : undefined}
+                className={`relative flex flex-1 min-w-11 flex-col items-center justify-center min-h-11 px-0.5 pt-1 text-xs font-medium transition-colors duration-150 ${active ? 'text-primary' : 'text-muted hover:text-ink'}`}
+              >
+                {active && (
+                  <motion.span
+                    layoutId="nav-marker"
+                    aria-hidden="true"
+                    className="absolute -top-2 h-[3px] w-6 rounded-full bg-accent"
+                    transition={{ duration: 0.25, ease: [0.2, 0.7, 0.2, 1] }}
                   />
                 )}
-
-                <item.icon
-                  size={item.isPrimary ? 28 : 24}
-                  className={item.isPrimary ? "text-indigo-400 drop-shadow-lg" : ""}
-                />
-                <span className="text-[10px] font-medium mt-1 opacity-80">{item.label}</span>
+                <item.icon size={22} aria-hidden="true" />
+                {item.label}
               </button>
-            ))}
-          </div>
+            );
+          })}
         </div>
       </nav>
 
-      {/* Desktop Sidebar */}
-      <nav aria-label="Main" className="hidden md:flex fixed left-0 top-0 bottom-0 w-20 flex-col items-center py-8 border-r border-[var(--color-glass-border)] bg-[var(--color-glass-bg)] backdrop-blur-md">
-        <div className="mb-8 p-2 bg-indigo-500/20 rounded-lg">
-          <Menu size={24} className="text-indigo-400" />
+      {/* Desktop: labelled sidebar */}
+      <nav aria-label="Main" className="hidden md:flex fixed left-0 top-0 bottom-0 w-64 flex-col gap-1 px-4 py-8 border-r border-line bg-surface">
+        <div className="px-2 pb-8">
+          <Logo wordmark size={32} />
         </div>
-
-        <div className="flex flex-col gap-6 w-full px-2">
-          {navItems.map((item) => (
+        {NAV_ITEMS.map((item) => {
+          const active = activeTab === item.id;
+          return item.isPrimary ? (
             <button
               key={item.id}
               onClick={() => onTabChange(item.id)}
               aria-label={item.label}
-              aria-current={activeTab === item.id ? 'page' : undefined}
-              className={`group relative flex items-center justify-center p-3 rounded-xl transition-all ${
-                activeTab === item.id ? 'bg-white/10 text-indigo-400' : 'text-slate-400 hover:bg-white/5 hover:text-slate-100'
-              }`}
+              aria-current={active ? 'page' : undefined}
+              className="my-2 flex items-center justify-center gap-2 min-h-11 px-4 rounded-xl bg-primary text-on-primary text-sm font-semibold hover:bg-primary-hover transition-colors duration-150"
             >
-              <item.icon size={24} className="transition-transform group-hover:scale-110" />
-              <span className="absolute left-16 px-2 py-1 bg-slate-800 border border-slate-700 rounded text-xs opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-                {item.label}
-              </span>
+              <item.icon size={18} aria-hidden="true" />
+              {item.label}
             </button>
-          ))}
-        </div>
+          ) : (
+            <button
+              key={item.id}
+              onClick={() => onTabChange(item.id)}
+              aria-label={item.label}
+              aria-current={active ? 'page' : undefined}
+              className={`flex items-center gap-3 min-h-11 px-3 rounded-xl text-sm font-medium transition-colors duration-150 ${active ? 'bg-primary-tint text-primary' : 'text-muted hover:bg-sunken hover:text-ink'}`}
+            >
+              <item.icon size={20} aria-hidden="true" />
+              {item.label}
+            </button>
+          );
+        })}
       </nav>
-
     </div>
   );
 }
