@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <style>
+    .doc { fill: #27358f; }
+    .m { stroke: #fbf9f5; }
+    @media (prefers-color-scheme: dark) { .doc { fill: #8c9bff; } .m { stroke: #0e1226; } }
+  </style>
+  <path class="doc" d="M7 3H33L43 13V45H7Z"/>
+  <path fill="#e8a317" d="M33 3V13H43Z"/>
+  <path class="m" d="M14 36V18L24 29L34 18V36" fill="none" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

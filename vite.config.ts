@@ -41,6 +41,8 @@ export default defineConfig({
         // The lazily loaded PDF engine (~1.3 MB) must be precached or PDFs fail offline.
         // Workbox silently skips files above its 2 MB default.
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        // Fonts must be precached too, or text falls back to the system font offline
+        globPatterns: ['**/*.{js,css,html,woff2}'],
       },
       devOptions: {
         enabled: false // Disable PWA logic in local dev to prevent caching issues
@@ -51,8 +53,8 @@ export default defineConfig({
         short_name: 'MerchMate',
         description: 'Offline-first invoicing for small businesses. Create, share and track invoices from your phone.',
 
-        theme_color: '#0f172a',
-        background_color: '#0f172a',
+        theme_color: '#27358f',
+        background_color: '#fbf9f5',
         display: 'standalone',
         orientation: 'portrait',
         icons: [
