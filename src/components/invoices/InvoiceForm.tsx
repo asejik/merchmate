@@ -4,6 +4,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
 import { DocumentGoneError, NumberInUseError, saveDocument } from '../../db/mutations';
 import { Save, ArrowLeft, Loader2 } from 'lucide-react';
+import { clsx } from 'clsx';
+import { BUTTON_GHOST, BUTTON_PRIMARY } from '../ui/styles';
 import { failed } from '../../lib/messages';
 import { formatDate } from '../../lib/dates';
 import { clearDraft, loadDraft, restoreValues, saveDraft } from '../../lib/drafts';
@@ -157,8 +159,8 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
   // saved client, so editing, duplicating or converting would open with no client chosen
   if (!initial || !customers) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 text-slate-500 gap-3">
-        {error ? <p className="text-red-400">{error}</p> : <Loader2 className="animate-spin" size={28} />}
+      <div className="flex flex-col items-center justify-center h-64 text-muted gap-3">
+        {error ? <p className="text-danger">{error}</p> : <Loader2 className="animate-spin" size={28} />}
       </div>
     );
   }
@@ -166,22 +168,22 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
   return (
     <div className="max-w-4xl mx-auto pb-20">
       <div className="flex items-center gap-4 mb-6">
-        <button onClick={onCancel} className="p-2 hover:bg-white/10 rounded-full text-slate-400 transition-colors" aria-label="Back">
-          <ArrowLeft size={20} />
+        <button onClick={onCancel} className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full text-muted transition-colors duration-150 hover:bg-sunken hover:text-ink" aria-label="Back">
+          <ArrowLeft size={20} aria-hidden="true" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-white">{text.title}</h1>
-          <p className="text-slate-400 text-sm">{text.subtitle}</p>
+          <h1 className="text-2xl font-extrabold tracking-tight text-ink">{text.title}</h1>
+          <p className="text-muted text-sm">{text.subtitle}</p>
         </div>
         {draftKind && isDirty && (
-          <button type="button" onClick={startOver} className="ml-auto min-h-11 px-3 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-white/10">
+          <button type="button" onClick={startOver} className={clsx(BUTTON_GHOST, "ml-auto shrink-0 whitespace-nowrap")}>
             Start over
           </button>
         )}
       </div>
 
       {restoredFrom && (
-        <p role="status" className="mb-6 rounded-xl border border-indigo-400/20 bg-indigo-500/10 px-4 py-3 text-sm text-indigo-100">
+        <p role="status" className="mb-6 rounded-xl bg-primary-tint px-4 py-3 text-sm text-primary">
           Restored your unsaved {noun.toLowerCase()} (saved on this device {formatDate(restoredFrom, 'long', { moment: true })}). It is saved automatically as you type.
         </p>
       )}
@@ -198,8 +200,8 @@ export function InvoiceForm({ mode, sourceInvoiceId, onComplete, onCancel, onAdd
         <CostsSection control={control} register={register} currency={currency} taxLabel={taxLabel} totals={totals} />
 
         <div className="flex flex-col items-end gap-3 pt-4">
-          {error && <p className="text-sm text-red-400" role="alert">{error}</p>}
-          <button type="submit" disabled={saving} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-xl font-bold shadow-lg shadow-indigo-500/20 transition-all transform hover:-translate-y-1 disabled:opacity-50">
+          {error && <p className="text-sm font-medium text-danger" role="alert">{error}</p>}
+          <button type="submit" disabled={saving} className={clsx(BUTTON_PRIMARY, "w-full sm:w-auto sm:px-8")}>
             {saving ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />}
             {text.submit}
           </button>

@@ -82,8 +82,8 @@ Planned with the invoice screens: a PAID stamp that presses onto an invoice once
 Plain, sentence case, verbs first, no "please", no exclamation marks. "Owed to you", not "Pending / Outstanding". Errors say what happened and what to do (`failed()` in `lib/messages.ts`).
 
 ## Migration status (as of 2026-10-20)
-Moved to the new design: app shell (nav, header, logo), Dashboard (hero, Today list, tiles, recent activity, reports, notices), Invoices list (cards, status chips, actions menu), the payment window and share window, icons and favicon.
-Not yet moved: New invoice form, Clients, Settings, the confirm/alert dialogs (`DialogProvider`), lock screen, fatal error screen, update banner. They keep their dark styling inside `data-surface="dark"`, so the app works while the move happens one screen at a time. When the last one moves, delete the `[data-surface='dark']` block in `index.css`, the attribute in `AppShell`, `LockScreen`, `FatalError`, and `GlassCard`.
+Moved to the new design: app shell (nav, header, logo), Dashboard (hero, Today list, tiles, recent activity, reports, notices), Invoices list (cards, status chips, actions menu), the payment window and share window, the new invoice/quote form (all its sections), icons and favicon.
+Not yet moved: Clients, Settings, the confirm/alert dialogs (`DialogProvider`), lock screen, fatal error screen, update banner. They keep their dark styling inside `data-surface="dark"`, so the app works while the move happens one screen at a time. When the last one moves, delete the `[data-surface='dark']` block in `index.css`, the attribute in `AppShell`, `LockScreen`, `FatalError`, and `GlassCard`.
 
 ## Known gaps
 - Hausa hooked letters have no glyph in the font (fallback only).

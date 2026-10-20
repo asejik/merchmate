@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useFieldArray, useWatch, type Control, type UseFormRegister } from 'react-hook-form';
 import { Lock, Plus, Trash2 } from 'lucide-react';
 import { clsx } from 'clsx';
-import { GlassCard } from '../../ui/GlassCard';
+import { Card } from '../../ui/Card';
 import { inputClass } from './formStyles';
 import { CURRENCY_SYMBOLS, formatMoney } from '../../../lib/currency';
 import type { InvoiceDraft, Totals } from '../../../lib/invoice';
@@ -24,18 +24,18 @@ export function CostsSection({ control, register, currency, taxLabel, totals }: 
   const profit = useMemo(() => computeProfit(totals.grandTotal, totals.tax, costs ?? []), [totals.grandTotal, totals.tax, costs]);
 
   return (
-    <GlassCard className="p-6">
+    <Card className="p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-            <Lock size={18} className="text-indigo-400" /> My Costs
+          <h2 className="text-base font-bold text-ink flex items-center gap-2">
+            <Lock size={18} className="text-primary" /> My Costs
           </h2>
-          <p className="text-xs text-slate-500 mt-1">Optional and private: never shown to the client. See what you actually make on this job.</p>
+          <p className="text-xs text-muted mt-1">Optional and private: never shown to the client. See what you actually make on this job.</p>
         </div>
         <button
           type="button"
           onClick={() => appendCost({ description: '', amount: 0 })}
-          className="text-xs flex items-center gap-1 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-indigo-300 transition-colors shrink-0"
+          className="flex shrink-0 items-center gap-1 rounded-lg bg-primary-tint px-3 py-1.5 text-xs font-semibold text-primary transition-opacity hover:opacity-80"
         >
           <Plus size={14} /> Add Cost
         </button>
@@ -52,7 +52,7 @@ export function CostsSection({ control, register, currency, taxLabel, totals }: 
                 aria-label="Cost description"
               />
               <div className="w-28 relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs">{symbol}</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted text-xs">{symbol}</span>
                 <input
                   type="number"
                   step="any"
@@ -62,31 +62,31 @@ export function CostsSection({ control, register, currency, taxLabel, totals }: 
                   aria-label="Cost amount"
                 />
               </div>
-              <button type="button" onClick={() => removeCost(index)} className="inline-flex items-center justify-center min-h-11 min-w-11 text-slate-500 hover:text-red-400 transition-colors" aria-label="Remove cost">
+              <button type="button" onClick={() => removeCost(index)} className="inline-flex items-center justify-center min-h-11 min-w-11 text-muted hover:text-danger transition-colors" aria-label="Remove cost">
                 <Trash2 size={16} />
               </button>
             </div>
           ))}
-          <div className="mt-3 rounded-xl bg-black/20 border border-white/5 p-4 text-sm space-y-1">
-            <div className="flex justify-between text-slate-400">
+          <div className="mt-3 rounded-xl bg-sunken p-4 text-sm space-y-1">
+            <div className="flex justify-between text-muted">
               <span>Your price{totals.tax > 0 ? ` (before ${taxLabel || 'tax'})` : ''}</span>
               <span>{formatMoney(profit.revenue, currency)}</span>
             </div>
-            <div className="flex justify-between text-slate-400">
+            <div className="flex justify-between text-muted">
               <span>Costs</span>
               <span>-{formatMoney(profit.cost, currency)}</span>
             </div>
-            <div className="h-px bg-white/10 my-1" />
+            <div className="h-px bg-line my-1" />
             <div className="flex justify-between font-bold">
-              <span className="text-white">Profit</span>
-              <span className={profit.profit < 0 ? "text-red-400" : "text-green-400"}>
+              <span className="text-ink">Profit</span>
+              <span className={profit.profit < 0 ? "text-danger" : "text-success"}>
                 {formatMoney(profit.profit, currency)}
-                {profit.margin !== null && <span className="text-xs font-normal text-slate-400"> · {profit.margin}%</span>}
+                {profit.margin !== null && <span className="text-xs font-normal text-muted"> · {profit.margin}%</span>}
               </span>
             </div>
           </div>
         </div>
       )}
-    </GlassCard>
+    </Card>
   );
 }

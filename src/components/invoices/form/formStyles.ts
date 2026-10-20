@@ -1,1 +1,1 @@
-export { INPUT_CLASS as inputClass, LABEL_CLASS as labelClass } from '../../ui/styles';
+export { FIELD_CLASS as inputClass, FIELD_LABEL as labelClass } from '../../ui/styles';

@@ -1,7 +1,7 @@
 import type { UseFormRegister, UseFormSetValue } from 'react-hook-form';
 import { Calculator, Percent } from 'lucide-react';
 import { clsx } from 'clsx';
-import { GlassCard } from '../../ui/GlassCard';
+import { Card } from '../../ui/Card';
 import { HIT_AREA } from '../../ui/styles';
 import { inputClass, labelClass } from './formStyles';
 import type { Invoice } from '../../../types';
@@ -27,7 +27,7 @@ interface TotalsSectionProps {
 export function TotalsSection({ register, setValue, currency, noun, isQuoteDoc, existing, discountType, discountRate, taxRate, taxLabel, totals, amountPaid }: TotalsSectionProps) {
   const symbol = CURRENCY_SYMBOLS[currency];
   return (
-    <GlassCard className="p-6">
+    <Card className="p-6">
       <div className="flex flex-col md:flex-row gap-8">
          <div className="flex-1 space-y-4">
 
@@ -38,13 +38,13 @@ export function TotalsSection({ register, setValue, currency, noun, isQuoteDoc, 
                    <button
                      type="button"
                      onClick={() => setValue('discountType', discountType === 'percentage' ? 'fixed' : 'percentage')}
-                     className={clsx(HIT_AREA, "text-[10px] bg-white/10 hover:bg-white/20 px-2 py-1.5 rounded text-indigo-300 transition-colors uppercase font-bold tracking-wide")}
+                     className={clsx(HIT_AREA, "rounded-lg bg-primary-tint px-2 py-1.5 text-xs font-semibold text-primary transition-opacity hover:opacity-80")}
                    >
                      {discountType === 'percentage' ? 'Use amount' : 'Use %'}
                    </button>
                 </div>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs font-bold">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted text-xs font-bold">
                     {discountType === 'percentage' ? <Percent size={14} /> : symbol}
                   </span>
                   <input
@@ -64,7 +64,7 @@ export function TotalsSection({ register, setValue, currency, noun, isQuoteDoc, 
                 <div className="flex gap-2">
                   <input {...register('taxLabel')} className={clsx(inputClass, "w-20")} placeholder="VAT" aria-label="Tax name" />
                   <div className="relative flex-1">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"><Percent size={14} /></span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"><Percent size={14} /></span>
                     <input
                       id="inv-taxRate"
                       type="number"
@@ -82,25 +82,25 @@ export function TotalsSection({ register, setValue, currency, noun, isQuoteDoc, 
             </div>
 
             {isQuoteDoc ? null : existing ? (
-              <div className="rounded-xl bg-white/5 border border-white/10 p-4 text-sm text-slate-300">
-                Paid so far: <span className="font-bold text-white">{formatMoney(existing.depositAmount, currency)}</span>
-                <p className="text-xs text-slate-500 mt-1">Use “Record Payment” on the invoice list to add payments.</p>
+              <div className="rounded-xl bg-sunken p-4 text-sm text-muted">
+                Paid so far: <span className="font-bold text-ink">{formatMoney(existing.depositAmount, currency)}</span>
+                <p className="text-xs text-muted mt-1">Use “Record Payment” on the invoice list to add payments.</p>
               </div>
             ) : (
               <div>
                 <label className={labelClass} htmlFor="inv-depositAmount">Deposit / Initial Payment</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">{symbol}</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">{symbol}</span>
                   <input
                     id="inv-depositAmount"
                     type="number"
                     step="any"
                     min="0"
                     {...register('depositAmount', { valueAsNumber: true })}
-                    className="w-full bg-indigo-500/10 border border-indigo-500/30 rounded-xl px-4 py-4 pl-8 text-xl font-bold text-white focus:outline-none focus:border-indigo-500 transition-all"
+                    className={clsx(inputClass, "money pl-8 text-xl font-bold")}
                   />
                 </div>
-                <p className="text-xs text-indigo-300/80 mt-2 flex items-center gap-1">
+                <p className="mt-2 flex items-center gap-1 text-xs text-muted">
                   <Calculator size={12} />
                   Any amount already paid upfront.
                 </p>
@@ -118,14 +118,14 @@ export function TotalsSection({ register, setValue, currency, noun, isQuoteDoc, 
             </div>
          </div>
 
-         <div className="w-full md:w-72 space-y-3 pt-2 bg-black/20 p-4 rounded-xl border border-white/5 h-fit">
-            <div className="flex justify-between text-sm text-slate-400">
+         <div className="w-full md:w-72 space-y-3 bg-sunken p-4 rounded-xl h-fit">
+            <div className="flex justify-between text-sm text-muted">
               <span>Subtotal:</span>
               <span>{formatMoney(totals.subtotal, currency)}</span>
             </div>
 
             {totals.discount > 0 && (
-              <div className="flex justify-between text-sm text-green-400">
+              <div className="flex justify-between text-sm text-success">
                 <span>
                   Discount {discountType === 'percentage' ? `(${toNumber(discountRate)}%)` : '(Fixed)'}:
                 </span>
@@ -134,31 +134,31 @@ export function TotalsSection({ register, setValue, currency, noun, isQuoteDoc, 
             )}
 
             {totals.tax > 0 && (
-              <div className="flex justify-between text-sm text-slate-400">
+              <div className="flex justify-between text-sm text-muted">
                 <span>{taxLabel || 'Tax'} ({toNumber(taxRate)}%):</span>
                 <span>{formatMoney(totals.tax, currency)}</span>
               </div>
             )}
 
-            <div className="h-px bg-white/10 my-2" />
+            <div className="h-px bg-line my-2" />
 
-            <div className="flex justify-between text-base font-semibold text-white">
+            <div className="flex justify-between text-base font-semibold text-ink">
               <span>Grand Total:</span>
               <span>{formatMoney(totals.grandTotal, currency)}</span>
             </div>
 
             {!isQuoteDoc && (
               <>
-                <div className="flex justify-between text-sm text-slate-400">
+                <div className="flex justify-between text-sm text-muted">
                   <span>Paid:</span>
-                  <span className="text-white">({formatMoney(toNumber(amountPaid), currency)})</span>
+                  <span className="text-ink">({formatMoney(toNumber(amountPaid), currency)})</span>
                 </div>
 
-                <div className="h-px bg-white/10 my-2" />
+                <div className="h-px bg-line my-2" />
 
                 <div className="flex justify-between text-lg font-bold">
-                  <span className="text-white">Balance Due:</span>
-                  <span className={totals.balance > 0 ? "text-orange-400" : "text-green-400"}>
+                  <span className="text-ink">Balance Due:</span>
+                  <span className={totals.balance > 0 ? "text-ink" : "text-success"}>
                     {formatMoney(totals.balance, currency)}
                   </span>
                 </div>
@@ -166,6 +166,6 @@ export function TotalsSection({ register, setValue, currency, noun, isQuoteDoc, 
             )}
          </div>
       </div>
-    </GlassCard>
+    </Card>
   );
 }

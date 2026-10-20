@@ -1,7 +1,7 @@
 import type { FieldErrors, UseFormRegister, UseFormSetValue } from 'react-hook-form';
 import { clsx } from 'clsx';
 import { FieldError } from '../../ui/FieldError';
-import { GlassCard } from '../../ui/GlassCard';
+import { Card } from '../../ui/Card';
 import { HIT_AREA } from '../../ui/styles';
 import { inputClass, labelClass } from './formStyles';
 import type { Customer } from '../../../types';
@@ -30,11 +30,11 @@ interface DetailsSectionProps {
 /** Currency, number, client and the dates (issued, due, delivery). */
 export function DetailsSection({ register, errors, setValue, currency, dateIssued, noun, isQuoteDoc, customers, onAddClient }: DetailsSectionProps) {
   return (
-    <GlassCard className="p-6">
+    <Card className="p-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
           <span id="inv-currency-label" className={labelClass}>Currency</span>
-          <div className="flex bg-white/5 rounded-lg p-1 border border-white/10" role="radiogroup" aria-labelledby="inv-currency-label">
+          <div className="flex rounded-xl border border-line bg-surface p-1" role="radiogroup" aria-labelledby="inv-currency-label">
             {CURRENCY_CODES.map((c) => (
               <button
                 key={c}
@@ -43,8 +43,8 @@ export function DetailsSection({ register, errors, setValue, currency, dateIssue
                 aria-checked={currency === c}
                 onClick={() => setValue('currency', c)}
                 className={clsx(
-                  "flex-1 min-h-11 text-xs font-medium rounded-md transition-all",
-                  currency === c ? "bg-indigo-600 text-white shadow-lg" : "text-slate-400 hover:text-white"
+                  "flex-1 min-h-11 text-sm font-semibold rounded-lg transition-colors duration-150",
+                  currency === c ? "bg-primary text-on-primary" : "text-muted hover:text-ink"
                 )}
               >
                 {c}
@@ -61,7 +61,7 @@ export function DetailsSection({ register, errors, setValue, currency, dateIssue
           <label className={labelClass} htmlFor="inv-customerId">Customer</label>
           <select id="inv-customerId" aria-invalid={!!errors.customerId} aria-describedby={errors.customerId ? 'inv-customerId-error' : undefined}
             {...register('customerId', { required: "Select a client" })}
-            className={clsx(inputClass, "[&>option]:bg-slate-900 [&>option]:text-white")}
+            className={inputClass}
           >
             <option value="">Select a client...</option>
             {customers?.map(c => (
@@ -73,9 +73,9 @@ export function DetailsSection({ register, errors, setValue, currency, dateIssue
       </div>
 
       {customers?.length === 0 && (
-        <div className="mt-3 p-3 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-between">
-          <span className="text-xs text-orange-200">No clients found.</span>
-          <button type="button" onClick={onAddClient} className="text-xs font-bold text-orange-400 hover:text-orange-300 underline">+ Add New Client</button>
+        <div className="mt-3 flex items-center justify-between rounded-xl bg-warning-tint p-3">
+          <span className="text-sm text-warning">No clients yet.</span>
+          <button type="button" onClick={onAddClient} className="min-h-11 px-2 text-sm font-semibold text-primary underline">Add a client</button>
         </div>
       )}
 
@@ -94,7 +94,7 @@ export function DetailsSection({ register, errors, setValue, currency, dateIssue
                   key={preset.days}
                   type="button"
                   onClick={() => setValue('dueDate', addDays(dateIssued, preset.days))}
-                  className={clsx(HIT_AREA, "text-[11px] bg-white/5 hover:bg-white/15 border border-white/10 px-2.5 py-1.5 rounded-md text-slate-300 transition-colors")}
+                  className={clsx(HIT_AREA, "text-xs font-medium bg-sunken hover:bg-primary-tint px-2.5 py-1.5 rounded-lg text-ink transition-colors duration-150")}
                 >
                   {preset.label}
                 </button>
@@ -102,7 +102,7 @@ export function DetailsSection({ register, errors, setValue, currency, dateIssue
               <button
                 type="button"
                 onClick={() => setValue('dueDate', '')}
-                className={clsx(HIT_AREA, "text-[11px] px-2.5 py-1.5 rounded-md text-slate-500 hover:text-slate-300 transition-colors")}
+                className={clsx(HIT_AREA, "text-xs font-medium px-2.5 py-1.5 rounded-lg text-muted hover:text-ink transition-colors duration-150")}
               >
                 None
               </button>
@@ -113,10 +113,10 @@ export function DetailsSection({ register, errors, setValue, currency, dateIssue
           <label className={labelClass} htmlFor="inv-deliveryDate">Delivery / Pickup Date</label>
           <input id="inv-deliveryDate" type="date" {...register('deliveryDate')} className={inputClass} />
         </div>
-        <p className="md:col-span-2 self-end text-xs text-slate-500 pb-2">
+        <p className="md:col-span-2 self-end text-xs text-muted pb-2">
           Optional. When you promised the order. Shown on the {noun.toLowerCase()} and flagged if it slips.
         </p>
       </div>
-    </GlassCard>
+    </Card>
   );
 }
