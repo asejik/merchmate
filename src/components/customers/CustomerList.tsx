@@ -132,7 +132,7 @@ export function CustomerList() {
                       {customer.name.charAt(0)}
                     </span>
                     <span>
-                      <span className="block text-ink font-medium group-hover:text-primary-hover transition-colors">{customer.name}</span>
+                      <span className="block text-ink font-medium group-hover:underline">{customer.name}</span>
                       <span className="block text-muted text-xs">{customer.phone}</span>
                     </span>
                   </button>
